@@ -1,7 +1,4 @@
 import {createContext, ReactNode, useState} from "react";
-import {SessionType} from "../types/SessionType";
-import {ExerciseType} from "../types/ExerciseType";
-import ExercisePage from "../pages/ExercisePage";
 
 const SessionContext = createContext({
     sessionData: null,

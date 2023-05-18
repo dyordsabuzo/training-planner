@@ -1,15 +1,8 @@
 import Dropdown from "../components/Dropdown";
-import Button from "../components/Button";
 import React, {useContext, useState} from "react";
 import SessionContext from "../context/SessionContext";
-import {Session} from "inspector";
-import {SessionType} from "../types/SessionType";
 
-type MainPageProps = {
-    setSessionData: (session: any) => void
-}
-
-const MainPage: React.FC<MainPageProps> = ({setSessionData}) => {
+const MainPage = () => {
     const [week, setWeek] = useState<string>("")
     const [session, setSession] = useState<string>("")
     const sessionContext = useContext(SessionContext)

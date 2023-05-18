@@ -1,15 +1,10 @@
 import Button from "../components/Button";
-import {ExercisePairType, ExerciseType} from "../types/ExerciseType";
 import React, {useContext} from "react";
 import SessionContext from "../context/SessionContext";
 
 const FinishPage = () => {
     const handleButtonClick = (flag: boolean) => {
         sessionContext.setIsRunning(true)
-    }
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
     }
 
     const sessionContext = useContext(SessionContext)

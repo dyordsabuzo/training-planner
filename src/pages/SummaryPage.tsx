@@ -1,15 +1,10 @@
 import Button from "../components/Button";
-import {ExercisePairType, ExerciseType} from "../types/ExerciseType";
+import {ExerciseType} from "../types/ExerciseType";
 import React, {useContext} from "react";
 import SessionContext from "../context/SessionContext";
 
 const SummaryPage = () => {
     const handleButtonClick = (flag: boolean) => {
-        sessionContext.setIsRunning(true)
-    }
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
         sessionContext.setIsRunning(true)
     }
 
@@ -28,7 +23,6 @@ const SummaryPage = () => {
                     </div>
                 ))}
             </div>
-
         </div>
     )
 }
