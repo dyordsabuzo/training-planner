@@ -1,0 +1,16 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_AnnotatewithRepository" enabled="true" level="SENSEI INFO" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_AnnotatewithRestController" enabled="true" level="SENSEI INFO" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_AnnotatewithValid" enabled="true" level="SENSEI INFO" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_Fieldinjectionisnotrecommended" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_Missingannotationincontrollerclass" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_Missingannotationinupdatequery" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_Missingparameterannotationinrequesthandler" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_Non-annotatedcontrollerpublicmethod" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_SpringSecurityraceconditionSecurityContextHolder.getContext.setAuthentication" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="7b0e33ac-9ff4-45cf-bcc9-9cdc2b258d10_Usealogger" enabled="true" level="SENSEI ERROR" enabled_by_default="true" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+  </profile>
+</component>
