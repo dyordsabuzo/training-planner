@@ -98,7 +98,7 @@ const ExercisePage = () => {
     if (exerciseState.rest && exerciseState.exerciseSet > 0) {
         return (
             <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-                <RestPage length={2} toggleRest={(flag: boolean) => dispatch({type: 'updateRest', flag})}/>
+                <RestPage length={120} toggleRest={(flag: boolean) => dispatch({type: 'updateRest', flag})}/>
             </div>
         )
     }
@@ -114,27 +114,41 @@ const ExercisePage = () => {
     return (
         <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
             <div className={`flex flex-col gap-4 shadown-md p-4 border rounded-md`}>
-                <h1>Exercise {exerciseState.exercise + 1}</h1>
-                <h3>Set {exerciseState.exerciseSet + 1}</h3>
-                <h3>{(sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].name}</h3>
+                <div className={`flex gap-1`}>
+                <span className={`text-xs bg-green-500 hover:bg-green-700 text-white font-bold 
+                                py-2 px-4 rounded-xl`}>
+                    Set {exerciseState.exerciseSet + 1}
+                </span>
+                    <span className={`text-xs bg-blue-500 hover:bg-blue-700 text-white font-bold 
+                                py-2 px-4 rounded-xl`}>
+                    Exercise {exerciseState.exercise + 1}
+                </span>
+                </div>
+                <span className={`text-xl px-2`}>
+                    {(sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].name}
+                </span>
             </div>
             <form className={`flex flex-col gap-4 p-4`} onSubmit={handleSubmit}>
 
-                <Input label={"Target Weight"} readonly
-                       value={targetWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
-                       placeholder={"Weight in kg"} changeValue={setTargetWeight}/>
+                <div className={`flex gap-2`}>
+                    <Input label={"Target Weight"} readonly
+                           value={targetWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
+                           placeholder={"Weight in kg"} changeValue={setTargetWeight}/>
 
-                <Input label={"Target Rep"} readonly
-                       value={targetRep || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetRep.toString()}
-                       placeholder={"Target rep"} changeValue={setTargetRep}/>
+                    <Input label={"Target Rep"} readonly
+                           value={targetRep || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetRep.toString()}
+                           placeholder={"Target rep"} changeValue={setTargetRep}/>
+                </div>
 
-                <Input label={"Actual Weight"} required
-                       value={actualWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
-                       placeholder={"Weight in kg"} changeValue={setActualWeight}/>
+                <div className={`flex gap-2`}>
+                    <Input label={"Actual Weight"} required
+                           value={actualWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
+                           placeholder={"Weight in kg"} changeValue={setActualWeight}/>
 
-                <Input label={"Actual Rep"} required
-                       value={actualRep || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetRep.toString()}
-                       placeholder={"Actual rep"} changeValue={setActualRep}/>
+                    <Input label={"Actual Rep"} required
+                           value={actualRep || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetRep.toString()}
+                           placeholder={"Actual rep"} changeValue={setActualRep}/>
+                </div>
 
                 <button type={"submit"}
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
