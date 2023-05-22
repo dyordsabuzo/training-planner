@@ -1,6 +1,5 @@
-import {createContext, ReactNode, useEffect, useState} from "react";
+import {createContext, ReactNode, useState} from "react";
 import useGoogleSheets from "use-google-sheets";
-import {Sheet} from "use-google-sheets/dist/types";
 
 const SessionContext = createContext({
     sessionData: null,
