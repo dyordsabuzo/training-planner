@@ -13,10 +13,10 @@ jobs:
         run: |
           yarn install
           yarn build
+        env:
+          REACT_APP_GOOGLE_API_KEY: ${{secrets.REACT_APP_GOOGLE_API_KEY}}
+          REACT_APP_GOOGLE_SHEETS_ID: ${{secrets.REACT_APP_GOOGLE_SHEETS_ID}}
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build # The folder the action should deploy.
-        env:
-          REACT_APP_GOOGLE_API_KEY: ${{secrets.REACT_APP_GOOGLE_API_KEY}}
-          REACT_APP_GOOGLE_SHEETS_ID: ${{secrets.REACT_APP_GOOGLE_SHEETS_ID}}
