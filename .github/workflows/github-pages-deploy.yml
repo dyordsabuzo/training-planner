@@ -1,0 +1,17 @@
+name: Build and Deploy
+on: [ push ]
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: gh-pages
+    steps:
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@4.0.0
+        with:
+          branch: gh-pages
+          folder: build
+        env:
+          REACT_APP_GOOGLE_API_KEY: ${{secret.REACT_APP_GOOGLE_API_KEY}}
+          REACT_APP_GOOGLE_SHEETS_ID: ${{secret.REACT_APP_GOOGLE_SHEETS_ID}}
