@@ -86,28 +86,29 @@ const SupersetListing = () => {
             </div>
 
             <>
-                {Object.entries((sourceDataContext.sourceData as any).supersets).map(([key, value]) => (
-                    <div key={key}
-                         className={`flex flex-col border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
-                         onClick={(e) => {
-                             e.preventDefault()
-                             setSupersetName((value as any).name)
-                             setSession((value as any).session)
-                             setExercises((value as any).exercises)
-                             setTags((value as any).tags)
-                             setIsEdit(true)
-                         }}>
-                        <span className={`font-bold`}>{(value as any).name}</span>
-                        <>
-                            {(value as any).exercises.map((e: any) => (
-                                <div className={`text-xs`}
-                                     key={e}>
-                                    {e}
-                                </div>
-                            ))}
-                        </>
-                    </div>
-                ))}
+                {Object.entries((sourceDataContext.sourceData as any).supersets ?? {})
+                    .map(([key, value]) => (
+                        <div key={key}
+                             className={`flex flex-col border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
+                             onClick={(e) => {
+                                 e.preventDefault()
+                                 setSupersetName((value as any).name)
+                                 setSession((value as any).session)
+                                 setExercises((value as any).exercises)
+                                 setTags((value as any).tags)
+                                 setIsEdit(true)
+                             }}>
+                            <span className={`font-bold`}>{(value as any).name}</span>
+                            <>
+                                {(value as any).exercises.map((e: any) => (
+                                    <div className={`text-xs`}
+                                         key={e}>
+                                        {e}
+                                    </div>
+                                ))}
+                            </>
+                        </div>
+                    ))}
             </>
 
         </div>

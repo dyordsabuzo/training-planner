@@ -97,29 +97,30 @@ const SessionListing = () => {
                 </button>
             </div>
             <>
-                {Object.entries((sourceDataContext.sourceData as any).sessions).map(([key, value]) => (
-                    <div key={key}
-                         className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
-                         onClick={() => {
-                             setExerciseId((value as any).exercise)
-                             setExerciseName((value as any).name)
-                             setVideoLink((value as any).videoLink)
-                             setTargetRep((value as any).targetRep)
-                             setTags((value as any).tags)
-                             setSupersets((value as any).supersets)
-                             setIsEdit(true)
-                         }}>
-                        <span className={`font-bold`}>{key}</span>
-                        <>
-                            {(value as any).supersets.map((e: string) => (
-                                <div className={`text-xs`}
-                                     key={e}>
-                                    {e}
-                                </div>
-                            ))}
-                        </>
-                    </div>
-                ))}
+                {Object.entries((sourceDataContext.sourceData as any).sessions ?? {})
+                    .map(([key, value]) => (
+                        <div key={key}
+                             className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
+                             onClick={() => {
+                                 setExerciseId((value as any).exercise)
+                                 setExerciseName((value as any).name)
+                                 setVideoLink((value as any).videoLink)
+                                 setTargetRep((value as any).targetRep)
+                                 setTags((value as any).tags)
+                                 setSupersets((value as any).supersets)
+                                 setIsEdit(true)
+                             }}>
+                            <span className={`font-bold`}>{key}</span>
+                            <>
+                                {(value as any).supersets.map((e: string) => (
+                                    <div className={`text-xs`}
+                                         key={e}>
+                                        {e}
+                                    </div>
+                                ))}
+                            </>
+                        </div>
+                    ))}
             </>
 
         </div>

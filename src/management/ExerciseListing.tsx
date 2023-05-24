@@ -113,25 +113,24 @@ const ExerciseListing = () => {
                 </button>
             </div>
             <>
-                {Object.entries((sourceDataContext.sourceData as any).exercises)
-                    .sort((a,b) => (b as any)[0] - (a as any)[0])
+                {Object.entries((sourceDataContext.sourceData as any).exercises ?? {})
                     .map(([key, value]) => (
-                    <div key={key}
-                         className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
-                         onClick={() => {
-                             setExerciseId((value as any).exercise)
-                             setExerciseName((value as any).name)
-                             setVideoLink((value as any).videoLink)
-                             setTargetRep((value as any).targetRep)
-                             setTargetSet((value as any).targetSet)
-                             setRest((value as any).rest)
-                             setTags((value as any).tags)
-                             setSupersets((value as any).supersets)
-                             setIsEdit(true)
-                         }}>
-                        {key}
-                    </div>
-                ))}
+                        <div key={key}
+                             className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
+                             onClick={() => {
+                                 setExerciseId((value as any).exercise)
+                                 setExerciseName((value as any).name)
+                                 setVideoLink((value as any).videoLink)
+                                 setTargetRep((value as any).targetRep)
+                                 setTargetSet((value as any).targetSet)
+                                 setRest((value as any).rest)
+                                 setTags((value as any).tags)
+                                 setSupersets((value as any).supersets)
+                                 setIsEdit(true)
+                             }}>
+                            {key}
+                        </div>
+                    ))}
             </>
 
         </div>
