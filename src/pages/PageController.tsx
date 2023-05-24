@@ -1,6 +1,6 @@
-import React, {useContext} from "react";
-import SessionPage from "./SessionPage";
-import SessionContext from "../context/SessionContext";
+import React from "react";
+// import SessionPage from "./SessionPage";
+// import SessionContext from "../context/SessionContext";
 import MainPage from "./MainPage";
 
 const PageController = () => {
