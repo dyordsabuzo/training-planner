@@ -3,6 +3,9 @@ export type ExerciseType = {
     name: string
     targetWeight: number
     targetRep: number
+    tags: string
+    videoLink: string
+    supersets: string
 }
 
 export type ExercisePairType = {

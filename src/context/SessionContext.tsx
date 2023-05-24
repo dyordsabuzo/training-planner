@@ -4,8 +4,10 @@ import useGoogleSheets from "use-google-sheets";
 const SessionContext = createContext({
     sessionData: null,
     isRunning: false,
+    isSessionOn: false,
     weeks: [],
     sessions: [],
+    setIsSessionOn: (flag: boolean) => {},
     setIsRunning: (flag: boolean) => {
     },
     initialiseSession: (week: number, session: number) => {
@@ -21,6 +23,7 @@ type _Props = {
 export const SessionContextProvider: React.FC<_Props> = ({children}) => {
     const [sessionData, setSessionData] = useState<any>(null)
     const [isRunning, setIsRunning] = useState(false)
+    const [isSessionOn, setIsSessionOn] = useState(false)
     const {data, loading, error} = useGoogleSheets({
         apiKey: process.env.REACT_APP_GOOGLE_API_KEY!,
         sheetId: process.env.REACT_APP_GOOGLE_SHEETS_ID!,
@@ -28,8 +31,6 @@ export const SessionContextProvider: React.FC<_Props> = ({children}) => {
 
     const initialiseSession = (week: number, session: number) => {
         const filteredData = data[0].data.filter((d: any) => d.Week === week.toString() && d.Session === session.toString())
-        console.log(filteredData, week, session)
-
         let exerciseCombinations: any[] = []
         let index = 0
         for (let i = 0, x = filteredData.length; i < x; i++) {
@@ -46,7 +47,7 @@ export const SessionContextProvider: React.FC<_Props> = ({children}) => {
                 "targetRep": 8,
             })
         }
-        setSessionData({week, session, exerciseCombinations: exerciseCombinations })
+        setSessionData({week, session, exerciseCombinations: exerciseCombinations})
     }
 
 
@@ -58,18 +59,13 @@ export const SessionContextProvider: React.FC<_Props> = ({children}) => {
         return <div>Error!</div>;
     }
 
-    // if (data) {
-    // //     const result = data[0].data.filter(d => (d as any).Date === "")
-    // //     setSourceData(data[0].data)
-    // //     const weeks = [...new Set(data[0].data.map((d: any) => d.Week))]
-    //     console.log(data[0].data)
-    // }
-
     return (
         <SessionContext.Provider
             value={{
                 sessionData,
                 isRunning,
+                isSessionOn,
+                setIsSessionOn,
                 // @ts-ignore
                 weeks: [...new Set(data[0].data.map((d: any) => d.Week))],
                 // weeks: ["1", "2", "3"],

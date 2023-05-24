@@ -10,7 +10,7 @@ type InputProps = {
 const Input: React.FC<InputProps> = ({label, value, required, readonly, placeholder, changeValue}) => {
     return (
         <div className={`w-full`}>
-            <label htmlFor={label} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            <label htmlFor={label} className="block mb-1 text-sm font-medium text-gray-900">
                 {label}
             </label>
             <input type="text" id={label}
@@ -24,7 +24,9 @@ const Input: React.FC<InputProps> = ({label, value, required, readonly, placehol
                    value={value}
                    required={required}
                    readOnly={readonly}
-                   onChange={(e) => changeValue(e.target.value)}
+                   onChange={(e) => {
+                       changeValue(e.target.value)
+                   }}
             />
         </div>
     )

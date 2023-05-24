@@ -3,7 +3,7 @@ import SourceDataContext from "../context/SourceDataContext";
 import Input from "../components/Input";
 import AlertModal from "../modal/AlertModal";
 
-const ExerciseListing = () => {
+const SessionListing = () => {
     const [isAdd, setIsAdd] = useState<boolean>(false)
     const [isEdit, setIsEdit] = useState<boolean>(false)
     const [exerciseId, setExerciseId] = useState<string>("")
@@ -11,8 +11,6 @@ const ExerciseListing = () => {
     const [videoLink, setVideoLink] = useState<string>("")
     const [tags, setTags] = useState<string>("")
     const [targetRep, setTargetRep] = useState<string>("")
-    const [targetSet, setTargetSet] = useState<string>("")
-    const [rest, setRest] = useState<string>("")
     const [supersets, setSupersets] = useState<string>("")
     const sourceDataContext = useContext(SourceDataContext)
 
@@ -25,8 +23,6 @@ const ExerciseListing = () => {
                 videoLink,
                 tags,
                 targetRep,
-                targetSet,
-                rest,
                 supersets,
                 targetWeight: 0,
             })
@@ -40,8 +36,6 @@ const ExerciseListing = () => {
                 videoLink,
                 tags,
                 targetRep,
-                targetSet,
-                rest,
                 supersets,
                 targetWeight: 0,
             })
@@ -54,8 +48,6 @@ const ExerciseListing = () => {
         setVideoLink("")
         setTags("")
         setTargetRep("")
-        setTargetSet("")
-        setRest("")
         setSupersets("")
         setIsAdd(true)
     }
@@ -64,7 +56,7 @@ const ExerciseListing = () => {
         return (
             <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
                 <Input label={"Exercise Name"} required
-                       value={exerciseName} readonly={isAdd}
+                       value={exerciseName}
                        placeholder={"Exercise name"} changeValue={setExerciseName}/>
                 <Input label={"Video link"}
                        value={videoLink}
@@ -75,12 +67,6 @@ const ExerciseListing = () => {
                 <Input label={"Target Rep"}
                        value={targetRep}
                        placeholder={"Target Rep"} changeValue={setTargetRep}/>
-                <Input label={"Target Set"}
-                       value={targetSet}
-                       placeholder={"Target Set"} changeValue={setTargetSet}/>
-                <Input label={"Rest in seconds"}
-                       value={rest}
-                       placeholder={"Rest time in seconds"} changeValue={setRest}/>
                 <Input label={"Supersets"}
                        value={supersets}
                        placeholder={"Supersets"} changeValue={setSupersets}/>
@@ -102,20 +88,16 @@ const ExerciseListing = () => {
         )
     }
 
-
     return (
         <div className={`flex flex-col gap-4`}>
-            {/*<AlertModal/>*/}
             <div className={`flex place-content-end`}>
                 <button type={"button"}
-                        className={`text-sm hover:bg-green-700 hover:text-white text-green-700 font-bold py-2 px-4 rounded-md`}
-                        onClick={() => resetForm()}>+ Add Exercise
+                        className={`text-sm hover:bg-green-700 hover:text-white text-green-700 font-bold p-2 rounded-md`}
+                        onClick={() => resetForm()}>+ Add Session
                 </button>
             </div>
             <>
-                {Object.entries((sourceDataContext.sourceData as any).exercises)
-                    .sort((a,b) => (b as any)[0] - (a as any)[0])
-                    .map(([key, value]) => (
+                {Object.entries((sourceDataContext.sourceData as any).sessions).map(([key, value]) => (
                     <div key={key}
                          className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
                          onClick={() => {
@@ -123,13 +105,19 @@ const ExerciseListing = () => {
                              setExerciseName((value as any).name)
                              setVideoLink((value as any).videoLink)
                              setTargetRep((value as any).targetRep)
-                             setTargetSet((value as any).targetSet)
-                             setRest((value as any).rest)
                              setTags((value as any).tags)
                              setSupersets((value as any).supersets)
                              setIsEdit(true)
                          }}>
-                        {key}
+                        <span className={`font-bold`}>{key}</span>
+                        <>
+                            {(value as any).supersets.map((e: string) => (
+                                <div className={`text-xs`}
+                                     key={e}>
+                                    {e}
+                                </div>
+                            ))}
+                        </>
                     </div>
                 ))}
             </>
@@ -138,4 +126,4 @@ const ExerciseListing = () => {
     )
 }
 
-export default ExerciseListing
+export default SessionListing
