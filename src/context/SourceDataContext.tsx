@@ -1,6 +1,6 @@
 import {createContext, ReactNode, useState} from "react";
-import {ExerciseType} from "../types/ExerciseType";
-import {DataSourceType} from "../types/DataSourceType";
+// import {ExerciseType} from "../types/ExerciseType";
+// import {DataSourceType} from "../types/DataSourceType";
 
 const SourceDataContext = createContext({
     sourceData: {},

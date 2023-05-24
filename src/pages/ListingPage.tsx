@@ -35,13 +35,13 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
                 `}>
                     {["Exercises", "Supersets", "Sessions", "Plans"].map(category => (
                         <li className="mr-2" key={category}>
-                            <a href="#" aria-current="page"
+                            <button
                                className={`
                                     ${standardCssTab}
                                     ${activeTab === category ? activeCssTab : ""}`}
                                onClick={(e) => tabClicked(category)}>
                                 {category}
-                            </a>
+                            </button>
                         </li>
                     ))}
                 </ul>

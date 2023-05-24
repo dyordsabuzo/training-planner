@@ -1,7 +1,7 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import Input from "../components/Input";
-import AlertModal from "../modal/AlertModal";
+// import AlertModal from "../modal/AlertModal";
 
 const ExerciseListing = () => {
     const [isAdd, setIsAdd] = useState<boolean>(false)
