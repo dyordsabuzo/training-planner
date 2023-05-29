@@ -6,9 +6,8 @@ import Input from "../components/Input";
 const SessionListing = () => {
     const [isAdd, setIsAdd] = useState<boolean>(false)
     const [isEdit, setIsEdit] = useState<boolean>(false)
-    const [exerciseId, setExerciseId] = useState<string>("")
-    const [exerciseName, setExerciseName] = useState<string>("")
-    const [videoLink, setVideoLink] = useState<string>("")
+    const [sessionId, setSessionId] = useState<string>("")
+    const [sessionName, setSessionName] = useState<string>("")
     const [tags, setTags] = useState<string>("")
     const [targetRep, setTargetRep] = useState<string>("")
     const [supersets, setSupersets] = useState<string>("")
@@ -18,34 +17,29 @@ const SessionListing = () => {
         e.preventDefault()
 
         if (isAdd) {
-            sourceDataContext.addExercise({
-                name: exerciseName,
-                videoLink,
+            sourceDataContext.addSession({
+                name: sessionName,
                 tags,
                 targetRep,
                 supersets,
-                targetWeight: 0,
             })
             setIsAdd(false)
         }
 
         if (isEdit) {
-            sourceDataContext.editExercise({
-                exercise: exerciseId,
-                name: exerciseName,
-                videoLink,
+            sourceDataContext.editSession({
+                id: sessionId,
+                name: sessionName,
                 tags,
                 targetRep,
                 supersets,
-                targetWeight: 0,
             })
             setIsEdit(false)
         }
     }
 
     const resetForm = () => {
-        setExerciseName("")
-        setVideoLink("")
+        setSessionName("")
         setTags("")
         setTargetRep("")
         setSupersets("")
@@ -56,11 +50,8 @@ const SessionListing = () => {
         return (
             <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
                 <Input label={"Exercise Name"} required
-                       value={exerciseName}
-                       placeholder={"Exercise name"} changeValue={setExerciseName}/>
-                <Input label={"Video link"}
-                       value={videoLink}
-                       placeholder={"Video link"} changeValue={setVideoLink}/>
+                       value={sessionName}
+                       placeholder={"Exercise name"} changeValue={setSessionName}/>
                 <Input label={"Tags"}
                        value={tags}
                        placeholder={"Tags"} changeValue={setTags}/>
@@ -77,7 +68,8 @@ const SessionListing = () => {
                     </button>
                     <button type={"button"}
                             className={`text-xs font-bold py-2 px-4 rounded-xl border border-black`}
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.preventDefault()
                                 setIsAdd(false)
                                 setIsEdit(false)
                             }}>
@@ -101,10 +93,10 @@ const SessionListing = () => {
                     .map(([key, value]) => (
                         <div key={key}
                              className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
-                             onClick={() => {
-                                 setExerciseId((value as any).exercise)
-                                 setExerciseName((value as any).name)
-                                 setVideoLink((value as any).videoLink)
+                             onClick={(e) => {
+                                 e.preventDefault()
+                                 setSessionId((value as any).exercise)
+                                 setSessionName((value as any).name)
                                  setTargetRep((value as any).targetRep)
                                  setTags((value as any).tags)
                                  setSupersets((value as any).supersets)

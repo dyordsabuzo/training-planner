@@ -64,7 +64,7 @@ const ExerciseListing = () => {
         return (
             <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
                 <Input label={"Exercise Name"} required
-                       value={exerciseName} readonly={isAdd}
+                       value={exerciseName}
                        placeholder={"Exercise name"} changeValue={setExerciseName}/>
                 <Input label={"Video link"}
                        value={videoLink}

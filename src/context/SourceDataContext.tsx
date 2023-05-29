@@ -12,6 +12,16 @@ const SourceDataContext = createContext({
     },
     editSuperset: (superset: any) => {
     },
+    addSession: (session: any) => {
+    },
+    editSession: (session: any) => {
+    },
+    addPlan: (plan: any) => {
+    },
+    editPlan: (plan: any) => {
+    },
+    updateWeekPlan: (planName: string, weekData: any) => {
+    },
     initialise: () => {
     },
 })
@@ -34,20 +44,18 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const initialise = () => {
-        // setSourceData({
-        //     exercises: {},
-        //     supersets: {}
-        // })
-        getFromLocalStorage()
+        getLocalStorage()
     }
 
-    const saveToLocaStorage = () => {
+    const saveToStorage = (data: any) => {
         if (process.env.NODE_ENV !== "production") {
-            localStorage.setItem('sourceData', JSON.stringify(sourceData));
+            localStorage.setItem('sourceData', JSON.stringify(data));
         }
+
+        setSourceData(data)
     }
 
-    const getFromLocalStorage = () => {
+    const getLocalStorage = () => {
         if (process.env.NODE_ENV !== "production") {
             let data = localStorage.getItem('sourceData')
             if (data) {
@@ -57,6 +65,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
                     exercises: {},
                     supersets: {},
                     sessions: {},
+                    plans: {},
                 })
             }
         }
@@ -110,28 +119,15 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             }
         })
 
-
-        setSourceData({
+        saveToStorage({
             ...sourceData,
             exercises: sortData(exercises),
             supersets: sortData(supersets)
         })
-        saveToLocaStorage()
     }
 
     const addExercise = (exercise: any) => {
         let exercises = sourceData.exercises
-
-        // let _exercise = {
-        //     ...exercise,
-        //     exercise: Object.keys(exercises).length + 1
-        // }
-        //
-        // exercises = {
-        //     ...exercises,
-        //     [exercise.name]: _exercise
-        // }
-
         exercises = {
             ...exercises,
             [exercise.name]: {
@@ -163,16 +159,24 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             }
         })
 
-        setSourceData({
+        saveToStorage({
             ...sourceData,
             exercises: sortData(exercises),
             supersets: sortData(supersets)
         })
-        saveToLocaStorage()
     }
 
     const addSuperset = (superset: any) => {
+        let supersets = sourceData.supersets
+        supersets = {
+            ...supersets,
+            [superset.name]: superset
+        }
 
+        saveToStorage({
+            ...sourceData,
+            supersets,
+        })
     }
 
     const editSuperset = (superset: any) => {
@@ -198,12 +202,113 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             }
         }
 
-        setSourceData({
+        saveToStorage({
             ...sourceData,
             supersets,
             sessions
         })
-        saveToLocaStorage()
+    }
+
+    const addSession = (session: any) => {
+
+    }
+
+    const editSession = (session: any) => {
+        let sessions = sourceData.sessions
+        sessions = {
+            ...sessions,
+            [session.name]: session
+        }
+        // console.log(sourceData)
+
+        // session.supersets((superset: string) => {
+        //     supersets = {
+        //         ...supersets,
+        //         [superset] : superset
+        //     }
+        // })
+
+        saveToStorage({
+            ...sourceData,
+            sessions
+        })
+    }
+
+    const addPlan = (plan: any) => {
+        let weeks = {}
+        Array.from(Array(parseInt(plan.numberOfWeeks ?? '0'))
+            .keys())
+            .forEach(week => {
+                weeks = {
+                    ...weeks,
+                    [`Week ${week + 1}`]: {
+                        weekNumber: week,
+                        targetRep: plan.targetRep,
+                        targetSet: plan.targetSet,
+                        annotation: ""
+                    }
+                }
+            })
+
+        plan = {
+            ...plan,
+            weeks
+        }
+
+        let plans = sourceData.plans ?? {}
+        plans = {
+            ...plans,
+            [plan.name]: {
+                ...plan,
+                id: Object.keys(plans).length + 1
+            }
+        }
+        saveToStorage({
+            ...sourceData,
+            plans
+        })
+    }
+
+    const editPlan = (plan: any) => {
+        let plans = sourceData.plans ?? {}
+        let _plan: any = Object.values(plans as any).find(obj => (obj as any).name === plan.name)
+
+        plans = {
+            ...plans,
+            [plan.name]: {
+                ..._plan,
+                ...plan
+            }
+        }
+        saveToStorage({
+            ...sourceData,
+            plans
+        })
+    }
+
+    const updateWeekPlan = (planName: string, weekData: any) => {
+        let plans = sourceData.plans ?? {}
+        let _plan: any = Object.values(plans as any).find(obj => (obj as any).name === planName)
+
+        _plan = {
+            ..._plan,
+            weeks: {
+                ..._plan.weeks,
+                [`Week ${weekData.weekNumber + 1}`]: weekData
+            }
+        }
+
+        plans = {
+            ...plans,
+            [_plan.name]: _plan
+        }
+
+        saveToStorage({
+            ...sourceData,
+            plans
+        })
+
+
     }
 
     return (
@@ -214,6 +319,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
                 addSuperset,
                 editExercise,
                 editSuperset,
+                addSession,
+                editSession,
+                addPlan,
+                editPlan,
+                updateWeekPlan,
                 initialise,
             }}>
             {children}

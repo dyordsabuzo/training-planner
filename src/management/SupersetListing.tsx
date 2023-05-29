@@ -8,6 +8,7 @@ const SupersetListing = () => {
     const [supersetName, setSupersetName] = useState<string>("")
     const [session, setSession] = useState<string>("")
     const [exercises, setExercises] = useState<string[]>([])
+    const [rest, setRest] = useState<string>("")
     const [tags, setTags] = useState<string>("")
     const sourceDataContext = useContext(SourceDataContext)
 
@@ -19,6 +20,7 @@ const SupersetListing = () => {
                 name: supersetName,
                 session,
                 exercises,
+                rest,
                 tags,
             })
             setIsAdd(false)
@@ -29,6 +31,7 @@ const SupersetListing = () => {
                 name: supersetName,
                 session,
                 exercises,
+                rest,
                 tags,
             })
             setIsEdit(false)
@@ -39,6 +42,7 @@ const SupersetListing = () => {
         setSupersetName("")
         setSession("")
         setTags("")
+        setRest("")
         setExercises([])
         setIsAdd(true)
     }
@@ -58,6 +62,9 @@ const SupersetListing = () => {
                 <Input label={"Exercises"}
                        value={exercises.join(",")}
                        placeholder={"Exercises"} changeValue={(value) => setExercises(value.split(","))}/>
+                <Input label={"Rest time in seconds"}
+                       value={rest}
+                       placeholder={"Rest time in seconds"} changeValue={setRest}/>
                 <div className={`flex gap-2 py-4`}>
                     <button type={"submit"}
                             className={`text-xs bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl`}>
@@ -95,6 +102,7 @@ const SupersetListing = () => {
                                  setSupersetName((value as any).name)
                                  setSession((value as any).session)
                                  setExercises((value as any).exercises)
+                                 setRest((value as any).rest)
                                  setTags((value as any).tags)
                                  setIsEdit(true)
                              }}>

@@ -2,6 +2,7 @@ import ExerciseListing from "../management/ExerciseListing";
 import React, {useState} from "react";
 import SupersetListing from "../management/SupersetListing";
 import SessionListing from "../management/SessionListing";
+import PlanListing from "../management/PlanListing";
 
 type ListingPageProps = {
     list: string
@@ -27,7 +28,7 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     // }
 
     return (
-        <div className={`flex flex-col gap-4`}>
+        <div className={`flex flex-col gap-2`}>
             <div className={'px-4 space-x-2 text-sm flex items-between place-content-between'}>
                 <ul className={`
                     flex flex-nowrap text-sm font-medium text-center text-gray-500 border-b 
@@ -46,10 +47,11 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
                     ))}
                 </ul>
             </div>
-            <div className={`p-4`}>
+            <div className={`p-2`}>
                 {activeTab === "Exercises" && <ExerciseListing/>}
                 {activeTab === "Supersets" && <SupersetListing/>}
                 {activeTab === "Sessions" && <SessionListing/>}
+                {activeTab === "Plans" && <PlanListing/>}
             </div>
         </div>
     )

@@ -12,10 +12,20 @@ const MainPage = () => {
         <div className={`flex flex-col gap-8 p-8 min-w-[30rem]`}>
             {!listing && (
                 <>
+                    {/*<button type={"button"}*/}
+                    {/*        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"*/}
+                    {/*        onClick={() => sessionContext.setIsSessionOn(true)}>*/}
+                    {/*    START SESSION*/}
+                    {/*</button>                    */}
+
                     <button type={"button"}
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
-                            onClick={() => sessionContext.setIsSessionOn(true)}>
-                        START SESSION
+                            onClick={() => {
+                                // sessionContext.setIsRunning(true)
+                                sourceContext.initialise()
+                                sessionContext.setIsSessionOn(true)
+                            }}>
+                        START TRAINING
                     </button>
 
                     <div className={`flex flex-col border border-1 gap-2 p-4`}>
