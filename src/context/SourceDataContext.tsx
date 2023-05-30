@@ -116,7 +116,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             }
         })
 
-        let supersets = sourceData.supersets
+        let supersets = sourceData.supersets ?? {}
         Object.values(supersets).forEach((s: any) => {
             const itemIndex = (s.exercises ?? []).indexOf(exercise.name)
             if (itemIndex >= 0) {
@@ -149,7 +149,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             }
         })
 
-        let supersets = sourceData.supersets
+        let supersets = sourceData.supersets ?? {}
         supersets = linkExerciseWithSupersets(exercise, supersets)
 
         saveToStorage({

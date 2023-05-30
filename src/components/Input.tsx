@@ -15,7 +15,6 @@ const Input: React.FC<InputProps> = ({label, value, required, readonly, placehol
 
     const changeValueHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
         e.preventDefault()
-        console.log(fieldValue)
         changeValue(e.target.value)
         setFieldValue(e.target.value)
     }
@@ -34,7 +33,7 @@ const Input: React.FC<InputProps> = ({label, value, required, readonly, placehol
                         dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 
                         dark:focus:border-blue-500 w-full`}
                    placeholder={placeholder}
-                   value={value}
+                   value={fieldValue}
                    required={required}
                    readOnly={readonly}
                    onChange={changeValueHandler}
