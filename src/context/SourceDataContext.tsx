@@ -8,17 +8,25 @@ const SourceDataContext = createContext({
     },
     addExercise: (exercise: any) => {
     },
+    deleteExercise: (name: string) => {
+    },
     addSuperset: (superset: any) => {
     },
     editSuperset: (superset: any) => {
+    },
+    deleteSuperset: (id: string) => {
     },
     addSession: (session: any) => {
     },
     editSession: (session: any) => {
     },
+    deleteSession: (name: string) => {
+    },
     addPlan: (plan: any) => {
     },
     editPlan: (plan: any) => {
+    },
+    deletePlan: (name: string) => {
     },
     updateWeekPlan: (planName: string, weekData: any) => {
     },
@@ -71,35 +79,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
         }
     }
 
-    const editExercise = (exercise: any) => {
-        let exercises = sourceData.exercises
-        let _exercise: any = Object.values(exercises as any).find(obj => (obj as any).name === exercise.name)
-
-        exercises = {
-            ...exercises,
-            [exercise.name]: {
-                ..._exercise,
-                ...exercise
-            }
-        }
-
-        let supersets = sourceData.supersets
-        Object.values(supersets).forEach((s: any) => {
-            const itemIndex = s.exercises.indexOf(exercise.name)
-            if (itemIndex >= 0) {
-                if (!exercise.supersets.split(",").includes(s.name)) {
-                    s.exercises.splice(itemIndex, 1)
-                    supersets = {
-                        ...supersets,
-                        [s.name]: s
-                    }
-                }
-            }
-        })
-
-        exercise.supersets.split(",").forEach((s: string) => {
+    const linkExerciseWithSupersets = (exercise: any, supersets: any): any => {
+        exercise.supersets.forEach((s: string) => {
             if (!s) {
-                return
+                return {}
             }
 
             let _superset: any = Object.values(supersets).find((sObject: any) => sObject.name === s)
@@ -118,59 +101,75 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
                 [_superset.name]: _superset
             }
         })
+        return supersets
+    }
+
+    const editExercise = (exercise: any) => {
+        let exercises = sourceData.exercises
+        let _exercise: any = Object.values(exercises as any).find(obj => (obj as any).name === exercise.name)
+
+        exercises = sortData({
+            ...exercises,
+            [exercise.name]: {
+                ..._exercise,
+                ...exercise
+            }
+        })
+
+        let supersets = sourceData.supersets
+        Object.values(supersets).forEach((s: any) => {
+            const itemIndex = (s.exercises ?? []).indexOf(exercise.name)
+            if (itemIndex >= 0) {
+                if (!exercise.supersets.includes(s.name)) {
+                    s.exercises.splice(itemIndex, 1)
+                    supersets = {
+                        ...supersets,
+                        [s.name]: s
+                    }
+                }
+            }
+        })
+
+        supersets = linkExerciseWithSupersets(exercise, supersets)
 
         saveToStorage({
             ...sourceData,
-            exercises: sortData(exercises),
-            supersets: sortData(supersets)
+            exercises,
+            supersets
         })
     }
 
     const addExercise = (exercise: any) => {
-        let exercises = sourceData.exercises
-        exercises = {
-            ...exercises,
+        let exercises = sortData({
+            ...sourceData.exercises,
             [exercise.name]: {
                 ...exercise,
-                exercise: Object.keys(exercises).length + 1
-            }
-        }
-
-        let supersets = sourceData.supersets
-        exercise.supersets.split(",").forEach((s: string) => {
-            if (!s) {
-                return
-            }
-
-            let _superset: any = Object.values(supersets).find((sObject: any) => sObject.name === s)
-            let exerciseList: string[] = _superset?.exercises ?? []
-            if (!exerciseList.includes(s)) {
-                exerciseList.push(s)
-                _superset = {
-                    ..._superset,
-                    name: s,
-                    exercises: exerciseList
-                }
-            }
-
-            supersets = {
-                ...supersets,
-                [_superset.name]: _superset
+                id: Object.keys(sourceData.exercises).length + 1
             }
         })
+
+        let supersets = sourceData.supersets
+        supersets = linkExerciseWithSupersets(exercise, supersets)
 
         saveToStorage({
             ...sourceData,
-            exercises: sortData(exercises),
-            supersets: sortData(supersets)
+            exercises,
+            supersets
         })
     }
 
+    const deleteExercise = (name: string) => {
+        delete sourceData.exercises[name]
+        saveToStorage(sourceData)
+    }
+
     const addSuperset = (superset: any) => {
-        let supersets = sourceData.supersets
-        supersets = {
-            ...supersets,
-            [superset.name]: superset
+        let supersets = {
+            ...sourceData.supersets,
+            [superset.name]: {
+                ...superset,
+                id: Object.keys(sourceData.supersets).length + 1
+            }
         }
 
         saveToStorage({
@@ -180,27 +179,29 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const editSuperset = (superset: any) => {
-
-        let supersets = sourceData.supersets
-        supersets = {
-            ...supersets,
+        let supersets = {
+            ...sourceData.supersets,
             [superset.name]: superset
         }
 
         let sessions = sourceData.sessions
-        if (superset.session) {
-            let supersetList: string[] = sessions[superset.session]?.supersets ?? []
+        if (!superset.sessions) {
+            superset.sessions = superset.session.split(",")
+        }
+
+        superset.sessions.forEach((session: string) => {
+            let supersetList: string[] = sessions[session]?.supersets ?? []
             if (!supersetList.includes(superset.name)) {
                 supersetList.push(superset.name)
                 sessions = {
                     ...sessions,
-                    [superset.session]: {
-                        name: superset.session,
+                    [session]: {
+                        name: session,
                         supersets: supersetList
                     }
                 }
             }
-        }
+        })
 
         saveToStorage({
             ...sourceData,
@@ -209,29 +210,42 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
         })
     }
 
-    const addSession = (session: any) => {
-
+    const deleteSuperset = (name: string) => {
+        delete sourceData.supersets[name]
+        saveToStorage(sourceData)
     }
 
-    const editSession = (session: any) => {
-        let sessions = sourceData.sessions
-        sessions = {
-            ...sessions,
-            [session.name]: session
+    const addSession = (session: any) => {
+        let sessions = {
+            ...sourceData.sessions,
+            [session.name]: {
+                ...session,
+                id: Object.keys(sourceData.sessions).length + 1
+            }
         }
-        // console.log(sourceData)
-
-        // session.supersets((superset: string) => {
-        //     supersets = {
-        //         ...supersets,
-        //         [superset] : superset
-        //     }
-        // })
 
         saveToStorage({
             ...sourceData,
             sessions
         })
+
+    }
+
+    const editSession = (session: any) => {
+        let sessions = {
+            ...sourceData.sessions,
+            [session.name]: session
+        }
+
+        saveToStorage({
+            ...sourceData,
+            sessions
+        })
+    }
+
+    const deleteSession = (name: string) => {
+        delete sourceData.sessions[name]
+        saveToStorage(sourceData)
     }
 
     const addPlan = (plan: any) => {
@@ -243,8 +257,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
                     ...weeks,
                     [`Week ${week + 1}`]: {
                         weekNumber: week,
-                        targetRep: plan.targetRep,
-                        targetSet: plan.targetSet,
+                        targetRep: plan.baselineRep,
+                        targetSet: plan.baselineSet,
                         annotation: ""
                     }
                 }
@@ -270,6 +284,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const editPlan = (plan: any) => {
+        console.log(plan)
         let plans = sourceData.plans ?? {}
         let _plan: any = Object.values(plans as any).find(obj => (obj as any).name === plan.name)
 
@@ -284,6 +299,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             ...sourceData,
             plans
         })
+    }
+
+    const deletePlan = (name: string) => {
+        delete sourceData.plans[name]
+        saveToStorage(sourceData)
     }
 
     const updateWeekPlan = (planName: string, weekData: any) => {
@@ -316,13 +336,17 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             value={{
                 sourceData,
                 addExercise,
-                addSuperset,
                 editExercise,
+                deleteExercise,
+                addSuperset,
                 editSuperset,
+                deleteSuperset,
                 addSession,
                 editSession,
+                deleteSession,
                 addPlan,
                 editPlan,
+                deletePlan,
                 updateWeekPlan,
                 initialise,
             }}>

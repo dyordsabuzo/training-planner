@@ -38,6 +38,8 @@ const SessionPage = () => {
         return <ExercisePage/>
     }
 
+    console.log(sourceData)
+
     return (
         <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
             <form onSubmit={handleSubmit} className={`flex flex-col gap-8`}>
@@ -47,7 +49,7 @@ const SessionPage = () => {
                               let planData: any = Object.values(sourceData.plans)
                                   .find((value: any) => value.name === plan)
                               setWeekOptions(Object.keys(planData.weeks))
-                              setSessionOptions(planData.selectedSessions)
+                              setSessionOptions(planData.sessions)
 
                               setSessionData({
                                   ...sessionData,
@@ -73,20 +75,19 @@ const SessionPage = () => {
                 <Dropdown label={"Session"} options={sessionOptions} required
                           valueHandler={(session: string) => {
                               let supersets = {}
-                              Object.values(sourceData.supersets)
-                                  .filter((value: any) => value.session === session)
-                                  .forEach((superset: any) => {
-                                      let exercises = Object.values(sourceData.exercises)
-                                          .filter((value: any) => superset.exercises.includes(value.name))
+                              let sessionSupersets = sourceData.sessions[session].supersets
+                              sessionSupersets.forEach((s: string) => {
+                                  let superset = sourceData.supersets[s]
+                                  let exercises = superset.exercises.map((e: string) => sourceData.exercises[e])
 
-                                      supersets = {
-                                          ...supersets,
-                                          [superset.name]: {
-                                              ...superset,
-                                              exercises
-                                          }
+                                  supersets = {
+                                      ...supersets,
+                                      [superset.name]: {
+                                          ...superset,
+                                          exercises
                                       }
-                                  })
+                                  }
+                              })
 
                               setSessionData({
                                   ...sessionData,
