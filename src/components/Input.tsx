@@ -11,10 +11,11 @@ type InputProps = {
 }
 
 const Input: React.FC<InputProps> = ({label, value, required, readonly, placeholder, changeValue, className}) => {
-    const [_, setFieldValue] = useState(value)
+    const [fieldValue, setFieldValue] = useState(value)
 
     const changeValueHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
         e.preventDefault()
+        console.log(fieldValue)
         changeValue(e.target.value)
         setFieldValue(e.target.value)
     }

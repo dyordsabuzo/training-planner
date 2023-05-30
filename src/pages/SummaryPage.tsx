@@ -1,5 +1,5 @@
 import Button from "../components/Button";
-import {ExerciseType} from "../types/ExerciseType";
+// import {ExerciseType} from "../types/ExerciseType";
 import React, {useContext} from "react";
 import SessionContext from "../context/SessionContext";
 
