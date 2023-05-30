@@ -75,7 +75,7 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
                    value={baselineRep}
                    placeholder={"Target Rep"} changeValue={setBaselineRep}/>
 
-            <TagInput label={"Selected sessions"} list={sessions} options={Object.keys(sourceData.sessions)}
+            <TagInput label={"Selected sessions"} list={sessions} options={Object.keys(sourceData.sessions ?? {})}
                       updateList={setSessions}/>
 
             <div className={`flex justify-between gap-2 py-4`}>

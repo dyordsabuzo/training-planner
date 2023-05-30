@@ -90,7 +90,7 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
             {/*<Input label={"Supersets"}*/}
             {/*       value={supersets}*/}
             {/*       placeholder={"Supersets"} changeValue={setSupersets}/>*/}
-            <TagInput label={"Supersets"} list={supersets} options={Object.keys(sourceData.supersets)}
+            <TagInput label={"Supersets"} list={supersets} options={Object.keys(sourceData.supersets ?? {})}
                       updateList={setSupersets}/>
 
 

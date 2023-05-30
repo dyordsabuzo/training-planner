@@ -57,7 +57,7 @@ const SessionForm: React.FC<Props> = ({data, type, closeForm}) => {
             <Input label={"Tags"}
                    value={tags}
                    placeholder={"Tags"} changeValue={setTags}/>
-            <TagInput label={"Supersets"} list={supersets} options={Object.keys(sourceData.supersets)} updateList={setSupersets}/>
+            <TagInput label={"Supersets"} list={supersets} options={Object.keys(sourceData.supersets ?? {})} updateList={setSupersets}/>
 
             <div className={`flex justify-between gap-2 py-4`}>
                 <div className={`flex gap-2`}>
