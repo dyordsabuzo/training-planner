@@ -56,27 +56,27 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const saveToStorage = (data: any) => {
-        if (process.env.NODE_ENV !== "production") {
-            localStorage.setItem('sourceData', JSON.stringify(data));
-        }
+        // if (process.env.NODE_ENV !== "production") {
+        localStorage.setItem('sourceData', JSON.stringify(data));
+        // }
 
         setSourceData(data)
     }
 
     const getLocalStorage = () => {
-        if (process.env.NODE_ENV !== "production") {
-            let data = localStorage.getItem('sourceData')
-            if (data) {
-                setSourceData(JSON.parse(data))
-            } else {
-                setSourceData({
-                    exercises: {},
-                    supersets: {},
-                    sessions: {},
-                    plans: {},
-                })
-            }
+        // if (process.env.NODE_ENV !== "production") {
+        let data = localStorage.getItem('sourceData')
+        if (data) {
+            setSourceData(JSON.parse(data))
+        } else {
+            setSourceData({
+                exercises: {},
+                supersets: {},
+                sessions: {},
+                plans: {},
+            })
         }
+        // }
     }
 
     const linkExerciseWithSupersets = (exercise: any, supersets: any): any => {
