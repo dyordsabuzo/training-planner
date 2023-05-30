@@ -140,11 +140,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const addExercise = (exercise: any) => {
-        let exercises = sortData({
-            ...sourceData.exercises,
+        let exercises = sourceData.exercises ?? {}
+        exercises = sortData({
+            ...exercises,
             [exercise.name]: {
                 ...exercise,
-                id: Object.keys(sourceData.exercises).length + 1
+                id: Object.keys(exercises).length + 1
             }
         })
 
@@ -164,11 +165,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const addSuperset = (superset: any) => {
-        let supersets = {
-            ...sourceData.supersets,
+        let supersets = sourceData.supersets ?? {}
+        supersets = {
+            ...supersets,
             [superset.name]: {
                 ...superset,
-                id: Object.keys(sourceData.supersets).length + 1
+                id: Object.keys(supersets).length + 1
             }
         }
 
@@ -216,11 +218,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const addSession = (session: any) => {
-        let sessions = {
+        let sessions = sourceData.sessions ?? {}
+        sessions = {
             ...sourceData.sessions,
             [session.name]: {
                 ...session,
-                id: Object.keys(sourceData.sessions).length + 1
+                id: Object.keys(sessions).length + 1
             }
         }
 
