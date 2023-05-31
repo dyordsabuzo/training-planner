@@ -1,53 +1,33 @@
-import React, {useContext, useState} from "react";
-import SessionContext from "../context/SessionContext";
-import ListingPage from "./ListingPage";
-import SourceDataContext from "../context/SourceDataContext";
+import React from "react";
+import WrapperPage from "./WrapperPage";
+import {useNavigate} from "react-router-dom";
 
-const MainPage = () => {
-    const [listing, setListing] = useState<string>("")
-    const sessionContext = useContext(SessionContext)
-    const sourceContext = useContext(SourceDataContext)
+type Props = {
+    listing?: string
+}
+
+const MainPage: React.FC<Props> = ({listing}) => {
+    const navigate = useNavigate()
+
 
     return (
-        <div className={`flex flex-col gap-8 p-8 min-w-[30rem]`}>
-            {!listing && (
-                <>
-                    {/*<button type={"button"}*/}
-                    {/*        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"*/}
-                    {/*        onClick={() => sessionContext.setIsSessionOn(true)}>*/}
-                    {/*    START SESSION*/}
-                    {/*</button>                    */}
+        <WrapperPage>
+            <button type={"button"}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-2 rounded"
+                    onClick={() => {
+                        navigate("/training-planner/train")
+                    }}>
+                START TRAINING
+            </button>
 
-                    <button type={"button"}
-                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
-                            onClick={() => {
-                                // sessionContext.setIsRunning(true)
-                                sourceContext.initialise()
-                                sessionContext.setIsSessionOn(true)
-                            }}>
-                        START TRAINING
-                    </button>
-
-                    <div className={`flex flex-col border border-1 gap-2 p-4`}>
-                        <button type={"button"}
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
-                                onClick={() => {
-                                    sourceContext.initialise()
-                                    setListing("exercises")
-                                }}>
-                            EXERCISES
-                        </button>
-                        <button type={"button"}
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
-                                onClick={() => setListing("supersets")}>
-                            SUPERSETS
-                        </button>
-                    </div>
-                </>
-            )}
-
-            {listing && <ListingPage list={listing}/>}
-        </div>
+            <button type={"button"}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
+                    onClick={() => {
+                        navigate("/training-planner/manage")
+                    }}>
+                Manage Training Setup
+            </button>
+        </WrapperPage>
     )
 }
 

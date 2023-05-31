@@ -1,9 +1,10 @@
 import Dropdown from "../components/Dropdown";
-import React, {useContext, useState} from "react";
+import React, {useContext, useEffect, useState} from "react";
 import SessionContext from "../context/SessionContext";
 import SummaryPage from "./SummaryPage";
 import ExercisePage from "./ExercisePage";
 import SourceDataContext from "../context/SourceDataContext";
+import WrapperPage from "./WrapperPage";
 
 const SessionPage = () => {
     const [sessionData, setSessionData] = useState<any>({})
@@ -12,23 +13,24 @@ const SessionPage = () => {
 
     const [weekOptions, setWeekOptions] = useState<string[]>([])
     const [sessionOptions, setSessionOptions] = useState<string[]>([])
+    const [isContextInitialised, setIsContextInitialised] = useState(false)
 
     const sourceData: any = sourceDataContext.sourceData
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        // let _session: any = Object.values(sourceData.sessions)
-        //     .find((s: any) => s.name === session)
-        //
-        // _session.supersets.forEach((supersetName: string) => {
-        //     let _supersetData = Object.values(sourceData.supersets)
-        //         .find((_superset: any) => _superset.name === supersetName)
-        //     console.log(_supersetData)
-        // })
-
-        // sessionContext.initialiseSession(plan, week, session)
         sessionContext.initialiseSession(sessionData)
     }
+
+    useEffect(() => {
+        if (!isContextInitialised) {
+            sessionContext.setIsSessionOn(true)
+            sourceDataContext.initialise()
+            setIsContextInitialised(true)
+        }
+        return () => {
+        }
+    }, [isContextInitialised, sessionContext, sourceDataContext])
 
     if (sessionContext.sessionData && !sessionContext.isRunning) {
         return <SummaryPage/>
@@ -38,10 +40,8 @@ const SessionPage = () => {
         return <ExercisePage/>
     }
 
-    console.log(sourceData)
-
     return (
-        <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
+        <WrapperPage>
             <form onSubmit={handleSubmit} className={`flex flex-col gap-8`}>
                 <Dropdown label={"Training plan"}
                           options={Object.keys(sourceData.plans ?? {})} required
@@ -61,7 +61,6 @@ const SessionPage = () => {
                           valueHandler={(week: string) => {
                               let weekData: any = sourceData.plans[sessionData.plan].weeks[week]
 
-                              console.log(weekData)
                               setSessionData({
                                   ...sessionData,
                                   week,
@@ -97,13 +96,12 @@ const SessionPage = () => {
                           }}
                 />
 
-                {/*<Button label={"LOAD"} clickHandler={handleClick}/>*/}
                 <button type={"submit"}
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded">
                     LOAD
                 </button>
             </form>
-        </div>
+        </WrapperPage>
     )
 }
 

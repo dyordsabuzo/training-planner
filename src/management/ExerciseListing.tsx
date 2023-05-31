@@ -16,11 +16,11 @@ const ExerciseListing = () => {
     }
 
     return (
-        <div className={`flex flex-col gap-4`}>
+        <div className={`flex flex-col gap-2`}>
             {/*<AlertModal/>*/}
             <div className={`flex place-content-end`}>
                 <button type={"button"}
-                        className={`text-sm hover:bg-green-700 hover:text-white text-green-700 font-bold py-2 px-4 rounded-md`}
+                        className={`text-sm hover:bg-green-700 hover:text-white text-green-700 font-bold p-2 rounded-md`}
                         onClick={() => {
                             setFormData({})
                             setFormType("add")

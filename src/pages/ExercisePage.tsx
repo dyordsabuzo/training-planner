@@ -3,7 +3,8 @@ import React, {useContext, useEffect, useReducer, useState} from "react";
 import SessionContext from "../context/SessionContext";
 import RestPage from "./RestPage";
 import SupersetCompletePage from "./SupersetCompletePage";
-// import FinishPage from "./FinishPage";
+import FinishPage from "./FinishPage";
+import WrapperPage from "./WrapperPage";
 // import sessionPage from "./SessionPage";
 
 type State = {
@@ -11,19 +12,21 @@ type State = {
     exercise: number
     exerciseSet: number
     rest: boolean
+    supersetCounter: number
     supersetComplete: boolean
 }
 
 type Action = { type: 'reset' }
     | { type: 'update', payload: any }
     | { type: 'updateRest', flag: boolean }
-    | { type: 'incrementCounter', listLength: number }
+    | { type: 'incrementCounter', listLength: number, totalSet: number }
 
 const initialState = {
     counter: 0,
     exercise: 0,
     exerciseSet: 0,
     rest: false,
+    supersetCounter: 0,
     supersetComplete: false
 }
 
@@ -32,7 +35,8 @@ const reducer = (state: State, action: Action) => {
         case "reset":
             return {
                 ...initialState,
-                counter: state.counter
+                counter: state.counter,
+                supersetCounter: state.supersetCounter
             }
         case 'update':
             return {
@@ -45,20 +49,24 @@ const reducer = (state: State, action: Action) => {
                 rest: action.flag
             }
         case 'incrementCounter':
-            const totalSet = 3
+            const totalSet = action.totalSet
             const listLength = action.listLength
             const counter = state.counter + 1
             const exercise = counter % listLength
             const exerciseSet = (exercise === 0) ? state.exerciseSet + 1 : state.exerciseSet
             const rest = (exercise === 0 && counter > 0 && exerciseSet < totalSet)
-            const supersetComplete = (exerciseSet === totalSet)
 
+            const supersetComplete = (exerciseSet === totalSet)
+            const supersetCounter = supersetComplete ? state.supersetCounter + 1 : state.supersetCounter
+
+            console.log(exerciseSet, totalSet, supersetCounter)
             return {
                 ...state,
                 counter,
                 exercise,
                 exerciseSet,
                 rest,
+                supersetCounter,
                 supersetComplete
             }
         default:
@@ -87,7 +95,11 @@ const ExercisePage = () => {
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        dispatch({type: 'incrementCounter', listLength: supersetData.exercises.length})
+        dispatch({
+            type: 'incrementCounter',
+            listLength: supersetData.exercises.length,
+            totalSet: parseInt(sessionData.targetSet)
+        })
     }
 
     useEffect(() => {
@@ -96,9 +108,18 @@ const ExercisePage = () => {
         }
     }, [exerciseState.exercise, supersetData.exercises])
 
+    useEffect(() => {
+        console.log(exerciseState.supersetCounter)
+        if (exerciseState.supersetCounter < Object.keys(sessionData.supersets).length) {
+            setSupersetData(Object.values(sessionData.supersets)[exerciseState.supersetCounter])
+        }
+        return () => {
+        }
+    }, [exerciseState.supersetCounter, sessionData.supersets])
+
     const handleNextSuperset = (flag: boolean) => {
+        console.log(`handle next superset`)
         dispatch({type: 'reset'})
-        setSupersetData(Object.values(sessionData.supersets)[exerciseState.exerciseSet])
     }
 
     if (exerciseState.supersetComplete) {
@@ -112,23 +133,24 @@ const ExercisePage = () => {
     if (exerciseState.rest && exerciseState.exerciseSet > 0) {
         return (
             <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-                <RestPage length={supersetData.rest ?? exerciseData.rest ?? 60}
+                <RestPage length={parseInt(supersetData.rest) || 10}
                           toggleRest={(flag: boolean) => dispatch({type: 'updateRest', flag})}/>
             </div>
         )
     }
 
-    // if (superset > (sessionContext.sessionData as any).exerciseCombinations.length - 1) {
-    //     return (
-    //         <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-    //             <FinishPage/>
-    //         </div>
-    //     )
-    // }
+    if (exerciseState.supersetCounter >= Object.keys(sessionData.supersets).length) {
+        return (
+            <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
+                <FinishPage/>
+            </div>
+        )
+    }
+
 
     return (
-        <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-            <div className={`flex flex-col gap-4 shadown-md p-4 border rounded-md`}>
+        <WrapperPage>
+            <div className={`w-full flex flex-col gap-4 shadown-md p-4 border rounded-md`}>
                 <div className={`flex gap-1`}>
                 <span className={`text-xs bg-green-500 hover:bg-green-700 text-white font-bold 
                                 py-2 px-4 rounded-xl`}>
@@ -141,13 +163,10 @@ const ExercisePage = () => {
                 </span>
                 </div>
                 <span className={`text-xl px-2`}>
-                        {/*{supersetData.exercises[exerciseState.exercise].name}*/}
                     {exerciseData.name}
-                    {/*{sessionData.exerciseCombinations[superset][exerciseState.exercise].name}*/}
                 </span>
             </div>
             <form className={`flex flex-col gap-4 p-4`} onSubmit={handleSubmit}>
-
                 <div className={`flex gap-2`}>
                     <Input label={"Target Weight"} readonly
                         // value={targetWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
@@ -176,7 +195,7 @@ const ExercisePage = () => {
                     DONE
                 </button>
             </form>
-        </div>
+        </WrapperPage>
     )
 }
 

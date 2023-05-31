@@ -1,24 +1,17 @@
-import React, {useContext} from "react";
+import React from "react";
 import SessionPage from "./SessionPage";
-import SessionContext from "../context/SessionContext";
 import MainPage from "./MainPage";
+import {Route, Routes} from "react-router-dom";
+import ListingPage from "./ListingPage";
 
 const PageController = () => {
-    const sessionContext = useContext(SessionContext)
-
-    if (sessionContext.isSessionOn) {
-        return (
-            <div className={`grid place-content-center`}>
-                <SessionPage/>
-            </div>
-        )
-    }
-
     return (
-        <div className={`grid place-content-center`}>
-            <MainPage/>
-        </div>
+        <Routes>
+            <Route path={"/training-planner/*"} element={<MainPage/>}/>
+            <Route path={"/training-planner/manage"} element={<ListingPage list={"exercises"}/>}/>
+            <Route path={"/training-planner/train"} element={<SessionPage/>}/>
+        </Routes>
     )
 }
 
-export default PageController;
+export default PageController
