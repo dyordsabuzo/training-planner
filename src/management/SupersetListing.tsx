@@ -1,6 +1,7 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import SupersetForm from "../forms/SupersetForm";
+import {sortData} from "../common/utils";
 
 const SupersetListing = () => {
     const [formData, setFormData] = useState<any>({})
@@ -27,7 +28,7 @@ const SupersetListing = () => {
             </div>
 
             <>
-                {Object.entries(sourceData.supersets ?? {})
+                {Object.entries(sortData(sourceData.supersets ?? {}))
                     .map(([key, value]) => (
                         <div key={key}
                              className={`flex flex-col border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}

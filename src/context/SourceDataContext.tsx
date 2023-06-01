@@ -1,6 +1,13 @@
 import {createContext, ReactNode, useState} from "react";
-// import {ExerciseType} from "../types/ExerciseType";
-// import {DataSourceType} from "../types/DataSourceType";
+import {addDoc, getDocs, updateDoc, deleteDoc} from "firebase/firestore";
+import {getCollection, getDocumentReference} from "../common/firebase";
+
+enum SourceDbReferences {
+    EXERCISES = "exercises",
+    SUPERSETS = "supersets",
+    SESSIONS = "sessions",
+    PLANS = "plans"
+}
 
 const SourceDataContext = createContext({
     sourceData: {},
@@ -8,25 +15,25 @@ const SourceDataContext = createContext({
     },
     addExercise: (exercise: any) => {
     },
-    deleteExercise: (name: string) => {
+    deleteExercise: (data: any) => {
     },
     addSuperset: (superset: any) => {
     },
     editSuperset: (superset: any) => {
     },
-    deleteSuperset: (id: string) => {
+    deleteSuperset: (superset: any) => {
     },
     addSession: (session: any) => {
     },
     editSession: (session: any) => {
     },
-    deleteSession: (name: string) => {
+    deleteSession: (session: any) => {
     },
     addPlan: (plan: any) => {
     },
     editPlan: (plan: any) => {
     },
-    deletePlan: (name: string) => {
+    deletePlan: (plan: any) => {
     },
     updateWeekPlan: (planName: string, weekData: any) => {
     },
@@ -43,215 +50,205 @@ type _Props = {
 export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     const [sourceData, setSourceData] = useState<any>({})
 
-    const sortData = (data: any) => {
-        return Object.keys(data).sort()
-            .reduce((accumulator: any, key: string) => {
-                accumulator[key] = data[key];
-                return accumulator
-            }, {})
-    }
+    const initialise = async () => {
+        // getLocalStorage()
+        const exercises = await getFromDB(SourceDbReferences.EXERCISES)
+        const supersets = await getFromDB(SourceDbReferences.SUPERSETS)
+        const sessions = await getFromDB(SourceDbReferences.SESSIONS)
+        const plans = await getFromDB(SourceDbReferences.PLANS)
 
-    const initialise = () => {
-        getLocalStorage()
+        setSourceData({
+            ...sourceData,
+            exercises,
+            supersets,
+            sessions,
+            plans
+        })
     }
 
     const saveToStorage = (data: any) => {
         // if (process.env.NODE_ENV !== "production") {
-        localStorage.setItem('sourceData', JSON.stringify(data));
+        // localStorage.setItem('sourceData', JSON.stringify(data));
         // }
 
         setSourceData(data)
     }
 
-    const getLocalStorage = () => {
-        // if (process.env.NODE_ENV !== "production") {
-        let data = localStorage.getItem('sourceData')
-        if (data) {
-            setSourceData(JSON.parse(data))
-        } else {
-            setSourceData({
-                exercises: {},
-                supersets: {},
-                sessions: {},
-                plans: {},
+    const deleteFromDB = (sourceDb: SourceDbReferences, data: any) => {
+        deleteDoc(getDocumentReference(sourceDb, data.id))
+            .then(() => {
+                let sourceDataElement = sourceData[sourceDb] ?? {}
+                delete sourceDataElement[data.name]
+                setSourceData({
+                    ...sourceData,
+                    [sourceDb]: sourceDataElement
+                })
             })
+    }
+
+    const saveToDB = async (sourceDb: SourceDbReferences, data: any) => {
+        const collection = getCollection(sourceDb)
+
+        if (!(data.id ?? '')) {
+            await addDoc(collection, data)
+                .then((doc) => {
+                    const sourceDataElement = sourceData[sourceDb] ?? {}
+                    setSourceData({
+                        ...sourceData,
+                        [sourceDb]: {
+                            ...sourceDataElement,
+                            [data.name]: {
+                                ...data,
+                                id: doc.id
+                            }
+                        }
+                    })
+                })
+                .catch((error) => {
+                    console.log(error)
+                })
+        } else {
+            const docRef = getDocumentReference(sourceDb, data.id)
+            const {id, ...plainData} = data
+
+            await updateDoc(docRef, plainData)
+                .then((doc) => {
+                    const sourceDataElement = sourceData[sourceDb] ?? {}
+                    setSourceData({
+                        ...sourceData,
+                        [sourceDb]: {
+                            ...sourceDataElement,
+                            [data.name]: data
+                        }
+                    })
+                })
         }
-        // }
     }
 
-    const linkExerciseWithSupersets = (exercise: any, supersets: any): any => {
-        exercise.supersets.forEach((s: string) => {
-            if (!s) {
-                return {}
-            }
+    const getFromDB = async (sourceDb: SourceDbReferences): Promise<any> => {
+        try {
+            const collection = getCollection(sourceDb)
+            const snapshot = await getDocs(collection)
 
-            let _superset: any = Object.values(supersets).find((sObject: any) => sObject.name === s)
-            let exerciseList: string[] = _superset?.exercises ?? []
-            if (!exerciseList.includes(exercise.name)) {
-                exerciseList.push(exercise.name)
-                _superset = {
-                    ..._superset,
-                    name: s,
-                    exercises: exerciseList
+            let data = {}
+            snapshot.docs.forEach((doc) => {
+                const docData = doc.data()
+                data = {
+                    ...data,
+                    [docData.name]: {...docData, id: doc.id}
                 }
-            }
+            })
 
-            supersets = {
-                ...supersets,
-                [_superset.name]: _superset
-            }
-        })
-        return supersets
+            return data
+        } catch (error) {
+            console.log(error)
+        }
     }
 
-    const editExercise = (exercise: any) => {
-        let exercises = sourceData.exercises
-        let _exercise: any = Object.values(exercises as any).find(obj => (obj as any).name === exercise.name)
+    // const getLocalStorage = () => {
+    //     // if (process.env.NODE_ENV !== "production") {
+    //     let data = localStorage.getItem('sourceData')
+    //     if (data) {
+    //         setSourceData(JSON.parse(data))
+    //     } else {
+    //         setSourceData({
+    //             exercises: {},
+    //             supersets: {},
+    //             sessions: {},
+    //             plans: {},
+    //         })
+    //     }
+    //     // }
+    // }
 
-        exercises = sortData({
-            ...exercises,
-            [exercise.name]: {
-                ..._exercise,
-                ...exercise
-            }
-        })
+    const linkExerciseWithSupersets = (exercise: any) => {
+        exercise.supersets.forEach(async (s: string) => {
+                if (s) {
+                    let superset: any = Object.values(sourceData.supersets ?? {})
+                        .find((sObject: any) => sObject.name === s)
 
-        let supersets = sourceData.supersets ?? {}
-        Object.values(supersets).forEach((s: any) => {
-            const itemIndex = (s.exercises ?? []).indexOf(exercise.name)
-            if (itemIndex >= 0) {
-                if (!exercise.supersets.includes(s.name)) {
-                    s.exercises.splice(itemIndex, 1)
-                    supersets = {
-                        ...supersets,
-                        [s.name]: s
+                    const exerciseList: string[] = superset?.exercises ?? []
+                    if (!exerciseList.includes(exercise.name)) {
+                        exerciseList.push(exercise.name)
                     }
-                }
-            }
-        })
-
-        supersets = linkExerciseWithSupersets(exercise, supersets)
-
-        saveToStorage({
-            ...sourceData,
-            exercises,
-            supersets
-        })
-    }
-
-    const addExercise = (exercise: any) => {
-        let exercises = sourceData.exercises ?? {}
-        exercises = sortData({
-            ...exercises,
-            [exercise.name]: {
-                ...exercise,
-                id: Object.keys(exercises).length + 1
-            }
-        })
-
-        let supersets = sourceData.supersets ?? {}
-        supersets = linkExerciseWithSupersets(exercise, supersets)
-
-        saveToStorage({
-            ...sourceData,
-            exercises,
-            supersets
-        })
-    }
-
-    const deleteExercise = (name: string) => {
-        delete sourceData.exercises[name]
-        saveToStorage(sourceData)
-    }
-
-    const addSuperset = (superset: any) => {
-        let supersets = sourceData.supersets ?? {}
-        supersets = {
-            ...supersets,
-            [superset.name]: {
-                ...superset,
-                id: Object.keys(supersets).length + 1
-            }
-        }
-
-        saveToStorage({
-            ...sourceData,
-            supersets,
-        })
-    }
-
-    const editSuperset = (superset: any) => {
-        let supersets = {
-            ...sourceData.supersets,
-            [superset.name]: superset
-        }
-
-        let sessions = sourceData.sessions
-        if (!superset.sessions) {
-            superset.sessions = superset.session.split(",")
-        }
-
-        superset.sessions.forEach((session: string) => {
-            let supersetList: string[] = sessions[session]?.supersets ?? []
-            if (!supersetList.includes(superset.name)) {
-                supersetList.push(superset.name)
-                sessions = {
-                    ...sessions,
-                    [session]: {
-                        name: session,
-                        supersets: supersetList
+                    superset = {
+                        ...superset,
+                        name: s,
+                        exercises: exerciseList
                     }
+
+                    await saveToDB(SourceDbReferences.SUPERSETS, superset)
                 }
             }
-        })
-
-        saveToStorage({
-            ...sourceData,
-            supersets,
-            sessions
-        })
+        )
     }
 
-    const deleteSuperset = (name: string) => {
-        delete sourceData.supersets[name]
-        saveToStorage(sourceData)
-    }
+    const linkSupersetWithSessions = (superset: any) => {
+        superset.sessions.forEach(async (session: string) => {
+            if (session) {
+                let sessionObject: any = Object.values(sourceData.sessions ?? {})
+                    .find((s: any) => s.name === session)
 
-    const addSession = (session: any) => {
-        let sessions = sourceData.sessions ?? {}
-        sessions = {
-            ...sourceData.sessions,
-            [session.name]: {
-                ...session,
-                id: Object.keys(sessions).length + 1
+                const supersetList: string[] = sessionObject?.supersets ?? []
+                if (!supersetList.includes(superset.name)) {
+                    supersetList.push(superset.name)
+                }
+                sessionObject = {
+                    ...sessionObject,
+                    name: session,
+                    supersets: supersetList
+                }
+                await saveToDB(SourceDbReferences.SESSIONS, sessionObject)
             }
-        }
-
-        saveToStorage({
-            ...sourceData,
-            sessions
-        })
-
-    }
-
-    const editSession = (session: any) => {
-        let sessions = {
-            ...sourceData.sessions,
-            [session.name]: session
-        }
-
-        saveToStorage({
-            ...sourceData,
-            sessions
         })
     }
 
-    const deleteSession = (name: string) => {
-        delete sourceData.sessions[name]
-        saveToStorage(sourceData)
+    const editExercise = async (exercise: any) => {
+        await saveToDB(SourceDbReferences.EXERCISES, exercise)
+        linkExerciseWithSupersets(exercise)
     }
 
-    const addPlan = (plan: any) => {
+    const addExercise = async (exercise: any) => {
+        await saveToDB(SourceDbReferences.EXERCISES, exercise)
+        linkExerciseWithSupersets(exercise)
+    }
+
+    const deleteExercise = (exercise: any) => {
+        deleteFromDB(SourceDbReferences.EXERCISES, exercise)
+    }
+
+    const addSuperset = async (superset: any) => {
+        await saveToDB(SourceDbReferences.SUPERSETS, superset)
+        linkSupersetWithSessions(superset)
+    }
+
+    const editSuperset = async (superset: any) => {
+        const exercises = Object.keys(sourceData.exercises ?? {})
+        superset = {
+            ...superset,
+            exercises: (superset.exercises ?? []).filter((e: string) => exercises.includes(e))
+        }
+        await saveToDB(SourceDbReferences.SUPERSETS, superset)
+        linkSupersetWithSessions(superset)
+    }
+
+    const deleteSuperset = (superset: any) => {
+        deleteFromDB(SourceDbReferences.SUPERSETS, superset)
+    }
+
+    const addSession = async (session: any) => {
+        await saveToDB(SourceDbReferences.SESSIONS, session)
+    }
+
+    const editSession = async (session: any) => {
+        await saveToDB(SourceDbReferences.SESSIONS, session)
+    }
+
+    const deleteSession = (session: any) => {
+        deleteFromDB(SourceDbReferences.SESSIONS, session)
+    }
+
+    const addPlan = async (plan: any) => {
         let weeks = {}
         Array.from(Array(parseInt(plan.numberOfWeeks ?? '0'))
             .keys())
@@ -271,42 +268,32 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             ...plan,
             weeks
         }
-
-        let plans = sourceData.plans ?? {}
-        plans = {
-            ...plans,
-            [plan.name]: {
-                ...plan,
-                id: Object.keys(plans).length + 1
-            }
-        }
-        saveToStorage({
-            ...sourceData,
-            plans
-        })
+        await saveToDB(SourceDbReferences.PLANS, plan)
     }
 
-    const editPlan = (plan: any) => {
-        console.log(plan)
-        let plans = sourceData.plans ?? {}
-        let _plan: any = Object.values(plans as any).find(obj => (obj as any).name === plan.name)
+    const editPlan = async (plan: any) => {
+        let currentWeeks = (sourceData.plan as any).weeks
+        if (parseInt(plan.numberOfWeeks ?? '0') > currentWeeks.length) {
+            Array.from(Array(parseInt(plan.numberOfWeeks) - currentWeeks.length)
+                .keys())
+                .forEach(week => {
+                    currentWeeks = {
+                        ...currentWeeks,
+                        [`Week ${week + 1 + currentWeeks.length}`]: {
+                            weekNumber: week + currentWeeks.length,
+                            targetRep: plan.baselineRep,
+                            targetSet: plan.baselineSet,
+                            annotation: ""
+                        }
+                    }
+                })
 
-        plans = {
-            ...plans,
-            [plan.name]: {
-                ..._plan,
-                ...plan
-            }
         }
-        saveToStorage({
-            ...sourceData,
-            plans
-        })
+        await saveToDB(SourceDbReferences.PLANS, plan)
     }
 
-    const deletePlan = (name: string) => {
-        delete sourceData.plans[name]
-        saveToStorage(sourceData)
+    const deletePlan = (plan: any) => {
+        deleteFromDB(SourceDbReferences.PLANS, plan)
     }
 
     const updateWeekPlan = (planName: string, weekData: any) => {

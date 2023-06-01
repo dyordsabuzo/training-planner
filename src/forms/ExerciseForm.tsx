@@ -87,9 +87,6 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
             <Input label={"Rest in seconds"}
                    value={rest}
                    placeholder={"Rest time in seconds"} changeValue={setRest}/>
-            {/*<Input label={"Supersets"}*/}
-            {/*       value={supersets}*/}
-            {/*       placeholder={"Supersets"} changeValue={setSupersets}/>*/}
             <TagInput label={"Supersets"} list={supersets} options={Object.keys(sourceData.supersets ?? {})}
                       updateList={setSupersets}/>
 
@@ -111,7 +108,7 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
                 <button type={"button"}
                         className={`text-xs bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl`}
                         onClick={() => {
-                            sourceDataContext.deleteExercise(name)
+                            sourceDataContext.deleteExercise(data)
                             closeForm()
                         }}>
                     Delete

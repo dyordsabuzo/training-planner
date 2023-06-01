@@ -95,7 +95,7 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
                 <button type={"button"}
                         className={`text-xs bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl`}
                         onClick={() => {
-                            sourceDataContext.deletePlan(name)
+                            sourceDataContext.deletePlan(data)
                             closeForm()
                         }}>
                     Delete

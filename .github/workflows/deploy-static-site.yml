@@ -32,6 +32,10 @@ jobs:
         env:
           REACT_APP_GOOGLE_API_KEY: ${{secrets.REACT_APP_GOOGLE_API_KEY}}
           REACT_APP_GOOGLE_SHEETS_ID: ${{secrets.REACT_APP_GOOGLE_SHEETS_ID}}
+          REACT_APP_FBASE_APIKEY: ${{secrets.REACT_APP_FBASE_APIKEY}}
+          REACT_APP_FBASE_AUTHDOMAIN: ${{secrets.REACT_APP_FBASE_AUTHDOMAIN}}
+          REACT_APP_FBASE_PROJECTID: ${{secrets.REACT_APP_FBASE_PROJECTID}}
+          REACT_APP_FBASE_APPID: ${{secrets.REACT_APP_FBASE_APPID}}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1

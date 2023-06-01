@@ -48,3 +48,8 @@ To learn React, check out the [React documentation](https://reactjs.org/).
 ## Install tailwindcss
 
 https://tailwindcss.com/docs/guides/create-react-app
+
+
+## Deployed in Github pages
+
+Refer to [deploy-static-site workflow](.github/workflows/deploy-static-site.yml)

@@ -1,6 +1,7 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import ExerciseForm from "../forms/ExerciseForm";
+import {sortData} from "../common/utils";
 // import AlertModal from "../modal/AlertModal";
 
 const ExerciseListing = () => {
@@ -28,7 +29,7 @@ const ExerciseListing = () => {
                 </button>
             </div>
             <>
-                {Object.entries((sourceDataContext.sourceData as any).exercises ?? {})
+                {Object.entries(sortData((sourceDataContext.sourceData as any).exercises ?? {}))
                     .map(([key, value]) => (
                         <div key={key}
                              className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
