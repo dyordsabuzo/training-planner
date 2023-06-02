@@ -155,15 +155,15 @@ const ExercisePage = () => {
     console.log(supersetData)
     return (
         <WrapperPage>
-            <div className={`h-[45vh] w-[24rem]
+            <div className={`h-[55vh] 
                     grid place-content-center
                     gap-4 shadow-md 
-                    border rounded-lg`}>
+                    border rounded-lg mx-4`}>
 
                 <div className={`grid place-content-center pb-6`}>
                     <span className={`grid place-content-center
                         text-xs bg-blue-200 font-bold
-                        p-2 rounded-xl`}>
+                        rounded-xl`}>
                         Exercise Set {exerciseState.exerciseSet + 1}
                     </span>
                     <div className={`leading-none py-6`}>
