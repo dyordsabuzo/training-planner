@@ -1,7 +1,8 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import SupersetForm from "../forms/SupersetForm";
-import {sortData} from "../common/utils";
+import {sortObject} from "../common/utils";
+import BaseListing from "./BaseListing";
 
 const SupersetListing = () => {
     const [formData, setFormData] = useState<any>({})
@@ -16,7 +17,7 @@ const SupersetListing = () => {
     }
 
     return (
-        <div className={`flex flex-col gap-4`}>
+        <BaseListing>
             <div className={`flex place-content-end`}>
                 <button type={"button"}
                         className={`text-sm hover:bg-blue-700 hover:text-white text-blue-700 font-bold py-2 px-4 rounded-md`}
@@ -27,8 +28,8 @@ const SupersetListing = () => {
                 </button>
             </div>
 
-            <>
-                {Object.entries(sortData(sourceData.supersets ?? {}))
+            <div className={`grid grid-cols-2 gap-3`}>
+                {Object.entries(sortObject(sourceData.supersets ?? {}))
                     .map(([key, value]) => (
                         <div key={key}
                              className={`flex flex-col border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
@@ -51,9 +52,8 @@ const SupersetListing = () => {
                             </>
                         </div>
                     ))}
-            </>
-
-        </div>
+            </div>
+        </BaseListing>
     )
 }
 

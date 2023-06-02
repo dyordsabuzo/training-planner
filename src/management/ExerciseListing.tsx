@@ -1,7 +1,8 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import ExerciseForm from "../forms/ExerciseForm";
-import {sortData} from "../common/utils";
+import {sortObject} from "../common/utils";
+import BaseListing from "./BaseListing";
 // import AlertModal from "../modal/AlertModal";
 
 const ExerciseListing = () => {
@@ -17,8 +18,7 @@ const ExerciseListing = () => {
     }
 
     return (
-        <div className={`flex flex-col gap-2`}>
-            {/*<AlertModal/>*/}
+        <BaseListing>
             <div className={`flex place-content-end`}>
                 <button type={"button"}
                         className={`text-sm hover:bg-green-700 hover:text-white text-green-700 font-bold p-2 rounded-md`}
@@ -28,11 +28,11 @@ const ExerciseListing = () => {
                         }}>+ Add Exercise
                 </button>
             </div>
-            <>
-                {Object.entries(sortData((sourceDataContext.sourceData as any).exercises ?? {}))
+            <div className={`grid grid-cols-2 gap-2`}>
+                {Object.entries(sortObject((sourceDataContext.sourceData as any).exercises ?? {}))
                     .map(([key, value]) => (
                         <div key={key}
-                             className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
+                             className={`grow border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
                              onClick={() => {
                                  let _value: any = value
                                  if (typeof _value.supersets === "string") {
@@ -44,9 +44,8 @@ const ExerciseListing = () => {
                             {key}
                         </div>
                     ))}
-            </>
-
-        </div>
+            </div>
+        </BaseListing>
     )
 }
 

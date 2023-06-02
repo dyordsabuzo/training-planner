@@ -66,14 +66,6 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
         })
     }
 
-    const saveToStorage = (data: any) => {
-        // if (process.env.NODE_ENV !== "production") {
-        // localStorage.setItem('sourceData', JSON.stringify(data));
-        // }
-
-        setSourceData(data)
-    }
-
     const deleteFromDB = (sourceDb: SourceDbReferences, data: any) => {
         deleteDoc(getDocumentReference(sourceDb, data.id))
             .then(() => {
@@ -280,29 +272,18 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
         deleteFromDB(SourceDbReferences.PLANS, plan)
     }
 
-    const updateWeekPlan = (planName: string, weekData: any) => {
+    const updateWeekPlan = async (planName: string, weekData: any) => {
         let plans = sourceData.plans ?? {}
-        let _plan: any = Object.values(plans as any).find(obj => (obj as any).name === planName)
+        let plan: any = Object.values(plans as any).find(obj => (obj as any).name === planName)
 
-        _plan = {
-            ..._plan,
+        plan = {
+            ...plan,
             weeks: {
-                ..._plan.weeks,
+                ...plan.weeks,
                 [`Week ${weekData.weekNumber + 1}`]: weekData
             }
         }
-
-        plans = {
-            ...plans,
-            [_plan.name]: _plan
-        }
-
-        saveToStorage({
-            ...sourceData,
-            plans
-        })
-
-
+        await saveToDB(SourceDbReferences.PLANS, plan)
     }
 
     return (

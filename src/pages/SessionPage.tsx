@@ -48,8 +48,8 @@ const SessionPage = () => {
                           valueHandler={(plan) => {
                               let planData: any = Object.values(sourceData.plans)
                                   .find((value: any) => value.name === plan)
-                              setWeekOptions(Object.keys(planData.weeks))
-                              setSessionOptions(planData.sessions)
+                              setWeekOptions(Object.keys(planData.weeks).sort())
+                              setSessionOptions(planData.sessions.sort())
 
                               setSessionData({
                                   ...sessionData,

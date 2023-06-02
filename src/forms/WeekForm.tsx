@@ -1,15 +1,14 @@
 import IncrementDecrement from "../components/IncrementDecrement";
 import React, {useContext, useState} from "react";
 import Input from "../components/Input";
-import Button from "../components/Button";
+// import Button from "../components/Button";
 import SourceDataContext from "../context/SourceDataContext";
 
 type Props = {
-    planName: string
     weekData: any
     clear: () => void
 }
-const WeekForm: React.FC<Props> = ({planName, weekData, clear}) => {
+const WeekForm: React.FC<Props> = ({weekData, clear}) => {
     const sourceDataContext = useContext(SourceDataContext)
 
     const [annotation, setAnnotation] = useState<string>(weekData.annotation ?? "")
@@ -18,8 +17,9 @@ const WeekForm: React.FC<Props> = ({planName, weekData, clear}) => {
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
+        let {weekKey, planName, ...minWeekData} = weekData
         sourceDataContext.updateWeekPlan(planName, {
-            ...weekData,
+            ...minWeekData,
             annotation,
             targetSet,
             targetRep
@@ -41,7 +41,7 @@ const WeekForm: React.FC<Props> = ({planName, weekData, clear}) => {
                             <div className="sm:flex sm:items-start w-full">
                                 <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
                                     <h3 className="text-base font-semibold leading-6 text-gray-900"
-                                        id="modal-title">Week {weekData.weekNumber + 1}</h3>
+                                        id="modal-title">{weekData.planName} - Week {weekData.weekNumber + 1}</h3>
                                     <div className="mt-2 grid grid-cols-2">
                                         <IncrementDecrement value={targetSet} label={"Set"} updateValue={setTargetSet}/>
                                         <IncrementDecrement value={targetRep} label={"Rep"} updateValue={setTargetRep}/>

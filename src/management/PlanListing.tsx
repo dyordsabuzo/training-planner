@@ -1,8 +1,9 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 // import IncrementDecrement from "../components/IncrementDecrement";
-// import WeekForm from "../forms/WeekForm";
+import WeekForm from "../forms/WeekForm";
 import PlanForm from "../forms/PlanForm";
+import {sortObject} from "../common/utils";
 // import AlertModal from "../modal/AlertModal";
 
 const PlanListing = () => {
@@ -12,12 +13,14 @@ const PlanListing = () => {
     const sourceDataContext = useContext(SourceDataContext)
     const sourceData: any = sourceDataContext.sourceData
 
-    // if (selectedWeekData) {
-    //     return (
-    //         <WeekForm planName={selectedPlan} weekData={selectedWeekData as any}
-    //                   clear={() => setSelectedWeekData(null)}/>
-    //     )
-    // }
+    const [selectedWeekData, setSelectedWeekData] = useState<any>({})
+
+    if (Object.keys(selectedWeekData).length) {
+        return (
+            <WeekForm weekData={selectedWeekData}
+                      clear={() => setSelectedWeekData({})}/>
+        )
+    }
 
     if (formType) {
         return (
@@ -40,25 +43,28 @@ const PlanListing = () => {
             </div>
             <>
                 {Object.entries((sourceDataContext.sourceData as any).plans ?? {})
-                    .map(([key, value]) => (
-                        <div key={key}
+                    .map(([planName, value]) => (
+                        <div key={planName}
                              className={`flex flex-col gap-4 border border-1 border-blue-200 p-4 rounded-md text-sm`}>
                             <div className={`cursor-pointer`}
                                  onClick={() => {
                                      setFormData(value as any)
                                      setFormType("edit")
                                  }}>
-                                <span className={`font-bold`}>{key}</span>
+                                <span className={`font-bold`}>{planName}</span>
                             </div>
                             <div className={`flex flex-col gap-2`}>
-                                {Object.entries((value as any).weeks ?? {})
+                                {Object.entries(sortObject((value as any).weeks ?? {}))
                                     .map(([weekKey, weekData]) => (
                                         <div key={weekKey}
                                              className={`border border-1 p-2 rounded-lg`}
-                                            // onClick={(e) => {
-                                            //     setSelectedPlan(key)
-                                            //     setSelectedWeekData(selectedWeekData && weekKey === `Week ${selectedWeekData.weekNumber + 1}` ? null : weekData)
-                                            // }}
+                                             onClick={(e) => {
+                                                 setSelectedWeekData({
+                                                     ...(weekData as any),
+                                                     planName,
+                                                     weekKey
+                                                 })
+                                             }}
                                         >
                                             <div className={`flex gap-4 cursor-pointer`}>
                                                 <span>{weekKey}</span>

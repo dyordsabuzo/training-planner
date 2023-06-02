@@ -39,7 +39,7 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
 
     return (
         <WrapperPage>
-            <div className={`flex flex-col gap-2`}>
+            <div className={`w-full flex flex-col gap-2`}>
                 <div className={'px-2 space-x-2 text-sm flex items-between place-content-between'}>
                     <ul className={`
                     flex flex-nowrap text-sm font-medium text-center text-gray-500 border-b 
@@ -57,7 +57,7 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
                         ))}
                     </ul>
                 </div>
-                <div className={`p-2`}>
+                <div className={`w-full p-2`}>
                     {activeTab === "Exercises" && <ExerciseListing/>}
                     {activeTab === "Supersets" && <SupersetListing/>}
                     {activeTab === "Sessions" && <SessionListing/>}

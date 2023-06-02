@@ -134,7 +134,7 @@ const ExercisePage = () => {
 
     if (exerciseState.supersetRest) {
         return (
-            <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
+            <WrapperPage>
                 <RestPage length={parseInt(supersetData.rest)}
                           toggleRest={(supersetRest: boolean) => {
                               dispatch({
@@ -142,7 +142,7 @@ const ExercisePage = () => {
                                   payload: {supersetRest,}
                               })
                           }}/>
-            </div>
+            </WrapperPage>
         )
     }
 
@@ -152,9 +152,10 @@ const ExercisePage = () => {
         )
     }
 
+    console.log(supersetData)
     return (
         <WrapperPage>
-            <div className={`w-full h-[45vh] 
+            <div className={`h-[45vh] w-[24rem]
                     grid place-content-center
                     gap-4 shadow-md 
                     border rounded-lg`}>
@@ -165,9 +166,14 @@ const ExercisePage = () => {
                         p-2 rounded-xl`}>
                         Exercise Set {exerciseState.exerciseSet + 1}
                     </span>
-                    <span className={`grid place-content-center text-2xl px-2 py-6 break-all`}>
-                        {exerciseData.name}
-                    </span>
+                    <div className={`leading-none py-6`}>
+                        <span className={`grid place-content-center text-3xl`}>
+                            {exerciseData.name}
+                        </span>
+                        <span className={`grid place-content-center text-sm font-extralight`}>
+                            {sessionData.week} - {supersetData.annotation}
+                        </span>
+                    </div>
                     <span className={`grid place-content-center
                         text-xs bg-green-200 font-bold
                         p-2 rounded-xl`}> {supersetData.name} </span>

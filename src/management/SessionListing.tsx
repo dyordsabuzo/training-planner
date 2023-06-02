@@ -1,7 +1,8 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import SessionForm from "../forms/SessionForm";
-import {sortData} from "../common/utils";
+import {sortObject} from "../common/utils";
+import BaseListing from "./BaseListing";
 // import AlertModal from "../modal/AlertModal";
 
 const SessionListing = () => {
@@ -18,7 +19,8 @@ const SessionListing = () => {
     }
 
     return (
-        <div className={`flex flex-col gap-4`}>
+        <BaseListing>
+
             <div className={`flex place-content-end`}>
                 <button type={"button"}
                         className={`text-sm hover:bg-green-700 hover:text-white text-green-700 font-bold p-2 rounded-md`}
@@ -28,8 +30,8 @@ const SessionListing = () => {
                         }}>+ Add Session
                 </button>
             </div>
-            <>
-                {Object.entries(sortData(sourceData.sessions ?? {}))
+            <div className={`grid grid-cols-2 gap-3`}>
+                {Object.entries(sortObject(sourceData.sessions ?? {}))
                     .map(([key, value]) => (
                         <div key={key}
                              className={`border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
@@ -52,9 +54,9 @@ const SessionListing = () => {
                             </>
                         </div>
                     ))}
-            </>
+            </div>
+        </BaseListing>
 
-        </div>
     )
 }
 

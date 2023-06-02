@@ -2,6 +2,7 @@ import Button from "../components/Button";
 // import {ExerciseType} from "../types/ExerciseType";
 import React, {useContext} from "react";
 import SessionContext from "../context/SessionContext";
+import WrapperPage from "./WrapperPage";
 
 const SummaryPage = () => {
     const handleButtonClick = (flag: boolean) => {
@@ -11,7 +12,7 @@ const SummaryPage = () => {
     const sessionContext = useContext(SessionContext)
 
     return (
-        <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
+        <WrapperPage>
             <div className={`flex flex-col gap-4`}>
                 <Button label={"BEGIN"} clickHandler={handleButtonClick}
                         className={`py-4`}/>
@@ -35,7 +36,7 @@ const SummaryPage = () => {
                     </div>
                 ))}
             </div>
-        </div>
+        </WrapperPage>
     )
 }
 
