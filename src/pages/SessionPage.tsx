@@ -76,14 +76,29 @@ const SessionPage = () => {
                               let supersets = {}
                               let sessionSupersets = sourceData.sessions[session].supersets
                               sessionSupersets.forEach((s: string) => {
-                                  let superset = sourceData.supersets[s]
+                                  let {targetRep, targetSet, annotation} = sessionData
+                                  let {sessions, rest, tags, ...superset} = sourceData.supersets[s]
                                   let exercises = superset.exercises.map((e: string) => sourceData.exercises[e])
+
+                                  // override if there is only 1 exercise
+                                  if (exercises.length === 1) {
+                                      const exerciseRep = parseInt(exercises[0].targetRep)
+                                      const exerciseSet = parseInt(exercises[0].targetSet)
+                                      const exerciseRest = parseInt(exercises[0].rest)
+                                      targetRep = exerciseRep || targetRep
+                                      targetSet = exerciseSet || targetSet
+                                      rest = exerciseRest || rest
+                                  }
 
                                   supersets = {
                                       ...supersets,
                                       [superset.name]: {
                                           ...superset,
-                                          exercises
+                                          exercises,
+                                          targetRep,
+                                          targetSet,
+                                          annotation,
+                                          rest
                                       }
                                   }
                               })

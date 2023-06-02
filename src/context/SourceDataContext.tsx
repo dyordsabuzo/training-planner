@@ -145,22 +145,6 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
         }
     }
 
-    // const getLocalStorage = () => {
-    //     // if (process.env.NODE_ENV !== "production") {
-    //     let data = localStorage.getItem('sourceData')
-    //     if (data) {
-    //         setSourceData(JSON.parse(data))
-    //     } else {
-    //         setSourceData({
-    //             exercises: {},
-    //             supersets: {},
-    //             sessions: {},
-    //             plans: {},
-    //         })
-    //     }
-    //     // }
-    // }
-
     const linkExerciseWithSupersets = (exercise: any) => {
         exercise.supersets.forEach(async (s: string) => {
                 if (s) {

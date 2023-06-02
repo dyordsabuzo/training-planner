@@ -1,21 +1,17 @@
 import Button from "../components/Button";
-import React, {useContext} from "react";
-import SessionContext from "../context/SessionContext";
+import React from "react";
+import WrapperPage from "./WrapperPage";
 
-const FinishPage = () => {
-    const handleButtonClick = (flag: boolean) => {
-        sessionContext.setIsRunning(true)
-    }
-
-    const sessionContext = useContext(SessionContext)
-
+type Props = {
+    wrapSession: () => void
+}
+const FinishPage: React.FC<Props> = ({wrapSession}) => {
     return (
-        <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
+        <WrapperPage>
             <div className={`flex flex-col gap-4`}>
-                <Button label={"FINISH"} clickHandler={handleButtonClick}/>
+                <Button className={`py-8`} label={"FINISH"} clickHandler={(flag) => wrapSession()}/>
             </div>
-
-        </div>
+        </WrapperPage>
     )
 }
 

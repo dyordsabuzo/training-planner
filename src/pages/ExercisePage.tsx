@@ -5,28 +5,25 @@ import RestPage from "./RestPage";
 import SupersetCompletePage from "./SupersetCompletePage";
 import FinishPage from "./FinishPage";
 import WrapperPage from "./WrapperPage";
-// import sessionPage from "./SessionPage";
+import Widget from "../components/Widget";
 
 type State = {
-    counter: number
-    exercise: number
+    exerciseCounter: number
     exerciseSet: number
-    rest: boolean
     supersetCounter: number
+    supersetRest: boolean
     supersetComplete: boolean
 }
 
 type Action = { type: 'reset' }
     | { type: 'update', payload: any }
-    | { type: 'updateRest', flag: boolean }
-    | { type: 'incrementCounter', listLength: number, totalSet: number }
+    | { type: 'continue', payload?: any }
 
 const initialState = {
-    counter: 0,
-    exercise: 0,
+    exerciseCounter: 0,
     exerciseSet: 0,
-    rest: false,
     supersetCounter: 0,
+    supersetRest: false,
     supersetComplete: false
 }
 
@@ -35,38 +32,30 @@ const reducer = (state: State, action: Action) => {
         case "reset":
             return {
                 ...initialState,
-                counter: state.counter,
-                supersetCounter: state.supersetCounter
+                supersetCounter: state.supersetCounter + 1
             }
         case 'update':
             return {
                 ...state,
                 ...action.payload
             }
-        case 'updateRest':
-            return {
-                ...state,
-                rest: action.flag
+        case 'continue':
+            const exerciseCounter = state.exerciseCounter + 1
+            let {exerciseSet, supersetRest, supersetComplete} = state
+
+            if (exerciseCounter % action.payload.exerciseLength === 0) {
+                exerciseSet++
+                supersetRest = true
             }
-        case 'incrementCounter':
-            const totalSet = action.totalSet
-            const listLength = action.listLength
-            const counter = state.counter + 1
-            const exercise = counter % listLength
-            const exerciseSet = (exercise === 0) ? state.exerciseSet + 1 : state.exerciseSet
-            const rest = (exercise === 0 && counter > 0 && exerciseSet < totalSet)
 
-            const supersetComplete = (exerciseSet === totalSet)
-            const supersetCounter = supersetComplete ? state.supersetCounter + 1 : state.supersetCounter
+            supersetComplete = (exerciseSet >= action.payload.targetSet)
 
-            console.log(exerciseSet, totalSet, supersetCounter)
             return {
                 ...state,
-                counter,
-                exercise,
+                ...action.payload,
                 exerciseSet,
-                rest,
-                supersetCounter,
+                exerciseCounter,
+                supersetRest,
                 supersetComplete
             }
         default:
@@ -79,116 +68,123 @@ const ExercisePage = () => {
     const sessionData: any = sessionContext.sessionData
 
     const [exerciseState, dispatch] = useReducer(reducer, initialState)
-    const [supersetData, setSupersetData] = useState<any>(
-        Object.values(sessionData.supersets)[0]
-    )
-    const [exerciseData, setExerciseData] = useState<any>(
-        supersetData.exercises[0]
-    )
-    const [targetRep, setTargetRep] = useState(
-        exerciseData.targetRep || sessionData.targetRep
-    )
 
-    const [targetWeight, setTargetWeight] = useState<string>("")
+    const [supersetData, setSupersetData] = useState<any>({})
+    const [exerciseData, setExerciseData] = useState<any>({})
+
     const [actualWeight, setActualWeight] = useState<string>("")
-    const [actualRep, setActualRep] = useState<string>(targetRep)
+    const [actualRep, setActualRep] = useState<string>("")
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
+
+        const targetSet = parseInt(supersetData.targetSet)
+        const exerciseLength = supersetData.exercises.length
+
         dispatch({
-            type: 'incrementCounter',
-            listLength: supersetData.exercises.length,
-            totalSet: parseInt(sessionData.targetSet)
+            type: 'continue',
+            payload: {
+                targetSet,
+                exerciseLength,
+            }
         })
     }
 
     useEffect(() => {
-        setExerciseData(supersetData.exercises[exerciseState.exercise])
+        if (supersetData && Object.keys(supersetData).length) {
+            const exerciseLength = supersetData.exercises.length
+            const exercise = supersetData.exercises[exerciseState.exerciseCounter % exerciseLength]
+            setExerciseData(exercise)
+        }
+
         return () => {
         }
-    }, [exerciseState.exercise, supersetData.exercises])
+    }, [exerciseState.exerciseCounter, supersetData])
 
     useEffect(() => {
-        console.log(exerciseState.supersetCounter)
-        if (exerciseState.supersetCounter < Object.keys(sessionData.supersets).length) {
-            setSupersetData(Object.values(sessionData.supersets)[exerciseState.supersetCounter])
+        const superset: any = Object.values(sessionData.supersets)[exerciseState.supersetCounter]
+        if (superset) {
+            setActualRep(superset.targetRep)
+            setSupersetData(superset)
+
         }
+
         return () => {
         }
-    }, [exerciseState.supersetCounter, sessionData.supersets])
-
-    const handleNextSuperset = (flag: boolean) => {
-        console.log(`handle next superset`)
-        dispatch({type: 'reset'})
-    }
-
-    if (exerciseState.supersetComplete) {
-        return (
-            <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-                <SupersetCompletePage nextPageHandler={handleNextSuperset} superset={supersetData.name}/>
-            </div>
-        )
-    }
-
-    if (exerciseState.rest && exerciseState.exerciseSet > 0) {
-        return (
-            <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-                <RestPage length={parseInt(supersetData.rest) || 10}
-                          toggleRest={(flag: boolean) => dispatch({type: 'updateRest', flag})}/>
-            </div>
-        )
-    }
+    }, [exerciseState.supersetCounter, sessionData])
 
     if (exerciseState.supersetCounter >= Object.keys(sessionData.supersets).length) {
         return (
             <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-                <FinishPage/>
+                <FinishPage wrapSession={() => {
+                    sessionContext.wrapSession()
+                }}/>
             </div>
         )
     }
 
+    if (exerciseState.supersetComplete) {
+        return (
+            <WrapperPage>
+                <SupersetCompletePage superset={supersetData.name}
+                                      nextPageHandler={(flag) => dispatch({type: 'reset'})}/>
+            </WrapperPage>
+        )
+    }
+
+    if (exerciseState.supersetRest) {
+        return (
+            <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
+                <RestPage length={parseInt(supersetData.rest)}
+                          toggleRest={(supersetRest: boolean) => {
+                              dispatch({
+                                  type: 'update',
+                                  payload: {supersetRest,}
+                              })
+                          }}/>
+            </div>
+        )
+    }
+
+    if (Object.keys(supersetData).length === 0) {
+        return (
+            <div>Loading</div>
+        )
+    }
 
     return (
         <WrapperPage>
-            <div className={`w-full flex flex-col gap-4 shadown-md p-4 border rounded-md`}>
-                <div className={`flex gap-1`}>
-                <span className={`text-xs bg-green-500 hover:bg-green-700 text-white font-bold 
-                                py-2 px-4 rounded-xl`}>
-                    {/*Set {exerciseState.exerciseSet + 1}*/}
-                    {supersetData.name}
-                </span>
-                    <span className={`text-xs bg-blue-500 hover:bg-blue-700 text-white font-bold 
-                                py-2 px-4 rounded-xl`}>
-                    Exercise {exerciseState.exercise + 1}
-                </span>
+            <div className={`w-full h-[45vh] 
+                    grid place-content-center
+                    gap-4 shadow-md 
+                    border rounded-lg`}>
+
+                <div className={`grid place-content-center pb-6`}>
+                    <span className={`grid place-content-center
+                        text-xs bg-blue-200 font-bold
+                        p-2 rounded-xl`}>
+                        Exercise Set {exerciseState.exerciseSet + 1}
+                    </span>
+                    <span className={`grid place-content-center text-2xl px-2 py-6 break-all`}>
+                        {exerciseData.name}
+                    </span>
+                    <span className={`grid place-content-center
+                        text-xs bg-green-200 font-bold
+                        p-2 rounded-xl`}> {supersetData.name} </span>
                 </div>
-                <span className={`text-xl px-2`}>
-                    {exerciseData.name}
-                </span>
+                <div className={`grid grid-cols-2 gap-8`}>
+                    <Widget label={"Target Weight"} value={exerciseData.targetWeight} unit={"kg"}/>
+                    <Widget label={"Target Rep"} value={supersetData.targetRep} unit={"reps"}/>
+                </div>
             </div>
-            <form className={`flex flex-col gap-4 p-4`} onSubmit={handleSubmit}>
-                <div className={`flex gap-2`}>
-                    <Input label={"Target Weight"} readonly
-                        // value={targetWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
-                           value={targetWeight || '0'}
-                           placeholder={"Weight in kg"} changeValue={setTargetWeight}/>
+            <form className={`grid grid-cols-2 gap-4 p-4`} onSubmit={handleSubmit}>
+                <Input label={"Actual Weight"} required
+                       value={actualWeight || '0'}
+                       placeholder={"Weight in kg"} changeValue={setActualWeight}/>
 
-                    <Input label={"Target Rep"} readonly
-                           value={targetRep}
-                           placeholder={"Target rep"} changeValue={setTargetRep}/>
-                </div>
-
-                <div className={`flex gap-2`}>
-                    <Input label={"Actual Weight"} required
-                        // value={actualWeight || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetWeight.toString()}
-                           value={actualWeight || '0'}
-                           placeholder={"Weight in kg"} changeValue={setActualWeight}/>
-
-                    <Input label={"Actual Rep"} required
-                        // value={actualRep || (sessionContext.sessionData as any).exerciseCombinations[superset][exerciseState.exercise].targetRep.toString()}
-                           value={actualRep || '0'}
-                           placeholder={"Actual rep"} changeValue={setActualRep}/>
-                </div>
+                <Input label={"Actual Rep"} required
+                       value={actualRep}
+                       placeholder={"Actual rep"} changeValue={setActualRep}/>
 
                 <button type={"submit"}
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
