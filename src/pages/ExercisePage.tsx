@@ -115,34 +115,28 @@ const ExercisePage = () => {
 
     if (exerciseState.supersetCounter >= Object.keys(sessionData.supersets).length) {
         return (
-            <div className={`flex flex-col gap-2 p-8 min-w-[30rem]`}>
-                <FinishPage wrapSession={() => {
-                    sessionContext.wrapSession()
-                }}/>
-            </div>
+            <FinishPage wrapSession={() => {
+                sessionContext.wrapSession()
+            }}/>
         )
     }
 
     if (exerciseState.supersetComplete) {
         return (
-            <WrapperPage>
-                <SupersetCompletePage superset={supersetData.name}
-                                      nextPageHandler={(flag) => dispatch({type: 'reset'})}/>
-            </WrapperPage>
+            <SupersetCompletePage superset={supersetData.name}
+                                  nextPageHandler={(flag) => dispatch({type: 'reset'})}/>
         )
     }
 
     if (exerciseState.supersetRest) {
         return (
-            <WrapperPage>
-                <RestPage length={parseInt(supersetData.rest)}
-                          toggleRest={(supersetRest: boolean) => {
-                              dispatch({
-                                  type: 'update',
-                                  payload: {supersetRest,}
-                              })
-                          }}/>
-            </WrapperPage>
+            <RestPage length={parseInt(supersetData.rest)}
+                      toggleRest={(supersetRest: boolean) => {
+                          dispatch({
+                              type: 'update',
+                              payload: {supersetRest,}
+                          })
+                      }}/>
         )
     }
 
@@ -158,12 +152,11 @@ const ExercisePage = () => {
             <div className={`h-[55vh] 
                     grid place-content-center
                     gap-4 shadow-md 
-                    border rounded-lg mx-4`}>
-
+                    border rounded-lg mx-4 mt-8`}>
                 <div className={`grid place-content-center pb-6`}>
                     <span className={`grid place-content-center
                         text-xs bg-blue-200 font-bold
-                        rounded-xl`}>
+                        rounded-xl p-2`}>
                         Exercise Set {exerciseState.exerciseSet + 1}
                     </span>
                     <div className={`leading-none py-6`}>

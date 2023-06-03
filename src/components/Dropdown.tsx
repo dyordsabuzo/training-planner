@@ -8,7 +8,7 @@ type DropdownProps = {
 const Dropdown: React.FC<DropdownProps> = ({label, options, required, valueHandler}) => {
     return (
         <div className="relative w-full">
-            <label htmlFor={label} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            <label htmlFor={label} className="block mb-2 text-sm font-medium text-gray-900">
                 {label}
             </label>
             <select

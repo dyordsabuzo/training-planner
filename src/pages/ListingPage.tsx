@@ -39,11 +39,11 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
 
     return (
         <WrapperPage>
-            <div className={`w-full flex flex-col gap-2`}>
+            <div className={`w-full flex flex-col gap-2 pt-4`}>
                 <div className={'px-2 space-x-2 text-sm flex items-between place-content-between'}>
                     <ul className={`
-                    flex flex-nowrap text-sm font-medium text-center text-gray-500 border-b 
-                    border-gray-200 dark:border-gray-700 dark:text-gray-400`}>
+                            flex flex-nowrap text-sm font-medium text-center text-gray-500 border-b 
+                            border-gray-200 dark:border-gray-700 dark:text-gray-400`}>
                         {["Exercises", "Supersets", "Sessions", "Plans"].map(category => (
                             <li className="mr-2" key={category}>
                                 <button
@@ -57,7 +57,7 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
                         ))}
                     </ul>
                 </div>
-                <div className={`w-full p-2`}>
+                <div className={`w-full`}>
                     {activeTab === "Exercises" && <ExerciseListing/>}
                     {activeTab === "Supersets" && <SupersetListing/>}
                     {activeTab === "Sessions" && <SessionListing/>}

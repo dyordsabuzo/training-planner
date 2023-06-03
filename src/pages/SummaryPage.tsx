@@ -13,7 +13,7 @@ const SummaryPage = () => {
 
     return (
         <WrapperPage>
-            <div className={`flex flex-col gap-4`}>
+            <div className={`grid place-content-center gap-2 pt-12`}>
                 <Button label={"BEGIN"} clickHandler={handleButtonClick}
                         className={`py-4`}/>
                 {/*{(sessionContext.sessionData as any).exerciseCombinations.map((pair: ExerciseType[], index: number) => (*/}

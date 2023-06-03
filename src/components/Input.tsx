@@ -22,7 +22,7 @@ const Input: React.FC<InputProps> = ({label, value, required, readonly, placehol
     return (
         <div className={`w-full ${className}`}>
             <label htmlFor={label} className={`block mb-1 text-sm font-medium 
-                    text-gray-900 dark:text-gray-900`}>
+                    text-gray-900 text-gray-900`}>
                 {label}
             </label>
             <input type="text" id={label}

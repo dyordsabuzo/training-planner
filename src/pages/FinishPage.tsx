@@ -8,7 +8,7 @@ type Props = {
 const FinishPage: React.FC<Props> = ({wrapSession}) => {
     return (
         <WrapperPage>
-            <div className={`flex flex-col gap-4`}>
+            <div className={`flex flex-col gap-4 pt-8`}>
                 <Button className={`py-8`} label={"FINISH"} clickHandler={(flag) => wrapSession()}/>
             </div>
         </WrapperPage>
