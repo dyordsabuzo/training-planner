@@ -248,7 +248,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     }
 
     const editPlan = async (plan: any) => {
-        let currentWeeks = (sourceData.plan as any).weeks
+        let currentWeeks = sourceData.plans[plan.name].weeks
         if (parseInt(plan.numberOfWeeks ?? '0') > currentWeeks.length) {
             Array.from(Array(parseInt(plan.numberOfWeeks) - currentWeeks.length)
                 .keys())
@@ -264,6 +264,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
                     }
                 })
 
+        }
+        plan = {
+            ...plan,
+            weeks: currentWeeks
         }
         await saveToDB(SourceDbReferences.PLANS, plan)
     }

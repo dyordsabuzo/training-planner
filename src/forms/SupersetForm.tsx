@@ -34,7 +34,6 @@ const SupersetForm: React.FC<Props> = ({data, type, closeForm}) => {
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        console.log('Form submitted')
 
         if (type === "add") {
             sourceDataContext.addSuperset({
@@ -75,10 +74,6 @@ const SupersetForm: React.FC<Props> = ({data, type, closeForm}) => {
                    placeholder={"Rest time in seconds"} changeValue={setRest}/>
             <TagInput key={"exercises"} label={"Exercises"} list={exercises} options={exerciseOptions}
                       updateList={setExercises}/>
-
-            {/*<Input label={"Exercises"}*/}
-            {/*       value={exercises.join(",")}*/}
-            {/*       placeholder={"Exercises"} changeValue={(value) => setExercises(value.split(","))}/>*/}
 
             <div className={`flex justify-between gap-2 py-4`}>
                 <div className={`flex gap-2`}>
