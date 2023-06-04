@@ -53,7 +53,7 @@ const Navigation = () => {
                                                  };
                                              }}
                                     >
-                                        <div className={`row d-flex flex-column justify-content-center 
+                                        <div className={`d-flex flex-column justify-content-center 
                                                 align-items-center`}>
                                             <FontAwesomeIcon size="lg" icon={tab.icon}/>
                                             <div className={`text-xs`}>{tab.label}</div>
