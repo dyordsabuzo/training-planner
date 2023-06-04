@@ -24,7 +24,7 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     `;
 
     const standardCssTab = `
-        inline-block p-4 rounded-t-lg hover:text-gray-600 hover:bg-gray-200 
+        inline-block p-3 rounded-t-lg hover:text-gray-600 hover:bg-gray-200 
         dark:hover:bg-gray-800 dark:hover:text-gray-300
     `;
 
@@ -40,12 +40,13 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     return (
         <WrapperPage>
             <div className={`w-full flex flex-col gap-2 pt-4`}>
-                <div className={'px-2 space-x-2 text-sm flex items-between place-content-between'}>
+                <div className={'w-full px-2 space-x-2 text-sm flex items-between place-content-between'}>
                     <ul className={`
+                            w-full
                             flex flex-nowrap text-sm font-medium text-center text-gray-500 border-b 
                             border-gray-200 dark:border-gray-700 dark:text-gray-400`}>
                         {["Exercises", "Supersets", "Sessions", "Plans"].map(category => (
-                            <li className="mr-2" key={category}>
+                            <li className="mr-1" key={category}>
                                 <button
                                     className={`
                                     ${standardCssTab}

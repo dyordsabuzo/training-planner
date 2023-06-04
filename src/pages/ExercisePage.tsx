@@ -146,7 +146,6 @@ const ExercisePage = () => {
         )
     }
 
-    console.log(supersetData)
     return (
         <WrapperPage>
             <div className={`h-[55vh] 
@@ -163,7 +162,7 @@ const ExercisePage = () => {
                         <span className={`grid place-content-center text-3xl`}>
                             {exerciseData.name}
                         </span>
-                        <span className={`grid place-content-center text-sm font-extralight`}>
+                        <span className={`grid place-content-center text-sm font-light`}>
                             {sessionData.week} - {supersetData.annotation}
                         </span>
                     </div>
@@ -173,7 +172,7 @@ const ExercisePage = () => {
                 </div>
                 <div className={`grid grid-cols-2 gap-8`}>
                     <Widget label={"Target Weight"} value={exerciseData.targetWeight} unit={"kg"}/>
-                    <Widget label={"Target Rep"} value={supersetData.targetRep} unit={"reps"}/>
+                    <Widget label={"Target Rep"} value={parseInt(exerciseData.targetRep) || supersetData.targetRep} unit={"reps"}/>
                 </div>
             </div>
             <form className={`grid grid-cols-2 gap-4 p-4`} onSubmit={handleSubmit}>

@@ -80,7 +80,7 @@ const SessionPage = () => {
                                   let {sessions, rest, tags, ...superset} = sourceData.supersets[s]
                                   let exercises = superset.exercises.map((e: string) => sourceData.exercises[e])
 
-                                  // override if there is only 1 exercise
+                                  // // override if there is only 1 exercise
                                   if (exercises.length === 1) {
                                       const exerciseRep = parseInt(exercises[0].targetRep)
                                       const exerciseSet = parseInt(exercises[0].targetSet)

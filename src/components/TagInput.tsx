@@ -5,9 +5,10 @@ type Props = {
     list: string[]
     options: string[]
     updateList: (value: string[]) => void
+    className?: string
 }
 
-const TagInput: React.FC<Props> = ({label, list, options, updateList}) => {
+const TagInput: React.FC<Props> = ({label, list, options, updateList, className}) => {
     const [inputValue, setInputValue] = useState("")
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +37,7 @@ const TagInput: React.FC<Props> = ({label, list, options, updateList}) => {
     }
 
     return (
-        <div className={`flex flex-col gap-1`}>
+        <div className={`flex flex-col gap-1 ${className}`}>
             <label htmlFor={label} className={`block mb-1 text-sm font-medium 
                     text-gray-900 dark:text-gray-900`}>
                 {label}

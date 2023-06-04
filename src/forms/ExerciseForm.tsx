@@ -12,6 +12,7 @@ type FormData = {
     targetSet?: string
     rest?: string
     supersets?: string[]
+    alternatives: string[]
 }
 
 type Props = {
@@ -30,6 +31,7 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
     const [targetSet, setTargetSet] = useState<string>(data.targetSet ?? "")
     const [rest, setRest] = useState<string>(data.rest ?? "")
     const [supersets, setSupersets] = useState<string[]>(data.supersets ?? [])
+    const [alternatives, setAlternatives] = useState<string[]>(data.alternatives ?? [])
 
     const sourceDataContext = useContext(SourceDataContext)
     const sourceData: any = sourceDataContext.sourceData
@@ -46,6 +48,7 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
                 targetSet,
                 rest,
                 supersets,
+                alternatives,
                 targetWeight: 0,
             })
             closeForm()
@@ -61,6 +64,7 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
                 targetSet,
                 rest,
                 supersets,
+                alternatives,
                 targetWeight: 0,
             })
             closeForm()
@@ -68,27 +72,39 @@ const ExerciseForm: React.FC<Props> = ({data, type, closeForm}) => {
     }
 
     return (
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
+        <form onSubmit={handleSubmit} className={`flex flex-col gap-4 px-2`}>
             <Input label={"Exercise Name"} required
                    value={name}
                    placeholder={"Exercise name"} changeValue={setName}/>
             <Input label={"Video link"}
                    value={videoLink}
                    placeholder={"Video link"} changeValue={setVideoLink}/>
+            <TagInput label={"Supersets"} list={supersets}
+                      options={Object.keys(sourceData.supersets ?? {})}
+                      updateList={setSupersets}/>
             <Input label={"Tags"}
                    value={tags}
                    placeholder={"Tags"} changeValue={setTags}/>
-            <Input label={"Target Rep"}
-                   value={targetRep}
-                   placeholder={"Target Rep"} changeValue={setTargetRep}/>
-            <Input label={"Target Set"}
-                   value={targetSet}
-                   placeholder={"Target Set"} changeValue={setTargetSet}/>
-            <Input label={"Rest in seconds"}
-                   value={rest}
-                   placeholder={"Rest time in seconds"} changeValue={setRest}/>
-            <TagInput label={"Supersets"} list={supersets} options={Object.keys(sourceData.supersets ?? {})}
-                      updateList={setSupersets}/>
+
+            <details className={`duration-300`}>
+                <summary className={`text-sm font-light`}>Advanced settings</summary>
+                <div className={`grid grid-cols-2 gap-3 pt-2`}>
+                    <TagInput label={"Alternatives"} list={alternatives}
+                              options={Object.keys(sourceData.exercises ?? {})}
+                              updateList={setAlternatives}
+                              className={`col-span-2 pt-2`}
+                    />
+                    <Input label={"Target Rep"}
+                           value={targetRep}
+                           placeholder={"Target Rep"} changeValue={setTargetRep}/>
+                    <Input label={"Target Set"}
+                           value={targetSet}
+                           placeholder={"Target Set"} changeValue={setTargetSet}/>
+                    <Input label={"Rest in seconds"}
+                           value={rest}
+                           placeholder={"Rest time in seconds"} changeValue={setRest}/>
+                </div>
+            </details>
 
 
             <div className={`flex justify-between gap-2 py-4`}>
