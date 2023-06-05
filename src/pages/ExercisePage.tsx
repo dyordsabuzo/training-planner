@@ -148,7 +148,7 @@ const ExercisePage = () => {
 
     return (
         <WrapperPage>
-            <div className={`h-[55vh] 
+            <div className={`h-[45vh] 
                     grid place-content-center
                     gap-4 shadow-md 
                     border rounded-lg mx-4 mt-8`}>
@@ -172,7 +172,8 @@ const ExercisePage = () => {
                 </div>
                 <div className={`grid grid-cols-2 gap-8`}>
                     <Widget label={"Target Weight"} value={exerciseData.targetWeight} unit={"kg"}/>
-                    <Widget label={"Target Rep"} value={parseInt(exerciseData.targetRep) || supersetData.targetRep} unit={"reps"}/>
+                    <Widget label={"Target Rep"} value={parseInt(exerciseData.targetRep) || supersetData.targetRep}
+                            unit={"reps"}/>
                 </div>
             </div>
             <form className={`grid grid-cols-2 gap-4 p-4`} onSubmit={handleSubmit}>
@@ -185,8 +186,14 @@ const ExercisePage = () => {
                        placeholder={"Actual rep"} changeValue={setActualRep}/>
 
                 <button type={"submit"}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        className="col-span-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded">
                     DONE
+                </button>
+
+                <button type={"button"}
+                        className="col-span-2 bg-gray-500 hover:bg-gray-700 text-white font-bold py-4 px-4 rounded"
+                        onClick={() => sessionContext.wrapSession()}>
+                    CANCEL SESSION
                 </button>
             </form>
         </WrapperPage>
