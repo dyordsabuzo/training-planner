@@ -18,16 +18,16 @@ const Navigation = () => {
                             border border-bottom-1 d-none d-lg-block`}
                  role="navigation">
                 <div className="container-fluid">
-                    <a className="navbar-brand" href="/home">Brand</a>
+                    <a className="navbar-brand" href="/home">Training Planner</a>
                     <Nav className="ml-auto">
                         <NavItem>
-                            <NavLink to="/search" className="nav-link">
-                                Search
+                            <NavLink to="/training-planner/manage" className="nav-link">
+                                Manage
                             </NavLink>
                         </NavItem>
                         <NavItem>
-                            <NavLink to="/login" className="nav-link">
-                                Login
+                            <NavLink to="/training-planner/train" className="nav-link">
+                                Train
                             </NavLink>
                         </NavItem>
                     </Nav>

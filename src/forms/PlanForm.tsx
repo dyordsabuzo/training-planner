@@ -3,6 +3,9 @@ import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import TagInput from "../components/TagInput";
 
+import "react-datepicker/dist/react-datepicker.css";
+import DateInput from "../components/DateInput";
+
 type FormData = {
     id?: string
     name?: string
@@ -10,6 +13,7 @@ type FormData = {
     baselineRep?: string
     baselineSet?: string
     sessions?: string[]
+    startDate: Date
 }
 
 type Props = {
@@ -26,6 +30,7 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
     const [baselineSet, setBaselineSet] = useState(data.baselineSet ?? "")
     const [baselineRep, setBaselineRep] = useState(data.baselineRep ?? "")
     const [sessions, setSessions] = useState<string[]>(data.sessions ?? [])
+    const [startDate, setStartDate] = useState<Date>(data.startDate ?? new Date())
 
     const sourceDataContext = useContext(SourceDataContext)
     const sourceData: any = sourceDataContext.sourceData
@@ -37,6 +42,7 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
             sourceDataContext.addPlan({
                 name,
                 numberOfWeeks,
+                startDate,
                 baselineSet,
                 baselineRep,
                 sessions,
@@ -49,6 +55,7 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
                 id,
                 name,
                 numberOfWeeks,
+                startDate,
                 baselineSet,
                 baselineRep,
                 sessions,
@@ -58,14 +65,18 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
     }
 
     return (
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
+        <form onSubmit={handleSubmit} className={`grid place-content-center grid-cols-2 gap-4 sm:gap-2`}>
             <Input label={"Plan name"} required
                    value={name}
-                   placeholder={"Plan name"} changeValue={setName}/>
+                   placeholder={"Plan name"} changeValue={setName}
+                   className={`col-span-2`}
+            />
 
             <Input label={"Number of weeks"} required
                    value={numberOfWeeks}
                    placeholder={"Number of weeks"} changeValue={setNumberOfWeeks}/>
+
+            <DateInput label={"Start date"} value={startDate} placeholder={"Start date"} changeValue={setStartDate}/>
 
             <Input label={"Baseline set"}
                    value={baselineSet}
@@ -78,7 +89,7 @@ const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
             <TagInput label={"Selected sessions"} list={sessions} options={Object.keys(sourceData.sessions ?? {})}
                       updateList={setSessions}/>
 
-            <div className={`flex justify-between gap-2 py-4`}>
+            <div className={`col-span-2 flex justify-between gap-2 py-4`}>
                 <div className={`flex gap-2`}>
                     <button type={"submit"}
                             className={`text-xs bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl`}>
