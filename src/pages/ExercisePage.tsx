@@ -124,6 +124,7 @@ const ExercisePage = () => {
     if (exerciseState.supersetComplete) {
         return (
             <SupersetCompletePage superset={supersetData.name}
+                                  nextSuperset={Object.values(sessionData.supersets)[exerciseState.supersetCounter+1] || null}
                                   nextPageHandler={(flag) => dispatch({type: 'reset'})}/>
         )
     }
