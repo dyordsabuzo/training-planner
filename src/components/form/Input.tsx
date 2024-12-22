@@ -10,7 +10,7 @@ type InputProps = {
     className?: string
 }
 
-const Input: React.FC<InputProps> = ({label, value, required, readonly, placeholder, changeValue, className}) => {
+export const Input = ({label, value, required, readonly, placeholder, changeValue, className}:InputProps) => {
     const [fieldValue, setFieldValue] = useState(value)
 
     const changeValueHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,5 +42,3 @@ const Input: React.FC<InputProps> = ({label, value, required, readonly, placehol
         </div>
     )
 }
-
-export default Input;

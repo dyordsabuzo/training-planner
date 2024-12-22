@@ -1,8 +1,8 @@
-import Dropdown from "../components/Dropdown";
+import {Dropdown} from "../components/form/Dropdown";
 import React, {useContext, useEffect, useState} from "react";
 import SessionContext from "../context/SessionContext";
 import SummaryPage from "./SummaryPage";
-import ExercisePage from "./ExercisePage";
+import {ExercisePage} from "./ExercisePage";
 import SourceDataContext from "../context/SourceDataContext";
 import WrapperPage from "./WrapperPage";
 

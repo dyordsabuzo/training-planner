@@ -1,9 +1,14 @@
+import { useState } from "react"
+
 type Props = {
     value: string
     label: string
+    nonZero?: boolean
     updateValue: (value: string) => void
 }
-const IncrementDecrement: React.FC<Props> = ({label, value, updateValue}) => {
+
+export const IncrementDecrement = ({label, value, nonZero = false, updateValue}:Props) => {
+    const [v, setV] = useState(value);
 
     return (
         <div className="flex flex-row rounded-lg bg-transparent py-2">
@@ -19,7 +24,13 @@ const IncrementDecrement: React.FC<Props> = ({label, value, updateValue}) => {
                             hover:bg-gray-400 rounded 
                             cursor-pointer outline-none`}
                         onClick={() => {
-                            updateValue((parseInt(value) - 1).toString())
+                            const newV = parseInt(v) - 1;
+                            if (nonZero && newV < 0) {
+                                return;
+                            }
+
+                            setV(newV.toString());
+                            updateValue(newV.toString())
                         }}>
                     <span className="m-auto text-white font-bold">−</span>
                 </button>
@@ -27,14 +38,15 @@ const IncrementDecrement: React.FC<Props> = ({label, value, updateValue}) => {
                     className={`px-3 outline-none focus:outline-none text-center
                             hover:text-black focus:text-black  md:text-basecursor-default flex items-center 
                             text-gray-700 w-fit`}>
-                {value}
+                {v}
                    </span>
                 <button type={"button"}
                         className={`px-2 bg-blue-300 text-blue-600 hover:text-blue-700 
                             hover:bg-blue-400 rounded cursor-pointer`}
                         onClick={() => {
-                            let _v = parseInt(value) + 1
-                            updateValue(_v.toString())
+                            const newV = parseInt(v) + 1;
+                            setV(newV.toString());
+                            updateValue(newV.toString())
                         }}>
                     <span className="m-auto text-white font-bold">+</span>
                 </button>
@@ -42,5 +54,3 @@ const IncrementDecrement: React.FC<Props> = ({label, value, updateValue}) => {
         </div>
     )
 }
-
-export default IncrementDecrement

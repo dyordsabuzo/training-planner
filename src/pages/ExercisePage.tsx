@@ -1,11 +1,11 @@
-import Input from "../components/Input";
+import { Input } from "../components/form/Input";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import SessionContext from "../context/SessionContext";
 import RestPage from "./RestPage";
 import SupersetCompletePage from "./SupersetCompletePage";
 import FinishPage from "./FinishPage";
 import WrapperPage from "./WrapperPage";
-import Widget from "../components/Widget";
+import { Widget } from "../components/others/Widget";
 
 type State = {
   exerciseCounter: number;
@@ -64,7 +64,7 @@ const reducer = (state: State, action: Action) => {
   }
 };
 
-const ExercisePage = () => {
+export const ExercisePage = () => {
   const sessionContext = useContext(SessionContext);
   const sessionData: any = sessionContext.sessionData;
 
@@ -96,7 +96,6 @@ const ExercisePage = () => {
       const exerciseLength = supersetData.exercises.length;
       const exercise =
         supersetData.exercises[exerciseState.exerciseCounter % exerciseLength];
-      console.log(exercise);
       setExerciseData(exercise);
     }
 
@@ -115,9 +114,8 @@ const ExercisePage = () => {
     return () => {};
   }, [exerciseState.supersetCounter, sessionData]);
 
-  if (
-    exerciseState.supersetCounter >= Object.keys(sessionData.supersets).length
-  ) {
+  const supersetLength = Object.keys(sessionData.supersets).length;
+  if (supersetLength > 0 && exerciseState.supersetCounter >= supersetLength) {
     return (
       <FinishPage
         wrapSession={() => {
@@ -136,7 +134,7 @@ const ExercisePage = () => {
             exerciseState.supersetCounter + 1
           ] || null
         }
-        nextPageHandler={(flag) => dispatch({ type: "reset" })}
+        nextPageHandler={() => dispatch({ type: "reset" })}
       />
     );
   }
@@ -252,5 +250,3 @@ const ExercisePage = () => {
     </WrapperPage>
   );
 };
-
-export default ExercisePage;

@@ -9,9 +9,27 @@ enum SourceDbReferences {
     PLANS = "plans"
 }
 
+type ContextData = {
+    sourceData?: any,
+    updateExercise?: (exercise: any) => void;
+    addExercise?: (exercise: any) => void,
+    deleteExercise?: (data: any) => void,
+    addSuperset?: (superset: any) => void;
+    editSuperset?: (superset: any) => void;
+    deleteSuperset?: (superset: any) => void;
+    addSession?: (session: any) => void;
+    editSession?: (session: any) => void;
+    deleteSession?: (session: any) => void;
+    addPlan?: (plan: any) => void;
+    editPlan?: (plan: any) => void;
+    deletePlan?: (plan: any) => void;
+    updateWeekPlan?: (planName: string, weekData: any) => void;
+    initialise?: () => void;
+}
+
 const SourceDataContext = createContext({
     sourceData: {},
-    editExercise: (exercise: any) => {
+    updateExercise: (exercise: any) => {
     },
     addExercise: (exercise: any) => {
     },
@@ -51,19 +69,24 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
     const [sourceData, setSourceData] = useState<any>({})
 
     const initialise = async () => {
-        // getLocalStorage()
-        const exercises = await getFromDB(SourceDbReferences.EXERCISES)
-        const supersets = await getFromDB(SourceDbReferences.SUPERSETS)
-        const sessions = await getFromDB(SourceDbReferences.SESSIONS)
-        const plans = await getFromDB(SourceDbReferences.PLANS)
-
-        setSourceData({
-            ...sourceData,
-            exercises,
-            supersets,
-            sessions,
-            plans
-        })
+        try {   
+            // getLocalStorage()
+            const exercises = await getFromDB(SourceDbReferences.EXERCISES)
+            const supersets = await getFromDB(SourceDbReferences.SUPERSETS)
+            const sessions = await getFromDB(SourceDbReferences.SESSIONS)
+            const plans = await getFromDB(SourceDbReferences.PLANS)
+            
+            setSourceData({
+                ...sourceData,
+                exercises,
+                supersets,
+                sessions,
+                plans
+            })
+        } catch(error) {
+            console.log(error);
+            throw error;
+        }
     }
 
     const deleteFromDB = (sourceDb: SourceDbReferences, data: any) => {
@@ -179,7 +202,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
         })
     }
 
-    const editExercise = async (exercise: any) => {
+    const updateExercise = async (exercise: any) => {
         await saveToDB(SourceDbReferences.EXERCISES, exercise)
         linkExerciseWithSupersets(exercise)
     }
@@ -295,7 +318,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({children}) => {
             value={{
                 sourceData,
                 addExercise,
-                editExercise,
+                updateExercise,
                 deleteExercise,
                 addSuperset,
                 editSuperset,

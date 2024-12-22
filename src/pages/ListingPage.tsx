@@ -1,8 +1,8 @@
-import ExerciseListing from "../management/ExerciseListing";
+import {ExerciseListing} from "../management/ExerciseListing";
 import React, {useContext, useEffect, useState} from "react";
-import SupersetListing from "../management/SupersetListing";
-import SessionListing from "../management/SessionListing";
-import PlanListing from "../management/PlanListing";
+import {SupersetListing} from "../management/SupersetListing";
+import {SessionListing} from "../management/SessionListing";
+import {PlanListing} from "../management/PlanListing";
 import WrapperPage from "./WrapperPage";
 import SourceDataContext from "../context/SourceDataContext";
 

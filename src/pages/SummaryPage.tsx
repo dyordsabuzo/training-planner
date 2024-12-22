@@ -1,4 +1,4 @@
-import Button from "../components/Button";
+import {Button} from "../components/form/Button";
 // import {ExerciseType} from "../types/ExerciseType";
 import React, {useContext} from "react";
 import SessionContext from "../context/SessionContext";
@@ -14,7 +14,8 @@ const SummaryPage = () => {
     return (
         <WrapperPage>
             <div className={`grid place-content-center gap-2 pt-12`}>
-                <Button label={"BEGIN"} clickHandler={handleButtonClick}
+                <Button label={"BEGIN"} 
+                // clickHandler={handleButtonClick}
                         className={`py-4`}/>
 
                 <div className={`w-full grid grid-cols-2 gap-2`}>

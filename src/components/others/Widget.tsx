@@ -4,7 +4,7 @@ type Props = {
     unit: string
 }
 
-const Widget: React.FC<Props> = ({label, value, unit}) => {
+export const Widget = ({label, value, unit}:Props) => {
     return (
         <div className={`grid place-content-center`}>
             <div className={`text-xs uppercase font-extralight`}>
@@ -17,5 +17,3 @@ const Widget: React.FC<Props> = ({label, value, unit}) => {
         </div>
     )
 }
-
-export default Widget
