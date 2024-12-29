@@ -1,5 +1,3 @@
-import WrapperPage from "../pages/WrapperPage";
-
 type Props = {
   children?: React.ReactNode;
 };

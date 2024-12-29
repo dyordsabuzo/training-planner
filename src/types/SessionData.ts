@@ -1,8 +1,10 @@
-type Exercise = {
-  name: string;
-  targetWeight?: number;
-  videoLink?: string;
-};
+import { Exercise } from "./Exercise";
+
+// type Exercise = {
+//   name: string;
+//   targetWeight?: number;
+//   videoLink?: string;
+// };
 
 type Superset = {
   name: string;

@@ -2,7 +2,6 @@ import React, { useContext, useState } from "react";
 import { Input } from "../components/form/Input";
 import SourceDataContext from "../context/SourceDataContext";
 import { TagInput } from "../components/others/TagInput";
-import { Button } from "../components/form/Button";
 import { FormButtons } from "./FormButtons";
 
 type ExerciseData = {
@@ -15,6 +14,7 @@ type ExerciseData = {
   rest?: string;
   supersets?: string[];
   alternatives: string[];
+  isTimeBased: boolean;
 };
 
 type Props = {
@@ -34,6 +34,9 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
   const [targetSet, setTargetSet] = useState<string>(
     exerciseData?.targetSet ?? ""
   );
+  // const [isTimeBased, setIsTimeBased] = useState<boolean>(
+  //   exerciseData?.isTimeBased ?? false
+  // );
   const [rest, setRest] = useState<string>(exerciseData?.rest ?? "");
   const [supersets, setSupersets] = useState<string[]>(
     exerciseData?.supersets ?? []
@@ -59,6 +62,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         supersets,
         alternatives,
         targetWeight: 0,
+        // isTimeBased,
       });
       closeForm();
     }
@@ -75,6 +79,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         supersets,
         alternatives,
         targetWeight: 0,
+        // isTimeBased,
       });
       closeForm();
     }
@@ -95,6 +100,11 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         placeholder={"Video link"}
         changeValue={setVideoLink}
       />
+      {/* <Toggle
+        label="Is this exercise time based?"
+        value={isTimeBased}
+        toggle={setIsTimeBased}
+      /> */}
       <TagInput
         label={"Supersets"}
         list={supersets}

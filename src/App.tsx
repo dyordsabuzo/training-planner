@@ -17,13 +17,11 @@ function App() {
           <BrowserRouter>
             <Navigation />
             <Routes>
-              <Route path={"/training-planner"}>
-                <Route
-                  path="*"
-                  element={<MainPage />}
-                  errorElement={<ErrorPage />}
-                />
-              </Route>
+              <Route
+                path={"/training-planner"}
+                element={<MainPage />}
+                errorElement={<ErrorPage />}
+              />
               <Route
                 path={"/training-planner/manage"}
                 element={<ListingPage list={"exercises"} />}

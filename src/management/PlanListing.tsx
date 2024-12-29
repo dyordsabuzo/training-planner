@@ -4,6 +4,17 @@ import { WeekForm } from "../forms/WeekForm";
 import { PlanForm } from "../forms/PlanForm";
 import { sortObject } from "../common/utils";
 import { Button } from "../components/form/Button";
+import { WeekListing } from "./WeekListing";
+
+type SelectedWeekData = {
+  weekKey: string;
+  weekNumber: number;
+  planName: string;
+  targetRep: number;
+  targetSet: number;
+  targetTime: number;
+  annotation: string;
+};
 
 export const PlanListing = () => {
   const [formData, setFormData] = useState<any>({});
@@ -12,13 +23,15 @@ export const PlanListing = () => {
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
 
-  const [selectedWeekData, setSelectedWeekData] = useState<any>({});
+  const [selectedWeekData, setSelectedWeekData] =
+    useState<SelectedWeekData | null>(null);
 
-  if (Object.keys(selectedWeekData).length) {
+  if (selectedWeekData) {
+    console.log(selectedWeekData);
     return (
       <WeekForm
         weekData={selectedWeekData}
-        clear={() => setSelectedWeekData({})}
+        clear={() => setSelectedWeekData(null)}
       />
     );
   }
@@ -73,24 +86,19 @@ export const PlanListing = () => {
                     <div
                       key={weekKey}
                       className={`border border-1 p-2 rounded-lg`}
-                      onClick={(e) => {
-                        setSelectedWeekData({
-                          ...(weekData as any),
-                          planName,
-                          weekKey,
-                        });
-                      }}
+                      // onClick={(e) => {
+                      //   setSelectedWeekData({
+                      //     ...(weekData as any),
+                      //     planName,
+                      //     weekKey,
+                      //   });
+                      // }}
                     >
-                      <div className={`flex gap-4 cursor-pointer`}>
-                        <span>{weekKey}</span>
-                        <span>
-                          Set: {(weekData as any).targetSet} / Rep:{" "}
-                          {(weekData as any).targetRep}
-                        </span>
-                        <span className={`truncate`}>
-                          {(weekData as any).annotation}
-                        </span>
-                      </div>
+                      <WeekListing
+                        weekLabel={weekKey}
+                        data={weekData}
+                        plan={value}
+                      />
                     </div>
                   )
                 )}

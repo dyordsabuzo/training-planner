@@ -16,8 +16,8 @@ let sessionData: SessionData | null = {
       name: "Back and chest",
       exercises: [
         {
-          name: "Seated cable rows",
-          targetWeight: 45,
+          name: "Seated cable rows try it to be very long name",
+          // targetWeight: 45,
           videoLink: "https://google.com",
         },
         {

@@ -13,10 +13,17 @@ export const WeekForm = ({ weekData, clear }: Props) => {
   const sourceDataContext = useContext(SourceDataContext);
 
   const [annotation, setAnnotation] = useState<string>(
-    weekData.annotation ?? ""
+    weekData.annotation || ""
   );
-  const [targetSet, setTargetSet] = useState<string>(weekData.targetSet ?? "0");
-  const [targetRep, setTargetRep] = useState<string>(weekData.targetRep ?? "0");
+  const [targetSet, setTargetSet] = useState<number>(
+    Number(weekData.targetSet) || 0
+  );
+  const [targetRep, setTargetRep] = useState<number>(
+    Number(weekData.targetRep) || 0
+  );
+  const [targetTime, setTargetTime] = useState<number>(
+    Number(weekData.targetTime) || 0
+  );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,6 +33,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
       annotation,
       targetSet,
       targetRep,
+      targetTime,
     });
     clear();
   };
@@ -47,7 +55,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
                             transition-all sm:my-8 sm:w-full sm:max-w-lg
                         `}
           >
-            <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <div className="bg-white px-2 pb-4 pt-5 sm:p-6 sm:pb-4">
               <div className="sm:flex sm:items-start w-full">
                 <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
                   <h3
@@ -56,7 +64,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
                   >
                     {weekData.planName} - Week {weekData.weekNumber + 1}
                   </h3>
-                  <div className="mt-2 grid grid-cols-2">
+                  <div className="mt-2 grid grid-cols-3">
                     <IncrementDecrement
                       value={targetSet}
                       label={"Set"}
@@ -69,7 +77,13 @@ export const WeekForm = ({ weekData, clear }: Props) => {
                       updateValue={setTargetRep}
                       nonZero={true}
                     />
-                    <div className={`col-span-2`}>
+                    <IncrementDecrement
+                      value={targetTime}
+                      label={"Time"}
+                      updateValue={setTargetTime}
+                      nonZero={true}
+                    />
+                    <div className={`col-span-3 py-2`}>
                       <Input
                         label={"Annotation"}
                         value={annotation}
@@ -82,25 +96,14 @@ export const WeekForm = ({ weekData, clear }: Props) => {
                 </div>
               </div>
             </div>
-            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-              <Button
-                label="Update"
-                type="submit"
-                className={`
-                                    inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm 
-                                    font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto
-                                `}
-              />
-
+            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+              <Button label="Update" type="submit" decoration="save" />
               <Button
                 label={"Cancel"}
-                className={`
-                                    !text-black
-                                    mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm 
-                                    font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 
-                                    hover:bg-gray-50 sm:mt-0 sm:w-auto
-                                `}
-                onClick={() => clear}
+                decoration="cancel"
+                onClick={() => {
+                  clear();
+                }}
               />
             </div>
           </form>

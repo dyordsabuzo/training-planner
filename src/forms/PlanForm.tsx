@@ -6,7 +6,6 @@ import { TagInput } from "../components/others/TagInput";
 import "react-datepicker/dist/react-datepicker.css";
 import { DateInput } from "../components/date/DateInput";
 import dayjs, { Dayjs } from "dayjs";
-import { Button } from "../components/form/Button";
 import { FormButtons } from "./FormButtons";
 
 type FormData = {
@@ -37,7 +36,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
   const [baselineRep, setBaselineRep] = useState(planData?.baselineRep ?? "");
   const [sessions, setSessions] = useState<string[]>(planData?.sessions ?? []);
   const [startDate, setStartDate] = useState<Dayjs | null>(
-    planData?.startDate ?? dayjs(new Date())
+    dayjs(planData?.startDate?.toDate()) ?? dayjs(new Date())
   );
 
   const sourceDataContext = useContext(SourceDataContext);
@@ -50,7 +49,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
       sourceDataContext.addPlan({
         name,
         numberOfWeeks,
-        startDate,
+        startDate: startDate?.toDate(),
         baselineSet,
         baselineRep,
         sessions,
@@ -61,9 +60,10 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
     if (type === "edit") {
       sourceDataContext.editPlan({
         id,
+        originalName: planData?.name,
         name,
         numberOfWeeks,
-        startDate,
+        startDate: startDate?.toDate(),
         baselineSet,
         baselineRep,
         sessions,

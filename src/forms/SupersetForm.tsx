@@ -2,8 +2,8 @@ import { Input } from "../components/form/Input";
 import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { TagInput } from "../components/others/TagInput";
-import { Button } from "../components/form/Button";
 import { FormButtons } from "./FormButtons";
+import { ButtonSelection } from "../components/form/ButtonSelection";
 
 type FormData = {
   id?: string;
@@ -12,15 +12,16 @@ type FormData = {
   tags?: string[];
   exercises?: [];
   rest?: string;
+  type: "Rep-based" | "Time-based" | null;
 };
 
 type Props = {
   data: FormData | null;
-  type: string;
+  entryType: string;
   closeForm: () => void;
 };
 
-export const SupersetForm = ({ data, type, closeForm }: Props) => {
+export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const formData = data;
 
   const id = formData?.id ?? "";
@@ -31,6 +32,7 @@ export const SupersetForm = ({ data, type, closeForm }: Props) => {
   );
   const [rest, setRest] = useState<string>(formData?.rest ?? "");
   const [tags, setTags] = useState(formData?.tags ?? []);
+  const [type, setType] = useState<string>(formData?.type ?? "Rep-based");
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -40,18 +42,19 @@ export const SupersetForm = ({ data, type, closeForm }: Props) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (type === "add") {
+    if (entryType === "add") {
       sourceDataContext.addSuperset({
         name,
         sessions,
         exercises,
         tags,
         rest,
+        type,
       });
       closeForm();
     }
 
-    if (type === "edit") {
+    if (entryType === "edit") {
       sourceDataContext.editSuperset({
         id,
         name,
@@ -59,6 +62,7 @@ export const SupersetForm = ({ data, type, closeForm }: Props) => {
         exercises,
         tags,
         rest,
+        type,
       });
       closeForm();
     }
@@ -74,11 +78,19 @@ export const SupersetForm = ({ data, type, closeForm }: Props) => {
         changeValue={setName}
       />
       <TagInput
-        key={"tags"}
-        label={"Tags"}
-        list={tags}
-        options={[]}
-        updateList={setTags}
+        key={"exercises"}
+        label={"Exercises"}
+        list={exercises}
+        options={exerciseOptions}
+        updateList={setExercises}
+      />
+      <ButtonSelection
+        label="Superset type"
+        options={["Rep-based", "Time-based"]}
+        selection={type}
+        onSelect={(value: string) => {
+          setType(value);
+        }}
       />
       <TagInput
         key={"sessions"}
@@ -94,11 +106,11 @@ export const SupersetForm = ({ data, type, closeForm }: Props) => {
         changeValue={setRest}
       />
       <TagInput
-        key={"exercises"}
-        label={"Exercises"}
-        list={exercises}
-        options={exerciseOptions}
-        updateList={setExercises}
+        key={"tags"}
+        label={"Tags"}
+        list={tags}
+        options={[]}
+        updateList={setTags}
       />
 
       <FormButtons

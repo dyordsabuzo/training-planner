@@ -15,7 +15,7 @@ export const SupersetListing = () => {
     return (
       <SupersetForm
         data={formData}
-        type={formType}
+        entryType={formType}
         closeForm={() => setFormType("")}
       />
     );

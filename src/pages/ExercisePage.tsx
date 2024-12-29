@@ -174,7 +174,9 @@ export const ExercisePage = () => {
             Exercise Set {exerciseState.exerciseSet + 1}
           </span>
           <div className={`leading-none py-4`}>
-            <span className={`grid place-content-center text-3xl`}>
+            <span
+              className={`grid place-content-center text-center text-3xl w-64 break-words text-wrap`}
+            >
               {exerciseData.name}
             </span>
             <span className={`grid place-content-center text-sm font-light`}>
@@ -190,18 +192,20 @@ export const ExercisePage = () => {
             {supersetData.name}{" "}
           </span>
         </div>
-        <div className={`grid grid-cols-2 gap-4`}>
-          <Widget
-            label={"Target Weight"}
-            value={exerciseData.targetWeight}
-            unit={"kg"}
-          />
-          <Widget
-            label={"Target Rep"}
-            value={parseInt(exerciseData.targetRep) || supersetData.targetRep}
-            unit={"reps"}
-          />
-        </div>
+        {!exerciseData.isTimeBased && (
+          <div className={`grid grid-cols-2 gap-4`}>
+            <Widget
+              label={"Target Weight"}
+              value={exerciseData.targetWeight}
+              unit={"kg"}
+            />
+            <Widget
+              label={"Target Rep"}
+              value={parseInt(exerciseData.targetRep) || supersetData.targetRep}
+              unit={"reps"}
+            />
+          </div>
+        )}
         {exerciseData.videoLink && (
           <div className={`flex justify-center mb-2`}>
             <a
