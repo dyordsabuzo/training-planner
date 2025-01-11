@@ -1,6 +1,7 @@
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
 import { addDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { getCollection, getDocumentReference } from "../common/firebase";
+import AuthContext from "./AuthContext";
 
 enum SourceDbReferences {
   EXERCISES = "exercises",
@@ -53,6 +54,8 @@ type _Props = {
 
 export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const [sourceData, setSourceData] = useState<any>({});
+  const authContext = useContext(AuthContext);
+  const { userPermission } = authContext;
 
   const initialise = async () => {
     try {
@@ -60,7 +63,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       const exercises = await getFromDB(SourceDbReferences.EXERCISES);
       const supersets = await getFromDB(SourceDbReferences.SUPERSETS);
       const sessions = await getFromDB(SourceDbReferences.SESSIONS);
-      const plans = await getFromDB(SourceDbReferences.PLANS);
+
+      const plans = await getFromDB(
+        SourceDbReferences.PLANS,
+        userPermission?.plans
+      );
 
       setSourceData({
         ...sourceData,
@@ -124,13 +131,21 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     }
   };
 
-  const getFromDB = async (sourceDb: SourceDbReferences): Promise<any> => {
+  const getFromDB = async (
+    sourceDb: SourceDbReferences,
+    idFilters: string[] = []
+  ): Promise<any> => {
     try {
       const collection = getCollection(sourceDb);
       const snapshot = await getDocs(collection);
 
       let data = {};
-      snapshot.docs.forEach((doc) => {
+      const docs =
+        idFilters.length > 0
+          ? snapshot.docs.filter((doc) => idFilters.includes(doc.id))
+          : snapshot.docs;
+
+      docs.forEach((doc) => {
         const docData = doc.data();
         data = {
           ...data,

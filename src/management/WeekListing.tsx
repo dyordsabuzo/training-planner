@@ -36,9 +36,9 @@ export const WeekListing = ({ weekLabel, data, plan }: Props) => {
         `}
       >
         <Input
-          label={"Annotation"}
+          label={"Week goal"}
           value={annotation}
-          placeholder={"Annotation"}
+          placeholder={"Describe the week goal"}
           changeValue={setAnnotation}
           className={`py-2`}
         />

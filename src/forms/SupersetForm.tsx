@@ -12,6 +12,9 @@ type FormData = {
   tags?: string[];
   exercises?: [];
   rest?: string;
+  targetRep?: string;
+  targetSet?: string;
+  targetTime?: string;
   type: "Rep-based" | "Time-based" | null;
 };
 
@@ -34,6 +37,12 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const [tags, setTags] = useState(formData?.tags ?? []);
   const [type, setType] = useState<string>(formData?.type ?? "Rep-based");
 
+  const [targetRep, setTargetRep] = useState(formData?.targetRep ?? "");
+  const [targetSet, setTargetSet] = useState<string>(formData?.targetSet ?? "");
+  const [targetTime, setTargetTime] = useState<string>(
+    formData?.targetTime ?? ""
+  );
+
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
   const exerciseOptions = Object.keys(sourceData.exercises ?? {});
@@ -50,6 +59,9 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
         tags,
         rest,
         type,
+        targetRep,
+        targetSet,
+        targetTime,
       });
       closeForm();
     }
@@ -63,6 +75,9 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
         tags,
         rest,
         type,
+        targetRep,
+        targetSet,
+        targetTime,
       });
       closeForm();
     }
@@ -89,6 +104,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
         options={["Rep-based", "Time-based"]}
         selection={type}
         onSelect={(value: string) => {
+          console.log(value);
           setType(value);
         }}
       />
@@ -112,6 +128,36 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
         options={[]}
         updateList={setTags}
       />
+
+      <details className={`duration-300`}>
+        <summary className={`text-sm font-semibold cursor-pointer py-2`}>
+          Advanced settings
+        </summary>
+        <div className={`grid grid-cols-2 gap-3 pt-2`}>
+          {type === "Rep-based" && (
+            <Input
+              label={"Target Rep"}
+              value={targetRep}
+              placeholder={"Target Rep"}
+              changeValue={setTargetRep}
+            />
+          )}
+          {type === "Time-based" && (
+            <Input
+              label={"Target Time (in seconds)"}
+              value={targetTime}
+              placeholder={"Target Time"}
+              changeValue={setTargetTime}
+            />
+          )}
+          <Input
+            label={"Target Set"}
+            value={targetSet}
+            placeholder={"Target Set"}
+            changeValue={setTargetSet}
+          />
+        </div>
+      </details>
 
       <FormButtons
         onCancel={() => {

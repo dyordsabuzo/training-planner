@@ -1,4 +1,4 @@
-import { Exercise } from "./Exercise";
+import { ExerciseSuperset } from "./Exercise";
 
 // type Exercise = {
 //   name: string;
@@ -8,7 +8,8 @@ import { Exercise } from "./Exercise";
 
 type Superset = {
   name: string;
-  exercises?: Exercise[];
+  exercises?: ExerciseSuperset[];
+  targetWeight?: number;
   targetRep?: number;
   targetSet?: number;
   annotation?: string;

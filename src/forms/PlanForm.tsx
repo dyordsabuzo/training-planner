@@ -14,6 +14,7 @@ type FormData = {
   numberOfWeeks?: string;
   baselineRep?: string;
   baselineSet?: string;
+  baselineTime?: string;
   sessions?: string[];
   startDate: Dayjs;
 };
@@ -34,6 +35,9 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
   );
   const [baselineSet, setBaselineSet] = useState(planData?.baselineSet ?? "");
   const [baselineRep, setBaselineRep] = useState(planData?.baselineRep ?? "");
+  const [baselineTime, setBaselineTime] = useState(
+    planData?.baselineTime ?? ""
+  );
   const [sessions, setSessions] = useState<string[]>(planData?.sessions ?? []);
   const [startDate, setStartDate] = useState<Dayjs | null>(
     dayjs(planData?.startDate?.toDate()) ?? dayjs(new Date())
@@ -52,6 +56,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
         startDate: startDate?.toDate(),
         baselineSet,
         baselineRep,
+        baselineTime,
         sessions,
       });
       closeForm();
@@ -66,6 +71,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
         startDate: startDate?.toDate(),
         baselineSet,
         baselineRep,
+        baselineTime,
         sessions,
       });
       closeForm();
@@ -113,6 +119,13 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
         value={baselineRep}
         placeholder={"Target Rep"}
         changeValue={setBaselineRep}
+      />
+
+      <Input
+        label={"Baseline Time"}
+        value={baselineTime}
+        placeholder={"Target Time"}
+        changeValue={setBaselineTime}
       />
 
       <TagInput

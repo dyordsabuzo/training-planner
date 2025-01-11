@@ -16,14 +16,20 @@ let sessionData: SessionData | null = {
       name: "Back and chest",
       exercises: [
         {
-          name: "Seated cable rows try it to be very long name",
-          // targetWeight: 45,
-          videoLink: "https://google.com",
+          exercise: {
+            name: "Exercise with a very long name",
+            // targetWeight: 45,
+            videoLink: "https://google.com",
+          },
+          targetWeight: 45,
         },
         {
-          name: "DB Bench flies",
+          exercise: {
+            name: "DB Bench flies",
+          },
         },
       ],
+      targetWeight: 45,
       targetRep: 8,
       targetSet: 3,
       annotation: "Some annotation",
@@ -34,7 +40,6 @@ let sessionData: SessionData | null = {
 };
 
 const wrapSession = () => {
-  console.log("wrap session");
   isRunning = false;
   sessionData = null;
 };

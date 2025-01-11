@@ -96,6 +96,7 @@ export const ExercisePage = () => {
       const exerciseLength = supersetData.exercises.length;
       const exercise =
         supersetData.exercises[exerciseState.exerciseCounter % exerciseLength];
+
       setExerciseData(exercise);
     }
 
@@ -196,7 +197,7 @@ export const ExercisePage = () => {
           <div className={`grid grid-cols-2 gap-4`}>
             <Widget
               label={"Target Weight"}
-              value={exerciseData.targetWeight}
+              value={exerciseData.targetWeight || supersetData.targetWeight}
               unit={"kg"}
             />
             <Widget

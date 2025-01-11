@@ -8,6 +8,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@mui/material": "^6.2.0",
@@ -30,7 +31,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "yarn run firebase:emulators &&react-scripts build",
     "test": "react-scripts test",
     "test:jest": "jest",
     "eject": "react-scripts eject",
@@ -42,6 +43,7 @@
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --quiet --fix",
     "firebase:login": "firebase login",
     "firebase:init": "firebase init",
+    "firebase:use": "firebase use",
     "firebase:deploy": "firebase deploy",
     "firebase:emulators": "firebase emulators:start"
   },

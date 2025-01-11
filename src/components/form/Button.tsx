@@ -1,9 +1,10 @@
 type ButtonProps = {
-  label: string;
+  label?: string;
   type?: "button" | "submit" | "reset";
   onClick?: () => void;
   className?: string;
   decoration?: string;
+  children?: React.ReactNode;
 };
 
 export const Button = ({
@@ -12,6 +13,7 @@ export const Button = ({
   className,
   type = "button",
   decoration = "basic",
+  children,
 }: ButtonProps) => {
   const setDecoration = (d: string) => {
     switch (d) {
@@ -25,6 +27,8 @@ export const Button = ({
         return "text-xs bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md";
       case "selection":
         return "text-sm px-2";
+      case "custom":
+        return "";
       default:
         return "bg-blue-500 hover:bg-blue-700 text-white font-bold rounded px-2";
     }
@@ -36,7 +40,7 @@ export const Button = ({
       type={type}
       onClick={onClick}
     >
-      {label}
+      {children ?? label}
     </button>
   );
 };

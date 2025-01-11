@@ -4,7 +4,7 @@ export type Exercise = {
   tags?: string[];
 };
 
-type ExerciseSuperset = {
+export type ExerciseSuperset = {
   exercise: Exercise;
   targetRep?: number;
   targetWeight?: number;
