@@ -7,7 +7,6 @@ import {
   faHome,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useContext } from "react";
 import AuthContext from "../../context/AuthContext";
 import { NavIcon } from "./NavIcon";

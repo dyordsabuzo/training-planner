@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from "react";
+import { useContext } from "react";
 import WrapperPage from "./WrapperPage";
 import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
@@ -12,11 +12,9 @@ export const MainPage = ({ listing }: Props) => {
   const authContext = useContext(AuthContext);
   const { user, userPermission } = authContext;
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/");
-    }
-  }, [user]);
+  if (!user) {
+    navigate("/");
+  }
 
   return (
     <WrapperPage>

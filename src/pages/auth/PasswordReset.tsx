@@ -1,9 +1,9 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useContext, useEffect, useState } from "react";
 
 import AuthContext from "../../context/AuthContext";
 import { Input } from "../../components/form/Input";
 import { Button } from "../../components/form/Button";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router";
@@ -12,24 +12,23 @@ import { Loading } from "../helpers/Loading";
 
 export const PasswordReset = () => {
   const authContext = useContext(AuthContext);
-  const { user, verifyResetCode, confirmReset, data, error, isLoading } =
-    authContext;
+  const { verifyResetCode, confirmReset, data, error, isLoading } = authContext;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordResetSent, setPasswordResetSent] = useState(false);
-  const [initComplete, setInitComplete] = useState(false);
 
   const [searchParams] = useSearchParams();
-  const mode = searchParams.get("mode");
   const oobCode = searchParams.get("oobCode") || "";
-  const continueUrl = searchParams.get("continueUrl");
-  const languageCode = searchParams.get("languageCode") || "en";
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     verifyResetCode(oobCode);
   }, []);
+
+  useEffect(() => {
+    setEmail(data?.email || "");
+  }, [data]);
 
   const resetPasswordHandler = () => {
     confirmReset(oobCode, password);
@@ -39,10 +38,6 @@ export const PasswordReset = () => {
 
   if (isLoading) {
     return <Loading />;
-  }
-
-  if (data) {
-    setEmail(data?.email);
   }
 
   return (

@@ -3,7 +3,7 @@ import {
   getFirestore,
   collection,
   doc,
-  connectFirestoreEmulator,
+  // connectFirestoreEmulator,
 } from "firebase/firestore";
 
 const config = {

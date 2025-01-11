@@ -12,7 +12,6 @@ import {
   onAuthStateChanged,
   verifyPasswordResetCode,
   confirmPasswordReset,
-  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import { getDocumentReference } from "../common/firebase";
 import { getDoc } from "firebase/firestore";
@@ -144,7 +143,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   const loginWithEmailAndPassword = async (email: string, password: string) => {
     try {
       setErrorObject(null);
-      const res = await signInWithEmailAndPassword(auth, email, password);
+      const res: any = await _signinUser(email, password);
       setUser(res.user);
     } catch (err) {
       setErrorObject("Authentication error.  Invalid email/password.");

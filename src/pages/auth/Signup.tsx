@@ -1,17 +1,10 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 
 import AuthContext from "../../context/AuthContext";
 import { Input } from "../../components/form/Input";
 import { Button } from "../../components/form/Button";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowAltCircleLeft,
-  faArrowLeft,
-  faPen,
-  faRegistered,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faUser } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router";
 import WrapperPage from "../WrapperPage";
 

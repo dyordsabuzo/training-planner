@@ -1,24 +1,18 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 
 import AuthContext from "../../context/AuthContext";
 import { Input } from "../../components/form/Input";
 import { Button } from "../../components/form/Button";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faRegistered, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router";
 import WrapperPage from "../WrapperPage";
 
 export const Login = () => {
   const authContext = useContext(AuthContext);
-  const {
-    user,
-    loginWithEmailAndPassword,
-    // // registerWithEmailAndPassword,
-    loginWithGoogle,
-    // logout,
-    error,
-  } = authContext;
+  const { user, loginWithEmailAndPassword, loginWithGoogle, error } =
+    authContext;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,12 +31,9 @@ export const Login = () => {
   };
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
-  }, [user]);
+  if (user) {
+    navigate("/");
+  }
 
   return (
     <WrapperPage>
