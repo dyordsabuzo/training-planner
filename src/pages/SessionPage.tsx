@@ -43,7 +43,7 @@ const SessionPage = () => {
     <WrapperPage>
       <form onSubmit={handleSubmit} className={`flex flex-col gap-8 pt-12`}>
         <Dropdown
-          label={"Training plan"}
+          label={"Training program"}
           options={Object.keys(sourceData.plans ?? {})}
           required
           valueHandler={(plan) => {

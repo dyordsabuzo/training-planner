@@ -4,7 +4,7 @@ import { WeekForm } from "../forms/WeekForm";
 import { PlanForm } from "../forms/PlanForm";
 import { sortObject } from "../common/utils";
 import { Button } from "../components/form/Button";
-import { WeekListing } from "./WeekListing";
+import { WeekItem } from "./unit/WeekItem";
 
 type SelectedWeekData = {
   weekKey: string;
@@ -27,7 +27,6 @@ export const PlanListing = () => {
     useState<SelectedWeekData | null>(null);
 
   if (selectedWeekData) {
-    console.log(selectedWeekData);
     return (
       <WeekForm
         weekData={selectedWeekData}
@@ -86,15 +85,8 @@ export const PlanListing = () => {
                     <div
                       key={weekKey}
                       className={`border border-1 p-2 rounded-lg`}
-                      // onClick={(e) => {
-                      //   setSelectedWeekData({
-                      //     ...(weekData as any),
-                      //     planName,
-                      //     weekKey,
-                      //   });
-                      // }}
                     >
-                      <WeekListing
+                      <WeekItem
                         weekLabel={weekKey}
                         data={weekData}
                         plan={value}

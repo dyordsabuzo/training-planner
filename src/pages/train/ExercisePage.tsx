@@ -185,7 +185,6 @@ export const ExercisePage = () => {
     return <div>Loading</div>;
   }
 
-  console.log(supersetData);
   return (
     <WrapperPage>
       <div

@@ -315,7 +315,15 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         [`Week ${weekData.weekNumber + 1}`]: weekData,
       },
     };
+
     await saveToDB(SourceDbReferences.PLANS, plan);
+    setSourceData({
+      ...sourceData,
+      plans: {
+        ...sourceData.plans,
+        [planName]: plan,
+      },
+    });
   };
 
   return (

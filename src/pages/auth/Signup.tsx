@@ -19,6 +19,7 @@ export const Signup = () => {
   const signupHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     registerWithEmailAndPassword(email, password);
+    navigate("/");
   };
 
   const navigate = useNavigate();
