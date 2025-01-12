@@ -1,11 +1,12 @@
-import { Input } from "../components/form/Input";
+import { Input } from "../../components/form/Input";
 import React, { useContext, useEffect, useReducer, useState } from "react";
-import SessionContext from "../context/SessionContext";
-import RestPage from "./RestPage";
-import SupersetCompletePage from "./SupersetCompletePage";
-import FinishPage from "./FinishPage";
-import WrapperPage from "./WrapperPage";
-import { Widget } from "../components/others/Widget";
+import SessionContext from "../../context/SessionContext";
+import { RestTimer } from "../timer/RestTimer";
+import { WorkTimer } from "../timer/WorkTimer";
+import SupersetCompletePage from "../SupersetCompletePage";
+import FinishPage from "../FinishPage";
+import WrapperPage from "../WrapperPage";
+import { Widget } from "../../components/others/Widget";
 
 type State = {
   exerciseCounter: number;
@@ -13,6 +14,7 @@ type State = {
   supersetCounter: number;
   supersetRest: boolean;
   supersetComplete: boolean;
+  supersetTimer: boolean;
 };
 
 type Action =
@@ -26,6 +28,7 @@ const initialState = {
   supersetCounter: 0,
   supersetRest: false,
   supersetComplete: false,
+  supersetTimer: false,
 };
 
 const reducer = (state: State, action: Action) => {
@@ -42,7 +45,8 @@ const reducer = (state: State, action: Action) => {
       };
     case "continue":
       const exerciseCounter = state.exerciseCounter + 1;
-      let { exerciseSet, supersetRest, supersetComplete } = state;
+      let { exerciseSet, supersetRest, supersetComplete, supersetTimer } =
+        state;
 
       if (exerciseCounter % action.payload.exerciseLength === 0) {
         exerciseSet++;
@@ -50,6 +54,7 @@ const reducer = (state: State, action: Action) => {
       }
 
       supersetComplete = exerciseSet >= action.payload.targetSet;
+      supersetTimer = false;
 
       return {
         ...state,
@@ -58,6 +63,7 @@ const reducer = (state: State, action: Action) => {
         exerciseCounter,
         supersetRest,
         supersetComplete,
+        supersetTimer,
       };
     default:
       return state;
@@ -76,9 +82,7 @@ export const ExercisePage = () => {
   const [actualWeight, setActualWeight] = useState<string>("");
   const [actualRep, setActualRep] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
+  const completeExercise = () => {
     const targetSet = parseInt(supersetData.targetSet);
     const exerciseLength = supersetData.exercises.length;
 
@@ -89,6 +93,11 @@ export const ExercisePage = () => {
         exerciseLength,
       },
     });
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    completeExercise();
   };
 
   useEffect(() => {
@@ -142,8 +151,8 @@ export const ExercisePage = () => {
 
   if (exerciseState.supersetRest) {
     return (
-      <RestPage
-        length={parseInt(supersetData.rest)}
+      <RestTimer
+        length={parseInt(supersetData.rest) || 120}
         toggleRest={(supersetRest: boolean) => {
           dispatch({
             type: "update",
@@ -154,10 +163,29 @@ export const ExercisePage = () => {
     );
   }
 
+  if (exerciseState.supersetTimer) {
+    return (
+      <WorkTimer
+        label={"WORK TIME"}
+        length={exerciseData.targetTime || supersetData.targetTime || 0}
+        toggleRest={(supersetRest: boolean) => {
+          // dispatch({ type: "update", payload: { supersetTimer: false } });
+          completeExercise();
+        }}
+      >
+        <div className={`flex justify-center py-4 gap-2 font-bold text-lg`}>
+          <span>{supersetData.name}: </span>
+          <span>{exerciseData.exercise?.name}</span>
+        </div>
+      </WorkTimer>
+    );
+  }
+
   if (Object.keys(supersetData).length === 0) {
     return <div>Loading</div>;
   }
 
+  console.log(supersetData);
   return (
     <WrapperPage>
       <div
@@ -178,7 +206,7 @@ export const ExercisePage = () => {
             <span
               className={`grid place-content-center text-center text-3xl w-64 break-words text-wrap`}
             >
-              {exerciseData.name}
+              {exerciseData.exercise?.name}
             </span>
             <span className={`grid place-content-center text-sm font-light`}>
               {sessionData.week} - {supersetData.annotation}
@@ -193,27 +221,56 @@ export const ExercisePage = () => {
             {supersetData.name}{" "}
           </span>
         </div>
-        {!exerciseData.isTimeBased && (
+        {supersetData.type !== "Time-based" && (
           <div className={`grid grid-cols-2 gap-4`}>
             <Widget
               label={"Target Weight"}
-              value={exerciseData.targetWeight || supersetData.targetWeight}
+              value={
+                exerciseData.targetWeight || supersetData.targetWeight || 0
+              }
               unit={"kg"}
             />
             <Widget
               label={"Target Rep"}
-              value={parseInt(exerciseData.targetRep) || supersetData.targetRep}
+              value={
+                parseInt(exerciseData.exercise?.targetRep) ||
+                parseInt(exerciseData.targetRep) ||
+                supersetData.targetRep
+              }
               unit={"reps"}
             />
           </div>
         )}
-        {exerciseData.videoLink && (
+        {supersetData.type === "Time-based" && (
+          <div
+            className={`grid grid-cols-1 gap-4 cursor-pointer`}
+            onClick={() =>
+              dispatch({ type: "update", payload: { supersetTimer: true } })
+            }
+          >
+            <Widget
+              label={"Target Time"}
+              value={exerciseData.targetTime || supersetData.targetTime || 0}
+              unit={"secs"}
+            />
+            {/* <Widget
+              label={"Target Rep"}
+              value={
+                parseInt(exerciseData.exercise?.targetRep) ||
+                parseInt(exerciseData.targetRep) ||
+                supersetData.targetRep
+              }
+              unit={"reps"}
+            /> */}
+          </div>
+        )}
+        {exerciseData.exercise?.videoLink && (
           <div className={`flex justify-center mb-2`}>
             <a
               className="no-underline text-white bg-blue-500 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
               target="_blank"
               rel="noreferrer"
-              href={exerciseData.videoLink}
+              href={exerciseData.exercise.videoLink}
             >
               Watch video
             </a>

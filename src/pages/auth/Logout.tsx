@@ -14,9 +14,11 @@ export const Logout = () => {
     logoutUser();
   }, []);
 
-  if (!user) {
-    navigate("/");
-  }
+  useEffect(() => {
+    if (!user) {
+      navigate("/");
+    }
+  }, [user]);
 
   return <div>Logout</div>;
 };

@@ -1,5 +1,5 @@
 import { Nav, NavItem } from "reactstrap";
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import {
   faDumbbell,
@@ -14,7 +14,8 @@ import { NavIcon } from "./NavIcon";
 const tabs = [
   {
     // requireUser: false,
-    route: "/training-planner",
+    // route: "/training-planner",
+    route: "/",
     icon: faHome,
     label: "Home",
   },
@@ -37,7 +38,7 @@ const tabs = [
 const Navigation = () => {
   const authContext = useContext(AuthContext);
   const { user, userPermission } = authContext;
-
+  const navigate = useNavigate();
   return (
     <div>
       <nav
@@ -46,9 +47,12 @@ const Navigation = () => {
         role="navigation"
       >
         <div className="container-fluid">
-          <a className="navbar-brand" href="/home">
+          <span
+            className="navbar-brand cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             Training Planner
-          </a>
+          </span>
           <Nav className="ml-auto">
             {user && (
               <>

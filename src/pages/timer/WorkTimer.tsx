@@ -1,19 +1,16 @@
 import { useEffect, useState } from "react";
-import WrapperPage from "./WrapperPage";
-import { Button } from "../components/form/Button";
-import { Timer } from "../components/others/Timer";
+import WrapperPage from "../WrapperPage";
+import { Button } from "../../components/form/Button";
+import { Timer } from "../../components/others/Timer";
 
-type RestPageProps = {
+type Props = {
+  label: string;
   length: number;
   toggleRest: (flag: boolean) => void;
+  children?: React.ReactNode;
 };
 
-// type RenderProps = {
-//   remainingTime: number;
-//   label?: string;
-// };
-
-const RestPage: React.FC<RestPageProps> = ({ length, toggleRest }) => {
+export const WorkTimer = ({ label, length, toggleRest, children }: Props) => {
   const [countdownComplete, setCountdownComplete] = useState(false);
 
   useEffect(() => {
@@ -30,19 +27,18 @@ const RestPage: React.FC<RestPageProps> = ({ length, toggleRest }) => {
           <div className={`w-full`}>
             <Timer
               length={length}
-              label="RESTING"
+              label={label}
               setCountdownComplete={setCountdownComplete}
             />
           </div>
         )}
-        <Button
+        {/* <Button
           label={"Resume exercise"}
           className={`my-5 py-3 bg-gray-400 hover:bg-gray-500`}
           onClick={() => toggleRest(false)}
-        />
+        /> */}
+        {children}
       </div>
     </WrapperPage>
   );
 };
-
-export default RestPage;

@@ -70,10 +70,10 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
       setUser(user);
       if (user) {
         // TODO: check if email is verified
-        localStorage.setItem("isLoggedIn", "1");
+        // localStorage.setItem("isLoggedIn", "1");
         setIsLoggedIn(true);
       } else {
-        localStorage.removeItem("isLoggedIn");
+        // localStorage.removeItem("isLoggedIn");
         setIsLoggedIn(false);
         setUserPermission(null);
       }

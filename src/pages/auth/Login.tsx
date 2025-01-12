@@ -1,5 +1,4 @@
-import { useContext, useState } from "react";
-
+import { useContext, useEffect, useState } from "react";
 import AuthContext from "../../context/AuthContext";
 import { Input } from "../../components/form/Input";
 import { Button } from "../../components/form/Button";
@@ -31,20 +30,23 @@ export const Login = () => {
   };
 
   const navigate = useNavigate();
-  if (user) {
-    navigate("/");
-  }
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   return (
     <WrapperPage>
-      <div className="flex flex-col gap-4 place-items-center py-4">
-        <div className="flex flex-col gap-2 w-full px-2 pb-4">
-          <span>Hi there!</span>
+      <div className="flex flex-col gap-4 place-items-center py-4 bg-blue-500 mt-10">
+        <div className="flex flex-col w-full px-4 pb-2 text-white">
+          <span className="text-2xl font-bold">Hi there!</span>
           <span>Welcome to Training Planner</span>
         </div>
         <form
           onSubmit={loginHandler}
-          className="flex flex-col gap-2 w-full border-2 border-gray-300 rounded-t-3xl p-4"
+          className="flex flex-col gap-2 w-full rounded-t-3xl p-4 bg-white"
         >
           <span className="text-2xl font-bold py-2">Login</span>
           <Input

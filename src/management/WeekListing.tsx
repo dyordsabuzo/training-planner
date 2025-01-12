@@ -11,8 +11,6 @@ export const WeekListing = ({ weekLabel, data, plan }: Props) => {
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [annotation, setAnnotation] = useState<string>(data.annotation || "");
 
-  console.log(plan);
-
   return (
     <div>
       <div

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ExercisePage } from "./ExercisePage";
-import { withMockSessionDataContext } from "../management/__mock__/MockContext";
-import { SessionData } from "../types/SessionData";
+import { withMockSessionDataContext } from "../../management/__mock__/MockContext";
+import { SessionData } from "../../types/SessionData";
 
 const meta: Meta<typeof ExercisePage> = {
   title: "pages/ExercisePage",

@@ -3,8 +3,9 @@ import { Button } from "../components/form/Button";
 import React, { useContext } from "react";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
+import { ExerciseSuperset } from "../types/Exercise";
 
-const SummaryPage = () => {
+export const SummaryPage = () => {
   const handleButtonClick = () => {
     sessionContext.setIsRunning(true);
   };
@@ -28,9 +29,12 @@ const SummaryPage = () => {
                 className={`w-full shadow-md p-4 border rounded-md flex flex-col gap-2`}
               >
                 <span className={`text-xl`}>{superset.name}</span>
-                {superset.exercises.map((exercise: any) => (
-                  <span key={exercise.name} className={`text-sm leading-none`}>
-                    {exercise.name}
+                {superset.exercises.map((item: ExerciseSuperset) => (
+                  <span
+                    key={item.exercise.name}
+                    className={`text-sm leading-none`}
+                  >
+                    {item.exercise.name}
                   </span>
                 ))}
               </div>
@@ -41,5 +45,3 @@ const SummaryPage = () => {
     </WrapperPage>
   );
 };
-
-export default SummaryPage;

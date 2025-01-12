@@ -44,9 +44,9 @@ const SupersetCompletePage: React.FC<SupersetCompletePageProps> = ({
               {nextSuperset.name}
             </span>
             <div className={`leading-none`}>
-              {nextSuperset.exercises.map((exercise: any) => (
+              {nextSuperset.exercises.map((exercise: any, index: number) => (
                 <div
-                  key={exercise.id}
+                  key={index}
                   className={`grid place-content-center text-sm`}
                 >
                   {exercise.name}
