@@ -25,9 +25,12 @@ export const Home = () => {
             <p>Thank you for signing up for Training Planner.</p>
             <p>
               In order to start training, you need to be assigned at least one
-              training program. Access to the training programs is restricted to
-              users with an active subscription.
+              training program.
             </p>
+            {/* <p>
+              Access to the training programs is restricted to users with an
+              active subscription.
+            </p> */}
             <p>
               Please contact the administrator at{" "}
               <a href="mailto:trainingplanner6@gmail.com">
@@ -40,7 +43,10 @@ export const Home = () => {
         {plans?.length > 0 && (
           <p>
             Click on{" "}
-            <span className="font-bold cursor-pointer text-blue-500">
+            <span
+              className="font-bold cursor-pointer text-blue-500"
+              onClick={() => navigate("/training-planner/train")}
+            >
               Train
             </span>{" "}
             in the menu bar to start your training program.

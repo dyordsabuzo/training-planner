@@ -7,6 +7,7 @@ import SupersetCompletePage from "../SupersetCompletePage";
 import FinishPage from "../FinishPage";
 import WrapperPage from "../WrapperPage";
 import { Widget } from "../../components/others/Widget";
+import { SummaryPage } from "../SummaryPage";
 
 type State = {
   exerciseCounter: number;
@@ -72,7 +73,7 @@ const reducer = (state: State, action: Action) => {
 
 export const ExercisePage = () => {
   const sessionContext = useContext(SessionContext);
-  const sessionData: any = sessionContext.sessionData;
+  const { sessionData } = sessionContext as any;
 
   const [exerciseState, dispatch] = useReducer(reducer, initialState);
 
@@ -124,26 +125,67 @@ export const ExercisePage = () => {
     return () => {};
   }, [exerciseState.supersetCounter, sessionData]);
 
+  // useEffect(() => {
+  //   setSessionData({
+  //     ...sessionData,
+  //     supersets: {
+  //       ...sessionData.supersets,
+  //       [supersetData.name]: {
+  //         ...sessionData.supersets[supersetData.name],
+  //         complete: true,
+  //       },
+  //     },
+  //   });
+  // }, [exerciseState.supersetComplete]);
+
   const supersetLength = Object.keys(sessionData.supersets).length;
   if (supersetLength > 0 && exerciseState.supersetCounter >= supersetLength) {
+    // return (
+    //   <FinishPage
+    //     wrapSession={() => {
+    //       sessionContext.wrapSession();
+    //     }}
+    //   />
+    // );
+    const supersetIndex = Object.values(sessionData.supersets).indexOf(
+      supersetData
+    );
+    console.log("Session complete");
     return (
-      <FinishPage
-        wrapSession={() => {
-          sessionContext.wrapSession();
-        }}
+      <SummaryPage
+        currentSuperset={supersetData}
+        supersetIndex={supersetIndex}
+        sessionComplete={true}
       />
     );
   }
 
   if (exerciseState.supersetComplete) {
+    // return (
+    //   <SupersetCompletePage
+    //     superset={supersetData}
+    //     nextSuperset={
+    //       Object.values(sessionData.supersets)[
+    //         exerciseState.supersetCounter + 1
+    //       ] || null
+    //     }
+    //     nextPageHandler={() => dispatch({ type: "reset" })}
+    //   />
+    // );
+
+    const supersetIndex = Object.values(sessionData.supersets).indexOf(
+      supersetData
+    );
+
     return (
-      <SupersetCompletePage
-        superset={supersetData.name}
+      <SummaryPage
+        currentSuperset={supersetData}
         nextSuperset={
           Object.values(sessionData.supersets)[
             exerciseState.supersetCounter + 1
           ] || null
         }
+        supersetIndex={supersetIndex}
         nextPageHandler={() => dispatch({ type: "reset" })}
       />
     );
@@ -199,7 +241,8 @@ export const ExercisePage = () => {
                         text-xs bg-blue-200 font-bold
                         rounded-xl p-2`}
           >
-            Exercise Set {exerciseState.exerciseSet + 1}
+            Exercise Set {exerciseState.exerciseSet + 1} of{" "}
+            {parseInt(supersetData.targetSet)}
           </span>
           <div className={`leading-none py-4`}>
             <span

@@ -1,9 +1,10 @@
 import { Button } from "../components/form/Button";
 import React from "react";
 import WrapperPage from "./WrapperPage";
+import { SummaryPage } from "./SummaryPage";
 
 type SupersetCompletePageProps = {
-  superset: string;
+  superset: any;
   nextSuperset: any;
   nextPageHandler: () => void;
 };
@@ -27,7 +28,7 @@ const SupersetCompletePage: React.FC<SupersetCompletePageProps> = ({
           <span
             className={`grid place-content-center text-2xl text-white font-semibold`}
           >
-            {superset}
+            {superset.name}
           </span>
         </div>
         {nextSuperset && (
