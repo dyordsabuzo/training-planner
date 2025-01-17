@@ -14,6 +14,30 @@ export const Home = () => {
     return <Loading />;
   }
 
+  if (role === "admin") {
+    return (
+      <WrapperPage>
+        <div className="flex flex-col pt-6 w-full px-8 justify-left">
+          <h1 className="text-2xl font-bold w-full">
+            Welcome to Training Planner
+          </h1>
+          <p>
+            You are logged in as an administrator. You can manage users and
+            training programs.
+          </p>
+          <p>
+            <span
+              className="font-bold cursor-pointer text-blue-500"
+              onClick={() => navigate("/training-planner/manage")}
+            >
+              Click here to start managing users and training programs.
+            </span>
+          </p>
+        </div>
+      </WrapperPage>
+    );
+  }
+
   return (
     <WrapperPage>
       <div className="flex flex-col pt-6 w-full px-8 justify-left">

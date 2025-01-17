@@ -1,15 +1,11 @@
 import { Button } from "../components/form/Button";
 // import {ExerciseType} from "../types/ExerciseType";
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
 import { ExerciseSuperset } from "../types/Exercise";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowLeft,
-  faCheck,
-  faCheckCircle,
-} from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 
 type Props = {

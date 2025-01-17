@@ -53,7 +53,7 @@ const Navigation = () => {
           >
             Training Planner
           </span>
-          <Nav className="ml-auto">
+          <Nav className="ml-auto items-center">
             {user && (
               <>
                 {userPermission?.role === "admin" && (
@@ -87,6 +87,29 @@ const Navigation = () => {
               <NavItem>
                 <NavLink to="/logout" className="nav-link">
                   Logout
+                </NavLink>
+              </NavItem>
+            )}
+            {user && (
+              <NavItem>
+                <NavLink to="/logout" className="nav-link">
+                  {user?.photoURL && (
+                    <img
+                      src={user?.photoURL || ""}
+                      alt="user"
+                      className="w-10 h-10 rounded-full"
+                    />
+                  )}
+                  {user && !user.photoURL && (
+                    <div
+                      className={`
+                    w-10 h-10 rounded-full border border-1 flex 
+                    place-content-center items-center font-bold
+                    `}
+                    >
+                      U
+                    </div>
+                  )}
                 </NavLink>
               </NavItem>
             )}
@@ -139,7 +162,26 @@ const Navigation = () => {
                     : {}
                 }
               >
-                <NavIcon icon={faUser} label={user ? "Logout" : "Login"} />
+                {!user && (
+                  <NavIcon icon={faUser} label={user ? "Logout" : "Login"} />
+                )}
+                {user?.photoURL && (
+                  <img
+                    src={user?.photoURL || ""}
+                    alt="user"
+                    className="w-10 h-10 rounded-full"
+                  />
+                )}
+                {user && !user.photoURL && (
+                  <div
+                    className={`
+                    w-10 h-10 rounded-full border border-1 flex 
+                    place-content-center items-center font-bold
+                    `}
+                  >
+                    U
+                  </div>
+                )}
               </NavLink>
             </NavItem>
           </div>

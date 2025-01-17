@@ -12,6 +12,7 @@ import {
   onAuthStateChanged,
   verifyPasswordResetCode,
   confirmPasswordReset,
+  User,
 } from "firebase/auth";
 import { getDocumentReference } from "../common/firebase";
 import { getDoc } from "firebase/firestore";
@@ -29,10 +30,9 @@ const AuthContext = createContext({
   isLoggedIn: false,
   isLoading: false,
   error: null,
-  user: null,
+  user: null as User | null,
   data: null as any,
-  // loading: false,
-  isEmailVerified: false,
+  // isEmailVerified: false as boolean,
   userPermission: null as UserPermission | null,
   loginWithGoogle: () => {},
   registerWithEmailAndPassword: (email: string, password: string) => {},
@@ -50,7 +50,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorObject, setErrorObject] = useState<any>(null);
   const [auth, setAuth] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userPermission, setUserPermission] = useState<UserPermission | null>(
     null
   );
@@ -240,8 +240,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         error: errorObject,
         user: user,
         data: data,
-        // loading: loading,
-        isEmailVerified: user?.emailVerified,
+        // isEmailVerified: user?.emailVerified,
         userPermission: userPermission,
         loginWithGoogle: loginWithGoogle,
         loginWithEmailAndPassword: loginWithEmailAndPassword,

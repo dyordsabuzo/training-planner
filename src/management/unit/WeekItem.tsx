@@ -25,7 +25,11 @@ export const WeekItem = ({ weekLabel, data, plan }: Props) => {
     sourceData: SourceData;
     updateWeekPlan: (plan: string, week: any) => void;
   };
-  const sessions = Object.values(sourceData?.sessions || {});
+  const sessions = Object.values(sourceData?.sessions || {}).filter((s) =>
+    plan.sessions.includes(s.name)
+  );
+
+  console.log(sessions);
 
   const handleDefaults = (defaultValues: any) => {
     updateWeekPlan(plan.name, {
@@ -71,14 +75,16 @@ export const WeekItem = ({ weekLabel, data, plan }: Props) => {
           initialTime={parseInt(data.targetTime)}
           label={`Update default values`}
         />
-        {sessions.map((session: any) => (
-          <WeekSession
-            key={session.name}
-            data={session}
-            plan={plan}
-            weekData={data}
-          />
-        ))}
+        {sessions
+          .filter((s) => plan.sessions.includes(s.name))
+          .map((session: any) => (
+            <WeekSession
+              key={session.name}
+              data={session}
+              plan={plan}
+              weekData={data}
+            />
+          ))}
 
         {/* {plan.sessions.map((session: string) => (
           <WeekPlan key={session} name={session} data={data} />
