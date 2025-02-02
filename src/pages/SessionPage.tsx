@@ -7,10 +7,10 @@ import SourceDataContext from "../context/SourceDataContext";
 import WrapperPage from "./WrapperPage";
 
 const SessionPage = () => {
-  const [sessionData, setSessionData] = useState<any>({});
   const sessionContext = useContext(SessionContext);
   const sourceDataContext = useContext(SourceDataContext);
 
+  const [sessionData, setSessionData] = useState<any>({});
   const [weekOptions, setWeekOptions] = useState<string[]>([]);
   const [sessionOptions, setSessionOptions] = useState<string[]>([]);
   const [isContextInitialised, setIsContextInitialised] = useState(false);
@@ -50,7 +50,20 @@ const SessionPage = () => {
             let planData: any = Object.values(sourceData.plans).find(
               (value: any) => value.name === plan
             );
-            setWeekOptions(Object.keys(planData.weeks).sort());
+            setWeekOptions(
+              Object.keys(planData.weeks).sort((a, b) => {
+                const [textA, numA] = a.split(" ");
+                const [textB, numB] = b.split(" ");
+
+                // Compare the text part first (alphabetical order)
+                if (textA !== textB) {
+                  return textA.localeCompare(textB);
+                }
+
+                // Compare the numeric part (numerical order)
+                return Number(numA) - Number(numB);
+              })
+            );
             setSessionOptions(planData.sessions.sort());
 
             setSessionData({
@@ -73,6 +86,8 @@ const SessionPage = () => {
               annotation: weekData.annotation,
               targetRep: weekData.targetRep,
               targetSet: weekData.targetSet,
+              targetTime: weekData.targetTime,
+              overrides: weekData.overrides || {},
             });
             // setWeek(week)
           }}
@@ -85,8 +100,14 @@ const SessionPage = () => {
           valueHandler={(session: string) => {
             let supersets = {};
             let sessionSupersets = sourceData.sessions[session].supersets;
+
             sessionSupersets.forEach((s: string) => {
-              let { targetRep, targetSet, annotation } = sessionData;
+              let {
+                targetRep,
+                targetSet,
+                annotation,
+                overrides: sessionOverrides,
+              } = sessionData;
               let { sessions, rest, tags, ...superset } =
                 sourceData.supersets[s];
               let exercises = superset.exercises.map((e: string) => {
@@ -99,6 +120,10 @@ const SessionPage = () => {
                   targetWeight: exercise.targetWeight || 0,
                 };
               });
+
+              if (exercises.length < 2) {
+                exercises.push({});
+              }
 
               // // override if there is only 1 exercise
               // if (exercises.length === 1) {
