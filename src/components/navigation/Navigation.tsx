@@ -10,6 +10,8 @@ import {
 import { useContext } from "react";
 import AuthContext from "../../context/AuthContext";
 import { NavIcon } from "./NavIcon";
+import { ProfileIcon } from "./ProfileIcon";
+import { Logo } from "../logo/Logo";
 
 const tabs = [
   {
@@ -39,6 +41,7 @@ const Navigation = () => {
   const authContext = useContext(AuthContext);
   const { user, userPermission } = authContext;
   const navigate = useNavigate();
+
   return (
     <div>
       <nav
@@ -46,13 +49,14 @@ const Navigation = () => {
                             border border-bottom-1 d-none d-lg-block`}
         role="navigation"
       >
-        <div className="container-fluid">
-          <span
-            className="navbar-brand cursor-pointer"
+        <div className="container-fluid relative">
+          <div
+            className="navbar-brand cursor-pointer fixed flex items-center"
             onClick={() => navigate("/")}
           >
-            Training Planner
-          </span>
+            <Logo className={`w-16`} />
+            <span>Training Planner</span>
+          </div>
           <Nav className="ml-auto items-center">
             {user && (
               <>
@@ -93,22 +97,11 @@ const Navigation = () => {
             {user && (
               <NavItem>
                 <NavLink to="/logout" className="nav-link">
-                  {user?.photoURL && (
-                    <img
-                      src={user?.photoURL || ""}
-                      alt="user"
-                      className="w-10 h-10 rounded-full"
+                  {user && (
+                    <ProfileIcon
+                      photoUrl={user.photoURL || undefined}
+                      label={user.email?.substring(0, 1)?.toUpperCase() || "U"}
                     />
-                  )}
-                  {user && !user.photoURL && (
-                    <div
-                      className={`
-                    w-10 h-10 rounded-full border border-1 flex 
-                    place-content-center items-center font-bold
-                    `}
-                    >
-                      U
-                    </div>
                   )}
                 </NavLink>
               </NavItem>
@@ -165,22 +158,11 @@ const Navigation = () => {
                 {!user && (
                   <NavIcon icon={faUser} label={user ? "Logout" : "Login"} />
                 )}
-                {user?.photoURL && (
-                  <img
-                    src={user?.photoURL || ""}
-                    alt="user"
-                    className="w-10 h-10 rounded-full"
+                {user && (
+                  <ProfileIcon
+                    photoUrl={user?.photoURL}
+                    label={user?.email?.substring(0, 1)?.toUpperCase() || "U"}
                   />
-                )}
-                {user && !user.photoURL && (
-                  <div
-                    className={`
-                    w-10 h-10 rounded-full border border-1 flex 
-                    place-content-center items-center font-bold
-                    `}
-                  >
-                    U
-                  </div>
                 )}
               </NavLink>
             </NavItem>

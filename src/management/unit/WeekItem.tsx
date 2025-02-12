@@ -29,8 +29,6 @@ export const WeekItem = ({ weekLabel, data, plan }: Props) => {
     plan.sessions.includes(s.name)
   );
 
-  console.log(sessions);
-
   const handleDefaults = (defaultValues: any) => {
     updateWeekPlan(plan.name, {
       ...data,
@@ -73,6 +71,7 @@ export const WeekItem = ({ weekLabel, data, plan }: Props) => {
           initialSet={parseInt(data.targetSet)}
           initialRep={parseInt(data.targetRep)}
           initialTime={parseInt(data.targetTime)}
+          rest={parseInt(data.targetRest)}
           label={`Update default values`}
         />
         {sessions

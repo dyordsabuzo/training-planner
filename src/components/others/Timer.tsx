@@ -26,18 +26,26 @@ const RenderTime = ({ label = "RESTING", remainingTime = 60 }: RenderProps) => {
 type MainProps = {
   length: number;
   label?: string;
+  size?: number;
+  strokeWidth?: number;
   setCountdownComplete: (flag: boolean) => void;
 };
 
-export const Timer = ({ length, setCountdownComplete, label }: MainProps) => {
+export const Timer = ({
+  length,
+  setCountdownComplete,
+  label,
+  size = 300,
+  strokeWidth = 16,
+}: MainProps) => {
   return (
     <CountdownCircleTimer
       isPlaying
       duration={length}
       colors={["#004777", "#F7B801", "#A30000", "#A30000"]}
       colorsTime={[length * (3 / 4), length * (1 / 2), length * (1 / 4), 0]}
-      strokeWidth={16}
-      size={300}
+      strokeWidth={strokeWidth}
+      size={size}
       onComplete={() => {
         setCountdownComplete(true);
         return { shouldRepeat: false, delay: 1 };

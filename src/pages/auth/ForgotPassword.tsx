@@ -7,6 +7,7 @@ import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useNavigate } from "react-router";
 import WrapperPage from "../WrapperPage";
+import { Loading } from "../helpers/Loading";
 
 export const ForgotPassword = () => {
   const authContext = useContext(AuthContext);
@@ -24,7 +25,7 @@ export const ForgotPassword = () => {
   const navigate = useNavigate();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loading />;
   }
 
   return (

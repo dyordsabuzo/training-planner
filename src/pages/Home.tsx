@@ -3,6 +3,7 @@ import { useContext } from "react";
 import AuthContext from "../context/AuthContext";
 import { Loading } from "./helpers/Loading";
 import { useNavigate } from "react-router";
+import { Logo } from "../components/logo/Logo";
 
 export const Home = () => {
   const authContext = useContext(AuthContext);
@@ -17,7 +18,7 @@ export const Home = () => {
   if (role === "admin") {
     return (
       <WrapperPage>
-        <div className="flex flex-col pt-6 w-full px-8 justify-left">
+        <div className="flex flex-col pt-6 w-full px-8 justify-left relative">
           <h1 className="text-2xl font-bold w-full">
             Welcome to Training Planner
           </h1>

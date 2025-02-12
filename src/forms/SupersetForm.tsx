@@ -33,6 +33,9 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const [exercises, setExercises] = useState<string[]>(
     formData?.exercises ?? []
   );
+
+  const [exerciseCombo, setExerciseCombo] = useState<any>([]);
+
   const [rest, setRest] = useState<string>(formData?.rest ?? "");
   const [tags, setTags] = useState(formData?.tags ?? []);
   const [type, setType] = useState<string>(formData?.type ?? "Rep-based");
@@ -92,13 +95,57 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
         placeholder={"Exercise name"}
         changeValue={setName}
       />
-      <TagInput
+      {/* <TagInput
         key={"exercises"}
         label={"Exercises"}
         list={exercises}
         options={exerciseOptions}
         updateList={setExercises}
-      />
+      /> */}
+      <div className={`flex flex-col`}>
+        <label>Exercises</label>
+        <div className={`flex gap-1 py-1`}>
+          <TagInput
+            key={"exercises"}
+            list={exercises}
+            placeholder="Select main exercise"
+            options={exerciseOptions}
+            updateList={(e) => {
+              // setExercises
+              if (exerciseCombo.length > 0) {
+                console.log("superset form");
+              }
+            }}
+            className={`flex grow`}
+          />
+          <TagInput
+            key={"exercises"}
+            list={exercises}
+            placeholder="Select alternatives"
+            options={exerciseOptions}
+            updateList={setExercises}
+            className={`flex grow`}
+          />
+        </div>
+        <div className={`flex gap-1 py-1`}>
+          <TagInput
+            key={"exercises"}
+            list={exercises}
+            placeholder="Select main exercise"
+            options={exerciseOptions}
+            updateList={setExercises}
+            className={`flex grow`}
+          />
+          <TagInput
+            key={"exercises"}
+            list={exercises}
+            placeholder="Select alternatives"
+            options={exerciseOptions}
+            updateList={setExercises}
+            className={`flex grow`}
+          />
+        </div>
+      </div>
       <ButtonSelection
         label="Superset type"
         options={["Rep-based", "Time-based"]}

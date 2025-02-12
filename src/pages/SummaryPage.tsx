@@ -11,6 +11,7 @@ import { Celebration } from "./others/Celebration";
 type Props = {
   currentSuperset?: any;
   nextSuperset?: any;
+  actualSupersetData?: any;
   supersetIndex?: number;
   sessionComplete?: boolean;
   nextPageHandler?: () => void;
@@ -19,33 +20,44 @@ type Props = {
 export const SummaryPage = ({
   currentSuperset = null,
   nextSuperset = null,
+  actualSupersetData = null,
   supersetIndex = 0,
   nextPageHandler = () => {},
 }: Props) => {
   const sessionComplete = currentSuperset && !nextSuperset;
+  const {
+    sessionData,
+    wrapSession,
+    updateUserData,
+    initialiseSession,
+    setIsRunning,
+  } = useContext(SessionContext);
 
   const handleButtonClick = () => {
     if (sessionComplete) {
-      sessionContext.wrapSession();
+      wrapSession();
     } else if (nextSuperset) {
       nextPageHandler();
     } else {
-      sessionContext.setIsRunning(true);
+      setIsRunning(true);
     }
   };
 
-  const sessionContext = useContext(SessionContext);
-  const supersets =
-    Object.values((sessionContext.sessionData as any).supersets) || [];
+  const supersets = Object.values((sessionData as any).supersets) || [];
+
+  if (sessionComplete) {
+    console.log(actualSupersetData);
+    updateUserData(actualSupersetData);
+  }
 
   return (
     <WrapperPage>
-      <div className={`grid place-content-center gap-2 pt-12`}>
+      <div className={`w-full grid place-content-center gap-2 pt-12`}>
         {sessionComplete && <Celebration />}
         <Button
           label={`${nextSuperset ? "NEXT" : currentSuperset ? "FINISH" : "BEGIN"}`}
           onClick={handleButtonClick}
-          className={`py-4`}
+          className={`py-4 w-full`}
         />
 
         <div className={`flex gap-2`}>
@@ -84,15 +96,20 @@ export const SummaryPage = ({
               >
                 <span className={`text-base font-bold`}>{superset.name}</span>
                 <div className={`flex flex-col gap-1`}>
-                  {superset.exercises.map((item: ExerciseSuperset) => (
-                    <span
-                      key={item.exercise.name}
-                      // className={`text-sm leading-none bg-green-500 text-white rounded-xl p-2 w-fit`}
-                      className={`text-sm leading-none text-gray-700 rounded-xl w-fit`}
-                    >
-                      {item.exercise.name}
-                    </span>
-                  ))}
+                  {superset.exercises.map(
+                    (item: ExerciseSuperset, index: number) => (
+                      <span
+                        key={index}
+                        // className={`text-sm leading-none bg-green-500 text-white rounded-xl p-2 w-fit`}
+                        className={`
+                          text-sm leading-none text-gray-700 rounded-xl w-fit
+                          ${item.exercise ? "" : "text-white"}
+                        `}
+                      >
+                        {item.exercise?.name || "filler"}
+                      </span>
+                    )
+                  )}
                 </div>
               </div>
             ))}
@@ -108,7 +125,7 @@ export const SummaryPage = ({
           <div
             className={`flex items-center gap-2 text-base text-blue-500 hover:text-blue-700 cursor-pointer font-bold`}
             onClick={() => {
-              sessionContext.initialiseSession(null);
+              initialiseSession(null);
             }}
           >
             <FontAwesomeIcon icon={faArrowLeft} />

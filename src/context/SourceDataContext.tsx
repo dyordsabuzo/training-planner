@@ -2,13 +2,7 @@ import { createContext, ReactNode, useContext, useState } from "react";
 import { addDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { getCollection, getDocumentReference } from "../common/firebase";
 import AuthContext from "./AuthContext";
-
-enum SourceDbReferences {
-  EXERCISES = "exercises",
-  SUPERSETS = "supersets",
-  SESSIONS = "sessions",
-  PLANS = "plans",
-}
+import { saveToDB, SourceDbReferences } from "../common/utils";
 
 // type ContextData = {
 //   sourceData?: any;
@@ -55,7 +49,7 @@ type _Props = {
 export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const [sourceData, setSourceData] = useState<any>({});
   const authContext = useContext(AuthContext);
-  const { userPermission } = authContext;
+  const { user, userPermission } = authContext;
 
   const initialise = async () => {
     try {
@@ -63,6 +57,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       const exercises = await getFromDB(SourceDbReferences.EXERCISES);
       const supersets = await getFromDB(SourceDbReferences.SUPERSETS);
       const sessions = await getFromDB(SourceDbReferences.SESSIONS);
+
+      const userdata = user
+        ? await getFromDB(SourceDbReferences.USERDATA, [user.uid])
+        : null;
 
       const plans = await getFromDB(
         SourceDbReferences.PLANS,
@@ -75,6 +73,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         supersets,
         sessions,
         plans,
+        userdata,
       });
     } catch (error) {
       console.log(error);
@@ -93,43 +92,43 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     });
   };
 
-  const saveToDB = async (sourceDb: SourceDbReferences, data: any) => {
-    const collection = getCollection(sourceDb);
+  // const saveToDB = async (sourceDb: SourceDbReferences, data: any) => {
+  //   const collection = getCollection(sourceDb);
 
-    if (!(data.id ?? "")) {
-      await addDoc(collection, data)
-        .then((doc) => {
-          const sourceDataElement = sourceData[sourceDb] ?? {};
-          setSourceData({
-            ...sourceData,
-            [sourceDb]: {
-              ...sourceDataElement,
-              [data.name]: {
-                ...data,
-                id: doc.id,
-              },
-            },
-          });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    } else {
-      const docRef = getDocumentReference(sourceDb, data.id);
-      const { id, ...plainData } = data;
+  //   if (!(data.id ?? "")) {
+  //     await addDoc(collection, data)
+  //       .then((doc) => {
+  //         const sourceDataElement = sourceData[sourceDb] ?? {};
+  //         setSourceData({
+  //           ...sourceData,
+  //           [sourceDb]: {
+  //             ...sourceDataElement,
+  //             [data.name]: {
+  //               ...data,
+  //               id: doc.id,
+  //             },
+  //           },
+  //         });
+  //       })
+  //       .catch((error) => {
+  //         console.log(error);
+  //       });
+  //   } else {
+  //     const docRef = getDocumentReference(sourceDb, data.id);
+  //     const { id, ...plainData } = data;
 
-      await updateDoc(docRef, plainData).then((doc) => {
-        const sourceDataElement = sourceData[sourceDb] ?? {};
-        setSourceData({
-          ...sourceData,
-          [sourceDb]: {
-            ...sourceDataElement,
-            [data.name]: data,
-          },
-        });
-      });
-    }
-  };
+  //     await updateDoc(docRef, plainData).then((doc) => {
+  //       const sourceDataElement = sourceData[sourceDb] ?? {};
+  //       setSourceData({
+  //         ...sourceData,
+  //         [sourceDb]: {
+  //           ...sourceDataElement,
+  //           [data.name]: data,
+  //         },
+  //       });
+  //     });
+  //   }
+  // };
 
   const getFromDB = async (
     sourceDb: SourceDbReferences,
@@ -147,10 +146,18 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
       docs.forEach((doc) => {
         const docData = doc.data();
-        data = {
-          ...data,
-          [docData.name]: { ...docData, id: doc.id },
-        };
+
+        if (docData.name) {
+          data = {
+            ...data,
+            [docData.name]: { ...docData, id: doc.id },
+          };
+        } else {
+          data = {
+            ...data,
+            [doc.id]: { ...docData, id: doc.id },
+          };
+        }
       });
 
       return data;
@@ -176,7 +183,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           exercises: exerciseList,
         };
 
-        await saveToDB(SourceDbReferences.SUPERSETS, superset);
+        const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+        updateSourceData(SourceDbReferences.SUPERSETS, data);
       }
     });
   };
@@ -197,27 +205,48 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           name: session,
           supersets: supersetList,
         };
-        await saveToDB(SourceDbReferences.SESSIONS, sessionObject);
+
+        const data = await saveToDB(SourceDbReferences.SESSIONS, sessionObject);
+        updateSourceData(SourceDbReferences.SESSIONS, data);
       }
     });
   };
 
+  const updateSourceData = (dbReference: SourceDbReferences, data: any) => {
+    if (data) {
+      const sourceDataElement = sourceData[dbReference];
+      setSourceData({
+        ...sourceData,
+        [dbReference]: {
+          ...sourceDataElement,
+          [data?.name]: data,
+        },
+      });
+    }
+  };
+
   const updateExercise = async (exercise: any) => {
-    await saveToDB(SourceDbReferences.EXERCISES, exercise);
+    const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
+    updateSourceData(SourceDbReferences.EXERCISES, data);
     linkExerciseWithSupersets(exercise);
   };
 
   const addExercise = async (exercise: any) => {
-    await saveToDB(SourceDbReferences.EXERCISES, exercise);
+    const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
+    updateSourceData(SourceDbReferences.EXERCISES, data);
     linkExerciseWithSupersets(exercise);
   };
 
   const deleteExercise = (exercise: any) => {
     deleteFromDB(SourceDbReferences.EXERCISES, exercise);
+    let _srcData = sourceData;
+    delete _srcData.exercises[exercise.name];
+    setSourceData(_srcData);
   };
 
   const addSuperset = async (superset: any) => {
-    await saveToDB(SourceDbReferences.SUPERSETS, superset);
+    const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+    updateSourceData(SourceDbReferences.SUPERSETS, data);
     linkSupersetWithSessions(superset);
   };
 
@@ -229,24 +258,33 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         exercises.includes(e)
       ),
     };
-    await saveToDB(SourceDbReferences.SUPERSETS, superset);
+    const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+    updateSourceData(SourceDbReferences.SUPERSETS, data);
     linkSupersetWithSessions(superset);
   };
 
   const deleteSuperset = (superset: any) => {
     deleteFromDB(SourceDbReferences.SUPERSETS, superset);
+    let _srcData = sourceData;
+    delete _srcData.supersets[superset.name];
+    setSourceData(_srcData);
   };
 
   const addSession = async (session: any) => {
-    await saveToDB(SourceDbReferences.SESSIONS, session);
+    const data = await saveToDB(SourceDbReferences.SESSIONS, session);
+    updateSourceData(SourceDbReferences.SESSIONS, data);
   };
 
   const editSession = async (session: any) => {
-    await saveToDB(SourceDbReferences.SESSIONS, session);
+    const data = await saveToDB(SourceDbReferences.SESSIONS, session);
+    updateSourceData(SourceDbReferences.SESSIONS, data);
   };
 
   const deleteSession = (session: any) => {
     deleteFromDB(SourceDbReferences.SESSIONS, session);
+    let _srcData = sourceData;
+    delete _srcData.sessions[session.name];
+    setSourceData(_srcData);
   };
 
   const addPlan = async (plan: any) => {
@@ -270,19 +308,23 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       ...plan,
       weeks,
     };
-    await saveToDB(SourceDbReferences.PLANS, plan);
+    const data = await saveToDB(SourceDbReferences.PLANS, plan);
+    updateSourceData(SourceDbReferences.PLANS, data);
   };
 
   const editPlan = async (plan: any) => {
     let currentWeeks = sourceData.plans[plan.originalName].weeks;
-    if (parseInt(plan.numberOfWeeks ?? "0") > currentWeeks.length) {
+    let currentWeeksLength = Object.keys(currentWeeks).length;
+
+    if (parseInt(plan.numberOfWeeks || "0") > currentWeeksLength) {
       Array.from(
-        Array(parseInt(plan.numberOfWeeks) - currentWeeks.length).keys()
+        Array(parseInt(plan.numberOfWeeks) - currentWeeksLength).keys()
       ).forEach((week) => {
+        console.log(week);
         currentWeeks = {
           ...currentWeeks,
-          [`Week ${week + 1 + currentWeeks.length}`]: {
-            weekNumber: week + currentWeeks.length,
+          [`Week ${week + 1 + currentWeeksLength}`]: {
+            weekNumber: week + currentWeeksLength,
             targetRep: plan.baselineRep,
             targetSet: plan.baselineSet,
             targetTime: plan.baselineTime,
@@ -295,11 +337,16 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       ...plan,
       weeks: currentWeeks,
     };
-    await saveToDB(SourceDbReferences.PLANS, plan);
+
+    const data = await saveToDB(SourceDbReferences.PLANS, plan);
+    updateSourceData(SourceDbReferences.PLANS, data);
   };
 
   const deletePlan = (plan: any) => {
     deleteFromDB(SourceDbReferences.PLANS, plan);
+    let _srcData = sourceData;
+    delete _srcData.plan[plan.name];
+    setSourceData(_srcData);
   };
 
   const updateWeekPlan = async (planName: string, weekData: any) => {
@@ -316,7 +363,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       },
     };
 
-    await saveToDB(SourceDbReferences.PLANS, plan);
+    const data = await saveToDB(SourceDbReferences.PLANS, plan);
+    updateSourceData(SourceDbReferences.PLANS, data);
+
     setSourceData({
       ...sourceData,
       plans: {

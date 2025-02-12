@@ -7,10 +7,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router";
 import WrapperPage from "../WrapperPage";
+import { Logo } from "../../components/logo/Logo";
+import { Loading } from "../helpers/Loading";
 
 export const Login = () => {
   const authContext = useContext(AuthContext);
-  const { user, loginWithEmailAndPassword, loginWithGoogle, error } =
+  const { user, isLoading, loginWithEmailAndPassword, loginWithGoogle, error } =
     authContext;
 
   const [email, setEmail] = useState("");
@@ -37,9 +39,14 @@ export const Login = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  if (isLoading) {
+    return <Loading />;
+  }
+
   return (
     <WrapperPage>
-      <div className="flex flex-col gap-4 place-items-center py-4 bg-blue-500 mt-10">
+      <div className="flex flex-col gap-4 place-items-center py-4 bg-blue-500 mt-10 relative">
+        {/* <Logo className={`absolute w-40 -right-20 -top-6`} /> */}
         <div className="flex flex-col w-full px-4 pb-2 text-white">
           <span className="text-2xl font-bold">Hi there!</span>
           <span>Welcome to Training Planner</span>

@@ -39,8 +39,8 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
     planData?.baselineTime ?? ""
   );
   const [sessions, setSessions] = useState<string[]>(planData?.sessions ?? []);
-  const [startDate, setStartDate] = useState<Dayjs | null>(
-    dayjs(planData?.startDate?.toDate()) ?? dayjs(new Date())
+  const [startDate, setStartDate] = useState<Dayjs>(
+    dayjs(planData?.startDate?.toDate()) || dayjs(new Date())
   );
 
   const sourceDataContext = useContext(SourceDataContext);

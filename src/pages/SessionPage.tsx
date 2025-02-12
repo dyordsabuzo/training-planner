@@ -9,13 +9,12 @@ import WrapperPage from "./WrapperPage";
 const SessionPage = () => {
   const sessionContext = useContext(SessionContext);
   const sourceDataContext = useContext(SourceDataContext);
+  const { sourceData } = sourceDataContext as any;
 
   const [sessionData, setSessionData] = useState<any>({});
   const [weekOptions, setWeekOptions] = useState<string[]>([]);
   const [sessionOptions, setSessionOptions] = useState<string[]>([]);
   const [isContextInitialised, setIsContextInitialised] = useState(false);
-
-  const sourceData: any = sourceDataContext.sourceData;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,19 +49,30 @@ const SessionPage = () => {
             let planData: any = Object.values(sourceData.plans).find(
               (value: any) => value.name === plan
             );
+
+            // let completedWeeks = Object.values(sourceData.userdata[plan]);
+            let userdata: any = Object.values(sourceData.userdata)[0];
+
+            let completedWeeks: string[] = [];
+            if (userdata && plan in userdata) {
+              completedWeeks = Object.keys(userdata[plan]);
+            }
+
             setWeekOptions(
-              Object.keys(planData.weeks).sort((a, b) => {
-                const [textA, numA] = a.split(" ");
-                const [textB, numB] = b.split(" ");
+              Object.keys(planData.weeks)
+                .filter((e) => !completedWeeks.includes(e))
+                .sort((a, b) => {
+                  const [textA, numA] = a.split(" ");
+                  const [textB, numB] = b.split(" ");
 
-                // Compare the text part first (alphabetical order)
-                if (textA !== textB) {
-                  return textA.localeCompare(textB);
-                }
+                  // Compare the text part first (alphabetical order)
+                  if (textA !== textB) {
+                    return textA.localeCompare(textB);
+                  }
 
-                // Compare the numeric part (numerical order)
-                return Number(numA) - Number(numB);
-              })
+                  // Compare the numeric part (numerical order)
+                  return Number(numA) - Number(numB);
+                })
             );
             setSessionOptions(planData.sessions.sort());
 

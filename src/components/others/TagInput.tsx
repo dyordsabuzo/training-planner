@@ -1,17 +1,19 @@
 import React, { useState } from "react";
 
 type Props = {
-  label: string;
+  label?: string;
   list: string[];
   options: string[];
+  placeholder?: string;
   updateList: (value: string[]) => void;
   className?: string;
 };
 
 export const TagInput = ({
-  label,
+  label = "",
   list,
   options,
+  placeholder = "",
   updateList,
   className,
 }: Props) => {
@@ -46,13 +48,15 @@ export const TagInput = ({
 
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
-      <label
-        htmlFor={label}
-        className={`block mb-1 text-sm font-medium 
+      {label !== "" && (
+        <label
+          htmlFor={label}
+          className={`block mb-1 text-sm font-medium 
                     text-gray-900 dark:text-gray-900`}
-      >
-        {label}
-      </label>
+        >
+          {label}
+        </label>
+      )}
       <div
         className={`w-full bg-white rounded border border-gray-300  
                     focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-200 
@@ -99,7 +103,7 @@ export const TagInput = ({
           //  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500
           //  dark:focus:border-blue-500 w-full`}
           className={`focus:border-0 focus:outline-none text-gray-700 text-sm w-full`}
-          placeholder={`Enter ${label.toLowerCase()} to add`}
+          placeholder={placeholder || `Enter ${label.toLowerCase()} to add`}
           value={inputValue}
           onKeyDown={handleKeyDown}
           onChange={handleInputChange}

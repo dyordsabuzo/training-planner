@@ -10,7 +10,7 @@ type InputProps = {
   required?: boolean;
   readonly?: boolean;
   placeholder: string;
-  changeValue: (value: Dayjs | null) => void;
+  changeValue: (value: Dayjs) => void;
   className?: string;
 };
 
@@ -37,11 +37,13 @@ export const DateInput = ({
 
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <DatePicker
-          defaultValue={dayjs("2022-04-17")}
+          defaultValue={dayjs(new Date())}
           value={fieldValue}
           onChange={(date) => {
-            changeValue(date);
-            setFieldValue(date);
+            if (date) {
+              changeValue(date);
+              setFieldValue(date);
+            }
           }}
           slotProps={{
             textField: {

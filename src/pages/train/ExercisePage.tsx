@@ -8,6 +8,12 @@ import FinishPage from "../FinishPage";
 import WrapperPage from "../WrapperPage";
 import { Widget } from "../../components/others/Widget";
 import { SummaryPage } from "../SummaryPage";
+import { Loading } from "../helpers/Loading";
+import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlayCircle } from "@fortawesome/free-solid-svg-icons";
+import { WatchVideo } from "../../components/others/WatchVideo";
+import { ExerciseDetails } from "./ExerciseDetails";
 
 type State = {
   exerciseCounter: number;
@@ -40,9 +46,20 @@ const reducer = (state: State, action: Action) => {
         supersetCounter: state.supersetCounter + 1,
       };
     case "update":
+      let { exerciseCounter: ecounter, exerciseSet: eset } = state;
+
+      if (
+        "supersetRest" in state &&
+        ecounter % action.payload.exerciseLength === 0
+      ) {
+        eset++;
+      }
+
       return {
         ...state,
         ...action.payload,
+        exerciseSet: eset,
+        supersetComplete: eset >= action.payload.targetSet,
       };
     case "continue":
       const exerciseCounter = state.exerciseCounter + 1;
@@ -50,11 +67,12 @@ const reducer = (state: State, action: Action) => {
         state;
 
       if (exerciseCounter % action.payload.exerciseLength === 0) {
-        exerciseSet++;
-        supersetRest = true;
+        supersetComplete = exerciseSet + 1 >= action.payload.targetSet;
+        if (!supersetComplete) {
+          supersetRest = true;
+        }
       }
 
-      supersetComplete = exerciseSet >= action.payload.targetSet;
       supersetTimer = false;
 
       return {
@@ -73,15 +91,20 @@ const reducer = (state: State, action: Action) => {
 
 export const ExercisePage = () => {
   const sessionContext = useContext(SessionContext);
-  const { sessionData } = sessionContext as any;
+  const { sessionData, updateUserData } = sessionContext as any;
 
   const [exerciseState, dispatch] = useReducer(reducer, initialState);
 
+  const [actualSupersetData, setActualSupersetData] = useState<any>({});
   const [supersetData, setSupersetData] = useState<any>({});
   const [exerciseData, setExerciseData] = useState<any>({});
 
   const [actualWeight, setActualWeight] = useState<string>("");
   const [actualRep, setActualRep] = useState<string>("");
+
+  const [targetWeight, setTargetWeight] = useState<string>("0");
+
+  const [targetRep, setTargetRep] = useState<string>("0");
 
   const completeExercise = () => {
     const targetSet = parseInt(supersetData.targetSet);
@@ -96,10 +119,60 @@ export const ExercisePage = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleCompleteExercise = () => {
+    // TODO: Last set of the exercise is not saved!!!
     completeExercise();
+
+    const exercise = exerciseData.exercise.name;
+    const superset = supersetData.name;
+    const actualSuperset = actualSupersetData?.[superset] || {};
+    const actualExercise = actualSuperset[exercise] || {};
+
+    setActualSupersetData({
+      ...actualSupersetData,
+      [superset]: {
+        ...actualSuperset,
+        [exercise]: {
+          ...actualExercise,
+          [exerciseState.exerciseSet + 1]: {
+            // actualRep,
+            // actualWeight,
+            // actualTime
+            targetRep,
+            targetWeight,
+            // targetTime,
+          },
+        },
+      },
+    });
   };
+
+  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   completeExercise();
+
+  //   const exercise = exerciseData.exercise.name;
+  //   const superset = supersetData.name;
+  //   const actualSuperset = actualSupersetData?.[superset] || {};
+  //   const actualExercise = actualSuperset[exercise] || {};
+
+  //   console.log("I am here");
+
+  //   setActualSupersetData({
+  //     ...actualSupersetData,
+  //     [superset]: {
+  //       ...actualSuperset,
+  //       [exercise]: {
+  //         ...actualExercise,
+  //         [exerciseState.exerciseSet + 1]: {
+  //           actualRep,
+  //           actualWeight,
+  //           // actualTime
+  //         },
+  //       },
+  //     },
+  //   });
+  // };
 
   useEffect(() => {
     if (supersetData && Object.keys(supersetData).length) {
@@ -114,16 +187,27 @@ export const ExercisePage = () => {
   }, [exerciseState.exerciseCounter, supersetData]);
 
   useEffect(() => {
-    const superset: any = Object.values(sessionData.supersets)[
+    let superset: any = Object.values(sessionData.supersets)[
       exerciseState.supersetCounter
     ];
+
     if (superset) {
+      superset.exercises = superset.exercises.filter((e: any) => e.exercise);
       setActualRep(superset.targetRep);
+      setTargetRep(superset.targetRep);
       setSupersetData(superset);
     }
 
     return () => {};
   }, [exerciseState.supersetCounter, sessionData]);
+
+  useEffect(() => {
+    if (exerciseData.targetWeight) {
+      setActualWeight(exerciseData.targetWeight);
+      setTargetWeight(exerciseData.targetWeight);
+      setTargetRep(exerciseData.exercise?.targetRep || exerciseData.targetRep);
+    }
+  }, [exerciseData]);
 
   // useEffect(() => {
   //   setSessionData({
@@ -140,17 +224,15 @@ export const ExercisePage = () => {
 
   const supersetLength = Object.keys(sessionData.supersets).length;
   if (supersetLength > 0 && exerciseState.supersetCounter >= supersetLength) {
-    // return (
-    //   <FinishPage
-    //     wrapSession={() => {
-    //       sessionContext.wrapSession();
-    //     }}
-    //   />
-    // );
+    if (actualSupersetData) {
+      updateUserData(actualSupersetData);
+      setActualSupersetData({});
+    }
+
     const supersetIndex = Object.values(sessionData.supersets).indexOf(
       supersetData
     );
-    console.log("Session complete");
+
     return (
       <SummaryPage
         currentSuperset={supersetData}
@@ -161,18 +243,6 @@ export const ExercisePage = () => {
   }
 
   if (exerciseState.supersetComplete) {
-    // return (
-    //   <SupersetCompletePage
-    //     superset={supersetData}
-    //     nextSuperset={
-    //       Object.values(sessionData.supersets)[
-    //         exerciseState.supersetCounter + 1
-    //       ] || null
-    //     }
-    //     nextPageHandler={() => dispatch({ type: "reset" })}
-    //   />
-    // );
-
     const supersetIndex = Object.values(sessionData.supersets).indexOf(
       supersetData
     );
@@ -187,23 +257,25 @@ export const ExercisePage = () => {
         }
         supersetIndex={supersetIndex}
         nextPageHandler={() => dispatch({ type: "reset" })}
+        actualSupersetData={actualSupersetData}
       />
     );
   }
 
-  if (exerciseState.supersetRest) {
-    return (
-      <RestTimer
-        length={parseInt(supersetData.rest) || 120}
-        toggleRest={(supersetRest: boolean) => {
-          dispatch({
-            type: "update",
-            payload: { supersetRest },
-          });
-        }}
-      />
-    );
-  }
+  // if (exerciseState.supersetRest) {
+  //   return (
+  //     <RestTimer
+  //       length={parseInt(supersetData.rest) || 120}
+  //       stateLabel={`Completed ${exerciseState.exerciseSet} sets of ${parseInt(supersetData.targetSet)}`}
+  //       toggleRest={(supersetRest: boolean) => {
+  //         dispatch({
+  //           type: "update",
+  //           payload: { supersetRest },
+  //         });
+  //       }}
+  //     />
+  //   );
+  // }
 
   if (exerciseState.supersetTimer) {
     return (
@@ -224,133 +296,96 @@ export const ExercisePage = () => {
   }
 
   if (Object.keys(supersetData).length === 0) {
-    return <div>Loading</div>;
+    return <Loading />;
   }
 
   return (
     <WrapperPage>
       <div
         className={`h-[45vh] 
-                    grid place-content-center
-                    gap-4 shadow-md 
-                    border rounded-lg mx-4 mt-8`}
+          flex flex-col place-content-center
+          gap-4 shadow-md 
+          rounded-sm mx-4 mt-8
+          bg-blue-500
+          min-h-[30rem]
+          relative
+      `}
       >
-        <div className={`grid place-content-center pb-2`}>
-          <span
-            className={`grid place-content-center
-                        text-xs bg-blue-200 font-bold
-                        rounded-xl p-2`}
-          >
-            Exercise Set {exerciseState.exerciseSet + 1} of{" "}
-            {parseInt(supersetData.targetSet)}
+        <div className={`flex flex-col pt-4 pl-4`}>
+          <span className={`text-white text-xs font-base`}>
+            {[sessionData.week, sessionData.annotation]
+              .filter((s: string) => typeof s === "string" && s.trim() !== "")
+              .join(" - ")}
           </span>
-          <div className={`leading-none py-4`}>
-            <span
-              className={`grid place-content-center text-center text-3xl w-64 break-words text-wrap`}
-            >
-              {exerciseData.exercise?.name}
-            </span>
-            <span className={`grid place-content-center text-sm font-light`}>
-              {sessionData.week} - {supersetData.annotation}
-            </span>
-          </div>
-          <span
-            className={`grid place-content-center
-                        text-xs bg-green-200 font-bold
-                        p-2 rounded-xl`}
-          >
-            {" "}
+          <span className={`text-white text-base font-bold`}>
             {supersetData.name}{" "}
           </span>
         </div>
-        {supersetData.type !== "Time-based" && (
-          <div className={`grid grid-cols-2 gap-4`}>
-            <Widget
-              label={"Target Weight"}
-              value={
-                exerciseData.targetWeight || supersetData.targetWeight || 0
-              }
-              unit={"kg"}
-            />
-            <Widget
-              label={"Target Rep"}
-              value={
-                parseInt(exerciseData.exercise?.targetRep) ||
-                parseInt(exerciseData.targetRep) ||
-                supersetData.targetRep
-              }
-              unit={"reps"}
-            />
-          </div>
-        )}
-        {supersetData.type === "Time-based" && (
+        <div className={`w-full h-full flex flex-col rounded-tl-3xl bg-white`}>
           <div
-            className={`grid grid-cols-1 gap-4 cursor-pointer`}
-            onClick={() =>
-              dispatch({ type: "update", payload: { supersetTimer: true } })
-            }
+            className={`self-end
+              flex items-center
+              text-white text-sm  font-bold bg-green-500 h-6
+              rounded-l-xl mt-3 p-2 px-4
+            `}
           >
-            <Widget
-              label={"Target Time"}
-              value={exerciseData.targetTime || supersetData.targetTime || 0}
-              unit={"secs"}
-            />
-            {/* <Widget
-              label={"Target Rep"}
-              value={
-                parseInt(exerciseData.exercise?.targetRep) ||
-                parseInt(exerciseData.targetRep) ||
-                supersetData.targetRep
+            <span className={``}>Set</span>
+            <span className={`text-3xl rounded-full bg-green-500 px-2 py-1`}>
+              {exerciseState.exerciseSet + 1}
+            </span>
+            <span>of {parseInt(supersetData.targetSet)}</span>
+          </div>
+          {exerciseState.supersetRest && (
+            <div className={`flex flex-col h-full`}>
+              <UnwrappedRestTimer
+                length={parseInt(supersetData.rest) || 120}
+                stateLabel={`Completed ${exerciseState.exerciseSet} sets of ${parseInt(supersetData.targetSet)}`}
+                toggleRest={(supersetRest: boolean) => {
+                  const targetSet = parseInt(supersetData.targetSet);
+                  const exerciseLength = supersetData.exercises.length;
+
+                  dispatch({
+                    type: "update",
+                    payload: { supersetRest, targetSet, exerciseLength },
+                  });
+                }}
+              />
+            </div>
+          )}
+          {!exerciseState.supersetRest && (
+            <ExerciseDetails
+              name={exerciseData.exercise?.name}
+              type={supersetData.type}
+              targetWeight={targetWeight}
+              targetRep={targetRep}
+              targetTime={
+                exerciseData.targetTime || supersetData.targetTime || "0"
               }
-              unit={"reps"}
-            /> */}
-          </div>
-        )}
-        {exerciseData.exercise?.videoLink && (
-          <div className={`flex justify-center mb-2`}>
-            <a
-              className="no-underline text-white bg-blue-500 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-              target="_blank"
-              rel="noreferrer"
-              href={exerciseData.exercise.videoLink}
-            >
-              Watch video
-            </a>
-          </div>
-        )}
+              videoLink={exerciseData.exercise?.videoLink}
+              completeExercise={handleCompleteExercise}
+              updateSupersetData={(data: any) => {
+                setSupersetData({
+                  ...supersetData,
+                  ...data,
+                });
+                const { targetWeight: tWeight, targetRep: tRep } = data;
+                if (targetWeight in data) {
+                  setTargetWeight(tWeight);
+                } else {
+                  setTargetRep(tRep);
+                }
+              }}
+            />
+          )}
+        </div>
       </div>
-      <form className={`grid grid-cols-2 gap-4 p-4`} onSubmit={handleSubmit}>
-        <Input
-          label={"Actual Weight"}
-          required
-          value={actualWeight || "0"}
-          placeholder={"Weight in kg"}
-          changeValue={setActualWeight}
-        />
-
-        <Input
-          label={"Actual Rep"}
-          required
-          value={actualRep}
-          placeholder={"Actual rep"}
-          changeValue={setActualRep}
-        />
-
-        <button
-          type={"submit"}
-          className="col-span-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded"
-        >
-          DONE
-        </button>
-
-        <button
-          type={"button"}
-          className="col-span-2 bg-gray-500 hover:bg-gray-700 text-white font-bold py-4 px-4 rounded"
-          onClick={() => sessionContext.wrapSession()}
-        >
-          CANCEL SESSION
-        </button>
-      </form>
+      <button
+        type={"button"}
+        className="col-span-2 bg-gray-500 hover:bg-gray-700 text-white font-bold mx-4 py-4 px-4 rounded"
+        onClick={() => sessionContext.wrapSession()}
+      >
+        CANCEL SESSION
+      </button>
     </WrapperPage>
   );
 };

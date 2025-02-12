@@ -1,4 +1,6 @@
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
+import { saveToDB, SourceDbReferences } from "../common/utils";
+import AuthContext from "./AuthContext";
 
 const SessionContext = createContext({
   sessionData: null,
@@ -8,6 +10,7 @@ const SessionContext = createContext({
   setIsRunning: (flag: boolean) => {},
   initialiseSession: (data: any) => {},
   setSessionData: (data: any) => {},
+  updateUserData: (data: any) => {},
   wrapSession: () => {},
 });
 
@@ -22,6 +25,9 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [isSessionOn, setIsSessionOn] = useState(false);
 
+  const authContext = useContext(AuthContext);
+  const { user } = authContext;
+
   const initialiseSession = (data: any) => {
     setSessionData(data);
   };
@@ -29,6 +35,27 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   const wrapSession = () => {
     setSessionData(null);
     setIsRunning(false);
+  };
+
+  const updateUserData = async (data: any) => {
+    const { plan, session, week } = sessionData;
+
+    console.log(data);
+
+    if (user) {
+      const userData = {
+        id: user.uid,
+        [plan]: {
+          [week]: {
+            [session]: {
+              ...data,
+            },
+          },
+        },
+      };
+      console.log(userData);
+      await saveToDB(SourceDbReferences.USERDATA, userData);
+    }
   };
 
   return (
@@ -42,6 +69,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
         initialiseSession,
         setSessionData,
         wrapSession,
+        updateUserData,
       }}
     >
       {children}

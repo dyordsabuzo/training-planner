@@ -43,6 +43,7 @@ export const ExistingExercise: StoryObj<typeof ExerciseForm> = {
           supersets: ["superset1"],
           alternatives: [],
           isTimeBased: true,
+          isWeightExercise: true,
         }}
         type={""}
         closeForm={() => {

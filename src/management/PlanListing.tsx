@@ -5,6 +5,7 @@ import { PlanForm } from "../forms/PlanForm";
 import { sortObject } from "../common/utils";
 import { Button } from "../components/form/Button";
 import { WeekItem } from "./unit/WeekItem";
+import { Loading } from "../pages/helpers/Loading";
 
 type SelectedWeekData = {
   weekKey: string;
@@ -46,7 +47,7 @@ export const PlanListing = () => {
   }
 
   if (!sourceData.plans) {
-    return <div>Loading</div>;
+    return <Loading />;
   }
 
   return (

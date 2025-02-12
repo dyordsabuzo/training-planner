@@ -3,6 +3,7 @@ import { Input } from "../components/form/Input";
 import SourceDataContext from "../context/SourceDataContext";
 import { TagInput } from "../components/others/TagInput";
 import { FormButtons } from "./FormButtons";
+import { ButtonSelection } from "../components/form/ButtonSelection";
 
 type ExerciseData = {
   id?: string;
@@ -15,6 +16,7 @@ type ExerciseData = {
   supersets?: string[];
   alternatives: string[];
   isTimeBased: boolean;
+  isWeightExercise: boolean;
 };
 
 type Props = {
@@ -29,6 +31,9 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
   const id = exerciseData?.id ?? "";
   const [name, setName] = useState(exerciseData?.name ?? "");
   const [videoLink, setVideoLink] = useState(exerciseData?.videoLink ?? "");
+  const [isWeightExercise, setIsWeightExercise] = useState(
+    exerciseData?.isWeightExercise ?? true
+  );
   const [tags, setTags] = useState(exerciseData?.tags ?? []);
   const [targetRep, setTargetRep] = useState(exerciseData?.targetRep ?? "");
   const [targetSet, setTargetSet] = useState<string>(
@@ -62,6 +67,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         supersets,
         alternatives,
         targetWeight: 0,
+        isWeightExercise,
         // isTimeBased,
       });
       closeForm();
@@ -79,6 +85,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         supersets,
         alternatives,
         targetWeight: 0,
+        isWeightExercise,
         // isTimeBased,
       });
       closeForm();
@@ -99,6 +106,14 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         value={videoLink}
         placeholder={"Video link"}
         changeValue={setVideoLink}
+      />
+      <ButtonSelection
+        label="Weight exercise?"
+        options={["Yes", "No"]}
+        selection={isWeightExercise ? "Yes" : "No"}
+        onSelect={(value: string) => {
+          setIsWeightExercise(value === "Yes");
+        }}
       />
       {/* <Toggle
         label="Is this exercise time based?"

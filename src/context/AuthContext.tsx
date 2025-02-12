@@ -13,6 +13,7 @@ import {
   verifyPasswordResetCode,
   confirmPasswordReset,
   User,
+  connectAuthEmulator,
 } from "firebase/auth";
 import { getDocumentReference } from "../common/firebase";
 import { getDoc } from "firebase/firestore";
@@ -65,6 +66,11 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     });
 
     const auth = getAuth(app);
+
+    if (process.env.NODE_ENV === "development") {
+      connectAuthEmulator(auth, "http://localhost:9099");
+    }
+
     setAuth(auth);
     onAuthStateChanged(auth, (user) => {
       setUser(user);
