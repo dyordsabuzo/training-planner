@@ -1,11 +1,10 @@
 import React, {useContext, useState} from "react";
 import SourceDataContext from "../context/SourceDataContext";
-import SessionForm from "../forms/SessionForm";
+import {SessionForm} from "../forms/SessionForm";
 import {sortObject} from "../common/utils";
 import BaseListing from "./BaseListing";
-// import AlertModal from "../modal/AlertModal";
 
-const SessionListing = () => {
+export const SessionListing = () => {
     const [formData, setFormData] = useState<any>({})
     const [formType, setFormType] = useState("")
 
@@ -59,5 +58,3 @@ const SessionListing = () => {
 
     )
 }
-
-export default SessionListing

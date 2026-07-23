@@ -1,120 +1,151 @@
-import Input from "../components/Input";
-import React, {useContext, useState} from "react";
+import { Input } from "../components/form/Input";
+import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
-import TagInput from "../components/TagInput";
+import { TagInput } from "../components/others/TagInput";
 
 import "react-datepicker/dist/react-datepicker.css";
-import DateInput from "../components/DateInput";
+import { DateInput } from "../components/date/DateInput";
+import dayjs, { Dayjs } from "dayjs";
+import { FormButtons } from "./FormButtons";
 
 type FormData = {
-    id?: string
-    name?: string
-    numberOfWeeks?: string
-    baselineRep?: string
-    baselineSet?: string
-    sessions?: string[]
-    startDate: Date
-}
+  id?: string;
+  name?: string;
+  numberOfWeeks?: string;
+  baselineRep?: string;
+  baselineSet?: string;
+  baselineTime?: string;
+  sessions?: string[];
+  startDate: Dayjs;
+};
 
 type Props = {
-    data: FormData
-    type: string
-    closeForm: () => void
-}
+  data: FormData | null;
+  type: string;
+  closeForm: () => void;
+};
 
-const PlanForm: React.FC<Props> = ({data, type, closeForm}) => {
-    // const [id, setId] = useState(data.id ?? "")
-    const id = data.id ?? ""
-    const [name, setName] = useState(data.name ?? "")
-    const [numberOfWeeks, setNumberOfWeeks] = useState(data.numberOfWeeks ?? "")
-    const [baselineSet, setBaselineSet] = useState(data.baselineSet ?? "")
-    const [baselineRep, setBaselineRep] = useState(data.baselineRep ?? "")
-    const [sessions, setSessions] = useState<string[]>(data.sessions ?? [])
-    const [startDate, setStartDate] = useState<Date>(data.startDate ?? new Date())
+export const PlanForm = ({ data, type, closeForm }: Props) => {
+  const planData = data;
 
-    const sourceDataContext = useContext(SourceDataContext)
-    const sourceData: any = sourceDataContext.sourceData
+  const id = planData?.id;
+  const [name, setName] = useState(planData?.name ?? "");
+  const [numberOfWeeks, setNumberOfWeeks] = useState(
+    planData?.numberOfWeeks ?? ""
+  );
+  const [baselineSet, setBaselineSet] = useState(planData?.baselineSet ?? "");
+  const [baselineRep, setBaselineRep] = useState(planData?.baselineRep ?? "");
+  const [baselineTime, setBaselineTime] = useState(
+    planData?.baselineTime ?? ""
+  );
+  const [sessions, setSessions] = useState<string[]>(planData?.sessions ?? []);
+  const [startDate, setStartDate] = useState<Dayjs>(
+    dayjs(planData?.startDate?.toDate()) || dayjs(new Date())
+  );
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
+  const sourceDataContext = useContext(SourceDataContext);
+  const sourceData: any = sourceDataContext.sourceData;
 
-        if (type === "add") {
-            sourceDataContext.addPlan({
-                name,
-                numberOfWeeks,
-                startDate,
-                baselineSet,
-                baselineRep,
-                sessions,
-            })
-            closeForm()
-        }
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-        if (type === "edit") {
-            sourceDataContext.editPlan({
-                id,
-                name,
-                numberOfWeeks,
-                startDate,
-                baselineSet,
-                baselineRep,
-                sessions,
-            })
-            closeForm()
-        }
+    if (type === "add") {
+      sourceDataContext.addPlan({
+        name,
+        numberOfWeeks,
+        startDate: startDate?.toDate(),
+        baselineSet,
+        baselineRep,
+        baselineTime,
+        sessions,
+      });
+      closeForm();
     }
 
-    return (
-        <form onSubmit={handleSubmit} className={`grid place-content-center grid-cols-2 gap-4 sm:gap-2`}>
-            <Input label={"Plan name"} required
-                   value={name}
-                   placeholder={"Plan name"} changeValue={setName}
-                   className={`col-span-2`}
-            />
+    if (type === "edit") {
+      sourceDataContext.editPlan({
+        id,
+        originalName: planData?.name,
+        name,
+        numberOfWeeks,
+        startDate: startDate?.toDate(),
+        baselineSet,
+        baselineRep,
+        baselineTime,
+        sessions,
+      });
+      closeForm();
+    }
+  };
 
-            <Input label={"Number of weeks"} required
-                   value={numberOfWeeks}
-                   placeholder={"Number of weeks"} changeValue={setNumberOfWeeks}/>
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`grid place-content-center grid-cols-2 gap-4 sm:gap-2`}
+    >
+      <Input
+        label={"Plan name"}
+        required
+        value={name}
+        placeholder={"Plan name"}
+        changeValue={setName}
+        className={`col-span-2`}
+      />
 
-            <DateInput label={"Start date"} value={startDate} placeholder={"Start date"} changeValue={setStartDate}/>
+      <Input
+        label={"Number of weeks"}
+        required
+        value={numberOfWeeks}
+        placeholder={"Number of weeks"}
+        changeValue={setNumberOfWeeks}
+      />
 
-            <Input label={"Baseline set"}
-                   value={baselineSet}
-                   placeholder={"Baseline set"} changeValue={setBaselineSet}/>
+      <DateInput
+        label={"Start date"}
+        value={startDate}
+        placeholder={"Start date"}
+        changeValue={setStartDate}
+      />
 
-            <Input label={"Baseline Rep"}
-                   value={baselineRep}
-                   placeholder={"Target Rep"} changeValue={setBaselineRep}/>
+      <Input
+        label={"Baseline set"}
+        value={baselineSet}
+        placeholder={"Baseline set"}
+        changeValue={setBaselineSet}
+      />
 
-            <TagInput label={"Selected sessions"} list={sessions} options={Object.keys(sourceData.sessions ?? {})}
-                      updateList={setSessions}/>
+      <Input
+        label={"Baseline Rep"}
+        value={baselineRep}
+        placeholder={"Target Rep"}
+        changeValue={setBaselineRep}
+      />
 
-            <div className={`col-span-2 flex justify-between gap-2 py-4`}>
-                <div className={`flex gap-2`}>
-                    <button type={"submit"}
-                            className={`text-xs bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl`}>
-                        Save
-                    </button>
-                    <button type={"button"}
-                            className={`text-xs font-bold py-2 px-4 rounded-xl border border-black`}
-                            onClick={() => {
-                                closeForm()
-                            }}>
-                        Cancel
-                    </button>
-                </div>
-                <button type={"button"}
-                        className={`text-xs bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl`}
-                        onClick={() => {
-                            sourceDataContext.deletePlan(data)
-                            closeForm()
-                        }}>
-                    Delete
-                </button>
-            </div>
+      <Input
+        label={"Baseline Time"}
+        value={baselineTime}
+        placeholder={"Target Time"}
+        changeValue={setBaselineTime}
+      />
 
-        </form>
-    )
-}
+      <TagInput
+        label={"Selected sessions"}
+        list={sessions}
+        options={Object.keys(sourceData.sessions ?? {})}
+        updateList={setSessions}
+      />
 
-export default PlanForm
+      <div className="col-span-2">
+        <FormButtons
+          onCancel={() => {
+            closeForm();
+          }}
+          onDelete={() => {
+            sourceDataContext.deletePlan(data);
+            closeForm();
+          }}
+        />
+      </div>
+    </form>
+  );
+};

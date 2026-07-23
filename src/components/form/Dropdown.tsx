@@ -5,7 +5,7 @@ type DropdownProps = {
     valueHandler: (value: string) => void
 }
 
-const Dropdown: React.FC<DropdownProps> = ({label, options, required, valueHandler}) => {
+export const Dropdown = ({label, options, required, valueHandler}:DropdownProps) => {
     return (
         <div className="relative w-full">
             <label htmlFor={label} className="block mb-2 text-sm font-medium text-gray-900">
@@ -25,5 +25,3 @@ const Dropdown: React.FC<DropdownProps> = ({label, options, required, valueHandl
         </div>
     )
 }
-
-export default Dropdown;

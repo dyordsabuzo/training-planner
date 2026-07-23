@@ -1,38 +1,53 @@
-import Input from "../components/Input";
 import React, { useContext, useState } from "react";
+import { Input } from "../components/form/Input";
 import SourceDataContext from "../context/SourceDataContext";
-import TagInput from "../components/TagInput";
+import { TagInput } from "../components/others/TagInput";
+import { FormButtons } from "./FormButtons";
+import { ButtonSelection } from "../components/form/ButtonSelection";
 
-type FormData = {
+type ExerciseData = {
   id?: string;
   name?: string;
   videoLink?: string;
-  tags?: string;
+  tags?: string[];
   targetRep?: string;
   targetSet?: string;
   rest?: string;
   supersets?: string[];
   alternatives: string[];
+  isTimeBased: boolean;
+  isWeightExercise: boolean;
 };
 
 type Props = {
-  data: FormData;
+  data: ExerciseData | null;
   type: string;
   closeForm: () => void;
 };
 
-const ExerciseForm: React.FC<Props> = ({ data, type, closeForm }) => {
-  // const [id, setId] = useState(data.id ?? "")
-  const id = data.id ?? "";
-  const [name, setName] = useState(data.name ?? "");
-  const [videoLink, setVideoLink] = useState(data.videoLink ?? "");
-  const [tags, setTags] = useState(data.tags ?? "");
-  const [targetRep, setTargetRep] = useState(data.targetRep ?? "");
-  const [targetSet, setTargetSet] = useState<string>(data.targetSet ?? "");
-  const [rest, setRest] = useState<string>(data.rest ?? "");
-  const [supersets, setSupersets] = useState<string[]>(data.supersets ?? []);
+export const ExerciseForm = ({ data, type, closeForm }: Props) => {
+  const exerciseData: ExerciseData | null = data;
+
+  const id = exerciseData?.id ?? "";
+  const [name, setName] = useState(exerciseData?.name ?? "");
+  const [videoLink, setVideoLink] = useState(exerciseData?.videoLink ?? "");
+  const [isWeightExercise, setIsWeightExercise] = useState(
+    exerciseData?.isWeightExercise ?? true
+  );
+  const [tags, setTags] = useState(exerciseData?.tags ?? []);
+  const [targetRep, setTargetRep] = useState(exerciseData?.targetRep ?? "");
+  const [targetSet, setTargetSet] = useState<string>(
+    exerciseData?.targetSet ?? ""
+  );
+  // const [isTimeBased, setIsTimeBased] = useState<boolean>(
+  //   exerciseData?.isTimeBased ?? false
+  // );
+  const [rest, setRest] = useState<string>(exerciseData?.rest ?? "");
+  const [supersets, setSupersets] = useState<string[]>(
+    exerciseData?.supersets ?? []
+  );
   const [alternatives, setAlternatives] = useState<string[]>(
-    data.alternatives ?? []
+    exerciseData?.alternatives ?? []
   );
 
   const sourceDataContext = useContext(SourceDataContext);
@@ -52,12 +67,14 @@ const ExerciseForm: React.FC<Props> = ({ data, type, closeForm }) => {
         supersets,
         alternatives,
         targetWeight: 0,
+        isWeightExercise,
+        // isTimeBased,
       });
       closeForm();
     }
 
     if (type === "edit") {
-      sourceDataContext.editExercise({
+      sourceDataContext.updateExercise({
         id,
         name,
         videoLink,
@@ -68,6 +85,8 @@ const ExerciseForm: React.FC<Props> = ({ data, type, closeForm }) => {
         supersets,
         alternatives,
         targetWeight: 0,
+        isWeightExercise,
+        // isTimeBased,
       });
       closeForm();
     }
@@ -88,18 +107,32 @@ const ExerciseForm: React.FC<Props> = ({ data, type, closeForm }) => {
         placeholder={"Video link"}
         changeValue={setVideoLink}
       />
+      <ButtonSelection
+        label="Weight exercise?"
+        options={["Yes", "No"]}
+        selection={isWeightExercise ? "Yes" : "No"}
+        onSelect={(value: string) => {
+          setIsWeightExercise(value === "Yes");
+        }}
+      />
+      {/* <Toggle
+        label="Is this exercise time based?"
+        value={isTimeBased}
+        toggle={setIsTimeBased}
+      /> */}
       <TagInput
         label={"Supersets"}
         list={supersets}
         options={Object.keys(sourceData.supersets ?? {})}
         updateList={setSupersets}
       />
-      <Input
+      {/* <Input
         label={"Tags"}
         value={tags}
         placeholder={"Tags"}
         changeValue={setTags}
-      />
+      /> */}
+      <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
 
       <details className={`duration-300`}>
         <summary className={`text-sm font-light`}>Advanced settings</summary>
@@ -132,37 +165,15 @@ const ExerciseForm: React.FC<Props> = ({ data, type, closeForm }) => {
         </div>
       </details>
 
-      <div className={`flex justify-between gap-2 py-4`}>
-        <div className={`flex gap-2`}>
-          <button
-            type={"submit"}
-            className={`text-xs bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl`}
-          >
-            Save
-          </button>
-          <button
-            type={"button"}
-            className={`text-xs font-bold py-2 px-4 rounded-xl border border-black`}
-            onClick={() => {
-              closeForm();
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-        <button
-          type={"button"}
-          className={`text-xs bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl`}
-          onClick={() => {
-            sourceDataContext.deleteExercise(data);
-            closeForm();
-          }}
-        >
-          Delete
-        </button>
-      </div>
+      <FormButtons
+        onCancel={() => {
+          closeForm();
+        }}
+        onDelete={() => {
+          sourceDataContext.deleteExercise(data);
+          closeForm();
+        }}
+      />
     </form>
   );
 };
-
-export default ExerciseForm;

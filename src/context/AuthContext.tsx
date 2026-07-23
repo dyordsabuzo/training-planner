@@ -1,278 +1,266 @@
-import {createContext, useState, useEffect, ReactNode} from "react";
-import {initializeApp} from "firebase/app";
-import {useMutation, gql} from "@apollo/client";
+import { createContext, useState, useEffect, ReactNode } from "react";
+import { initializeApp } from "firebase/app";
 import {
-    GoogleAuthProvider,
-    getAuth,
-    signInWithPopup,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    sendPasswordResetEmail,
-    sendEmailVerification,
-    signOut,
-    onAuthStateChanged,
+  GoogleAuthProvider,
+  getAuth,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  signOut,
+  onAuthStateChanged,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
+  User,
+  connectAuthEmulator,
 } from "firebase/auth";
-// import { useNavigate } from "react-router-dom";
-import {VERIFY_USER} from "./gql/AuthGQL";
+import { getDocumentReference } from "../common/firebase";
+import { getDoc } from "firebase/firestore";
 
 type _Props = {
-    children: ReactNode
-}
+  children: ReactNode;
+};
+
+export type UserPermission = {
+  role: string;
+  plans: string[];
+};
 
 const AuthContext = createContext({
-    isLoggedIn: false,
-    isLoading: false,
-    error: null,
-    user: null,
-    loading: false,
-    isEmailVerified: false,
-    userPermission: null,
-    loginWithGoogle: () => {
-    },
-    registerWithEmailAndPassword: (email: string,
-                                   password: string,
-                                   firstName: string,
-                                   lastName: string) => {
-    },
-    sendPasswordReset: (email: string) => {
-    },
-    loginWithEmailAndPassword: (email: string, password: string) => {
-    },
-    logoutUser: () => {
-    },
-    getUserProfileImage: () => {
-    },
-    getUid: () => {
-    }
+  isLoggedIn: false,
+  isLoading: false,
+  error: null,
+  user: null as User | null,
+  data: null as any,
+  // isEmailVerified: false as boolean,
+  userPermission: null as UserPermission | null,
+  loginWithGoogle: () => {},
+  registerWithEmailAndPassword: (email: string, password: string) => {},
+  sendPasswordReset: (email: string) => {},
+  loginWithEmailAndPassword: (email: string, password: string) => {},
+  verifyResetCode: (actionCode: string) => {},
+  confirmReset: (actionCode: string, password: string) => {},
+  logoutUser: () => {},
+  getUserProfileImage: () => {},
+  getUid: () => {},
 });
 
-export const AuthContextProvider: React.FC<_Props> = ({children}) => {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [errorObject, setErrorObject] = useState<any>(null);
-    const [auth, setAuth] = useState<any>(null);
-    const [user, setUser] = useState<any>(null);
-    const [userPermission, setUserPermission] = useState(null);
-    const [verifyUser, {data, loading, error}] = useMutation(VERIFY_USER);
+export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorObject, setErrorObject] = useState<any>(null);
+  const [auth, setAuth] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [userPermission, setUserPermission] = useState<UserPermission | null>(
+    null
+  );
+  const [data, setData] = useState<any>(null);
 
-    // const navigate = useNavigate();
+  useEffect(() => {
+    const app = initializeApp({
+      apiKey: process.env.REACT_APP_FBASE_APIKEY,
+      authDomain: process.env.REACT_APP_FBASE_AUTHDOMAIN,
+      projectId: process.env.REACT_APP_FBASE_PROJECTID,
+      appId: process.env.REACT_APP_FBASE_APPID,
+    });
 
-    useEffect(() => {
-        const app = initializeApp({
-            apiKey: process.env.REACT_APP_FBASE_API_KEY,
-            appId: process.env.REACT_APP_FBASE_APP_ID,
-            messagingSenderId: process.env.REACT_APP_FBASE_MSG_SENDER_ID,
-            authDomain: process.env.REACT_APP_FBASE_AUTH_DOMAIN,
-            projectId: process.env.REACT_APP_FBASE_PROJECT_ID,
-            storageBucket: process.env.REACT_APP_FBASE_STORAGE_BUCKET,
-        });
+    const auth = getAuth(app);
 
-        const auth = getAuth(app);
-        setAuth(auth);
-        onAuthStateChanged(auth, (user) => {
-            setUser(user);
-            if (user) {
-                // navigate user to email verify if email is unverified
-                if (!user.emailVerified) {
-                    // navigate("/emailVerify");
-                    console.log('email verified')
-                } else {
-                    _verifyUserObject({
-                        user: {
-                            authProvider: "unknown",
-                            uid: user.uid,
-                        },
-                    });
-                    localStorage.setItem("isLoggedIn", "1");
-                    setIsLoggedIn(true);
-                    // navigate("/");
-                }
-            } else {
-                localStorage.removeItem("isLoggedIn");
-                setIsLoggedIn(false);
-                setUserPermission(null);
-            }
-            setIsLoading(false);
-        });
+    if (process.env.NODE_ENV === "development") {
+      connectAuthEmulator(auth, "http://localhost:9099");
+    }
 
-        return () => {
-        };
-    }, []);
+    setAuth(auth);
+    onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      if (user) {
+        // TODO: check if email is verified
+        // localStorage.setItem("isLoggedIn", "1");
+        setIsLoggedIn(true);
+      } else {
+        // localStorage.removeItem("isLoggedIn");
+        setIsLoggedIn(false);
+        setUserPermission(null);
+      }
+      setIsLoading(false);
+    });
 
-    useEffect(() => {
-        if (error) {
-            console.error(error);
-            setErrorObject(
-                "Unable to authencate at this time,  Please contact administrator."
-            );
-        }
-        return () => {
-        };
-    }, [error]);
+    return () => {};
+  }, []);
 
-    useEffect(() => {
-        if (data?.verify) {
-            setUserPermission(data.verify);
-        }
-        return () => {
-        };
-    }, [data]);
+  useEffect(() => {
+    if (user) {
+      const docRef = getDocumentReference("users", user.uid);
+      getDoc(docRef).then((doc) => {
+        setUserPermission(doc.data() as UserPermission);
+      });
+    } else {
+      setUserPermission(null);
+    }
+    return () => {};
+  }, [user]);
 
-    const _verifyUserObject = (variables: any) => {
-        verifyUser({
-            variables: variables,
-        });
-    };
+  const loginWithGoogle = async () => {
+    try {
+      setErrorObject(null);
+      const googleProvider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, googleProvider);
+      const [firstName, lastName] = (res.user.displayName as string).split(" ");
+      console.log(`Welcome ${firstName} ${lastName}`);
+    } catch (err) {
+      setErrorObject("Authentication error.  Invalid email/password.");
+    }
+  };
 
-    const loginWithGoogle = async () => {
-        try {
-            setErrorObject(null);
-            const googleProvider = new GoogleAuthProvider();
-            const res = await signInWithPopup(auth, googleProvider);
-            const [firstName, lastName] = (res.user.displayName as string).split(" ");
+  const _signinUser = async (email: string, password: string) => {
+    return new Promise((resolve, reject) => {
+      return signInWithEmailAndPassword(auth, email, password)
+        .then((user) => resolve(user))
+        .catch((err) => reject(err));
+    });
+  };
 
-            _verifyUserObject({
-                user: {
-                    authProvider: "google",
-                    uid: res.user.uid,
-                    firstName: firstName,
-                    lastName: lastName,
-                    createDate: Date().toString(),
-                },
-            });
-        } catch (err) {
-            setErrorObject("Authentication error.  Invalid email/password.");
-        }
-    };
+  const _signOutUser = async () => {
+    return new Promise((resolve, reject) => {
+      return signOut(auth)
+        .then((user) => resolve(user))
+        .catch((err) => reject(err));
+    });
+  };
 
-    const _signinUser = async (email: string, password: string) => {
-        return new Promise((resolve, reject) => {
-            return signInWithEmailAndPassword(auth, email, password)
-                .then((user) => resolve(user))
-                .catch((err) => reject(err));
-        });
-    };
+  const _registerUser = async (email: string, password: string) => {
+    return new Promise((resolve, reject) => {
+      return createUserWithEmailAndPassword(auth, email, password)
+        .then((user) => resolve(user))
+        .catch((err) => reject(err));
+    });
+  };
 
-    const _signOutUser = async () => {
-        return new Promise((resolve, reject) => {
-            return signOut(auth)
-                .then((user) => resolve(user))
-                .catch((err) => reject(err));
-        });
-    };
+  const _verifyEmail = async (user: any) => {
+    // TODO: Revisit page design for verified email (redirect to homepage)
+    return new Promise((resolve, reject) => {
+      return sendEmailVerification(auth.currentUser)
+        .then((user) => resolve(user))
+        .catch((err) => reject(err));
+    });
+  };
 
-    const _registerUser = async (email: string, password: string) => {
-        return new Promise((resolve, reject) => {
-            return createUserWithEmailAndPassword(auth, email, password)
-                .then((user) => resolve(user))
-                .catch((err) => reject(err));
-        });
-    };
+  const loginWithEmailAndPassword = async (email: string, password: string) => {
+    try {
+      setErrorObject(null);
+      const res: any = await _signinUser(email, password);
+      setUser(res.user);
+    } catch (err) {
+      setErrorObject("Authentication error.  Invalid email/password.");
+    }
+  };
 
-    const _verifyEmail = async (user: any) => {
-        // TODO: Revisit page design for verified email (redirect to homepage)
-        return new Promise((resolve, reject) => {
-            return sendEmailVerification(auth.currentUser)
-                .then((user) => resolve(user))
-                .catch((err) => reject(err));
-        });
-    };
+  const _verifyResetCode = async (actionCode: string) => {
+    return new Promise((resolve, reject) => {
+      return verifyPasswordResetCode(auth, actionCode)
+        .then((user) => resolve(user))
+        .catch((err) => reject(err));
+    });
+  };
 
-    const loginWithEmailAndPassword = async (email: string, password: string) => {
-        try {
-            const response: any = await _signinUser(email, password);
-            _verifyUserObject({
-                user: {
-                    authProvider: "local",
-                    uid: response.user.uid,
-                    lastLoginDate: Date().toString(),
-                },
-            });
-        } catch (err) {
-            throw err;
-        }
-    };
+  const _confirmReset = async (actionCode: string, password: string) => {
+    return new Promise((resolve, reject) => {
+      return confirmPasswordReset(auth, actionCode, password)
+        .then((user) => resolve(user))
+        .catch((err) => reject(err));
+    });
+  };
 
-    const registerWithEmailAndPassword = async (
-        email: string,
-        password: string,
-        firstName: string,
-        lastName: string
-    ) => {
-        try {
-            const response: any = await _registerUser(email, password);
-            await _verifyEmail(response.user);
+  const verifyResetCode = async (actionCode: string) => {
+    try {
+      setData(null);
+      setErrorObject(null);
+      setIsLoading(true);
+      const response: any = await _verifyResetCode(actionCode);
+      setData(response);
+    } catch (err) {
+      setErrorObject("Invalid password reset link");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-            // store user data in system
-            // store basic user info to system
-            // store uid, firstname, lastname and agreement
-            _verifyUserObject({
-                user: {
-                    authProvider: "local",
-                    uid: response.user.uid,
-                    firstName: firstName,
-                    lastName: lastName,
-                    createDate: Date().toString(),
-                },
-            });
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    };
+  const confirmReset = async (actionCode: string, password: string) => {
+    try {
+      setErrorObject(null);
+      setIsLoading(true);
+      await _confirmReset(actionCode, password);
+    } catch (err) {
+      setErrorObject("Unable to perform password reset.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const logoutUser = async () => {
-        try {
-            await _signOutUser();
-            setUser(null);
-        } catch (err) {
-            throw err;
-        }
-    };
+  const registerWithEmailAndPassword = async (
+    email: string,
+    password: string
+  ) => {
+    try {
+      const response: any = await _registerUser(email, password);
+      await _verifyEmail(response.user);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
 
-    const sendPasswordReset = async (email: string) => {
-        try {
-            await sendPasswordResetEmail(auth, email);
-            alert("Password reset link sent!");
-        } catch (err: any) {
-            console.error(err);
-            setErrorObject(err);
-            alert(err.message);
-        }
-    };
+  const logoutUser = async () => {
+    _signOutUser();
+    setUser(null);
+  };
 
-    const getUserProfileImage = () => {
-        if (user) {
-            return user.photoURL;
-        }
-        return null;
-    };
+  const sendPasswordReset = async (email: string) => {
+    try {
+      setIsLoading(true);
+      await sendPasswordResetEmail(auth, email);
+    } catch (err: any) {
+      setErrorObject(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const getUid = () => {
-        return user?.uid;
-    };
+  const getUserProfileImage = () => {
+    if (user) {
+      return user.photoURL;
+    }
+    return null;
+  };
 
-    return (
-        <AuthContext.Provider
-            value={{
-                isLoggedIn: isLoggedIn,
-                isLoading: isLoading,
-                error: errorObject,
-                user: user,
-                loading: loading,
-                isEmailVerified: user?.emailVerified,
-                userPermission: userPermission,
-                loginWithGoogle: loginWithGoogle,
-                loginWithEmailAndPassword: loginWithEmailAndPassword,
-                registerWithEmailAndPassword: registerWithEmailAndPassword,
-                sendPasswordReset: sendPasswordReset,
-                logoutUser: logoutUser,
-                getUserProfileImage: getUserProfileImage,
-                getUid: getUid,
-            }}
-        >
-            {children}
-        </AuthContext.Provider>
-    );
+  const getUid = () => {
+    return user?.uid;
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: isLoggedIn,
+        isLoading: isLoading,
+        error: errorObject,
+        user: user,
+        data: data,
+        // isEmailVerified: user?.emailVerified,
+        userPermission: userPermission,
+        loginWithGoogle: loginWithGoogle,
+        loginWithEmailAndPassword: loginWithEmailAndPassword,
+        registerWithEmailAndPassword: registerWithEmailAndPassword,
+        sendPasswordReset: sendPasswordReset,
+        verifyResetCode,
+        logoutUser: logoutUser,
+        getUserProfileImage: getUserProfileImage,
+        getUid: getUid,
+        confirmReset,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 export default AuthContext;

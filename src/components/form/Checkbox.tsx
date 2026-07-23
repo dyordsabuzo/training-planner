@@ -6,7 +6,7 @@ type CheckboxProps = {
     toggleSelection: (selection: string) => void
 }
 
-const Checkbox: React.FC<CheckboxProps> = ({label, checked, toggleSelection}) => {
+export const Checkbox = ({label, checked, toggleSelection}:CheckboxProps) => {
     const [selected, setSelected] = useState<boolean>(checked ?? true)
 
     const checkboxHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,5 +28,3 @@ const Checkbox: React.FC<CheckboxProps> = ({label, checked, toggleSelection}) =>
         </div>
     )
 }
-
-export default Checkbox
