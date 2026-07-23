@@ -59,15 +59,15 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
 
   useEffect(() => {
     const app = initializeApp({
-      apiKey: process.env.REACT_APP_FBASE_APIKEY,
-      authDomain: process.env.REACT_APP_FBASE_AUTHDOMAIN,
-      projectId: process.env.REACT_APP_FBASE_PROJECTID,
-      appId: process.env.REACT_APP_FBASE_APPID,
+      apiKey: import.meta.env.VITE_FBASE_APIKEY,
+      authDomain: import.meta.env.VITE_FBASE_AUTHDOMAIN,
+      projectId: import.meta.env.VITE_FBASE_PROJECTID,
+      appId: import.meta.env.VITE_FBASE_APPID,
     });
 
     const auth = getAuth(app);
 
-    if (process.env.NODE_ENV === "development") {
+    if (import.meta.env.DEV) {
       connectAuthEmulator(auth, "http://localhost:9099");
     }
 

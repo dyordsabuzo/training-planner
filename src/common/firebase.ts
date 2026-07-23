@@ -8,16 +8,16 @@ import {
 } from "firebase/firestore";
 
 const config = {
-  apiKey: process.env.REACT_APP_FBASE_APIKEY,
-  authDomain: process.env.REACT_APP_FBASE_AUTHDOMAIN,
-  projectId: process.env.REACT_APP_FBASE_PROJECTID,
-  appId: process.env.REACT_APP_FBASE_APPID,
+  apiKey: import.meta.env.VITE_FBASE_APIKEY,
+  authDomain: import.meta.env.VITE_FBASE_AUTHDOMAIN,
+  projectId: import.meta.env.VITE_FBASE_PROJECTID,
+  appId: import.meta.env.VITE_FBASE_APPID,
 };
 
 const app = initializeApp(config);
 export const database = getFirestore(app);
 
-if (process.env.NODE_ENV === "development") {
+if (import.meta.env.DEV) {
   connectFirestoreEmulator(database, "127.0.0.1", 8080);
 }
 
