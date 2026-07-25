@@ -17,7 +17,7 @@ const config = {
 const app = initializeApp(config);
 export const database = getFirestore(app);
 
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR !== "false") {
   connectFirestoreEmulator(database, "127.0.0.1", 8080);
 }
 

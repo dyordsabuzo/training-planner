@@ -1,55 +1,64 @@
-# Getting Started with Create React App
+# Training Planner
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A web app for planning training programs and running through workouts: define
+exercises, group them into supersets, organize supersets into sessions, and
+schedule sessions across a multi-week plan. During a workout, the app walks
+you through each exercise, tracks sets, and runs rest/work timers between
+exercises.
 
-## Available Scripts
+## Tech stack
 
-In the project directory, you can run:
+- React 18 + TypeScript
+- [Vite](https://vitejs.dev/) for dev server and build, [Vitest](https://vitest.dev/) for tests
+- Tailwind CSS for styling, with light/dark theme support
+- [Firebase](https://firebase.google.com/) (Auth + Firestore)
+- [Storybook](https://storybook.js.org/) for the shared component library
 
-### `npm start`
+## Getting started
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Requires Node 22.22.3+ and Yarn (see `.tool-versions`).
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```bash
+yarn install
+cp .env.example .env   # then fill in the Firebase config values
+yarn dev
+```
 
-### `npm test`
+The app runs at http://localhost:3000.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Environment variables
 
-### `npm run build`
+Firebase config is read from `VITE_`-prefixed env vars (see `.env.example`):
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- `VITE_FBASE_APIKEY`
+- `VITE_FBASE_AUTHDOMAIN`
+- `VITE_FBASE_PROJECTID`
+- `VITE_FBASE_APPID`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+By default, `yarn dev` connects to the local Auth/Firestore emulators (see
+`yarn firebase:emulators`). Set `VITE_USE_FIREBASE_EMULATOR=false` in `.env` to
+connect local dev to the live Firebase project instead — useful for verifying
+against real data, but be aware any writes during testing hit production.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Scripts
 
-### `npm run eject`
+| Command | Description |
+| --- | --- |
+| `yarn dev` | Start the Vite dev server |
+| `yarn build` | Production build, output to `build/` |
+| `yarn preview` | Serve the production build locally |
+| `yarn test` | Run the test suite once (Vitest) |
+| `yarn test:watch` | Run tests in watch mode |
+| `yarn storybook` | Run Storybook locally |
+| `yarn build-storybook` | Build a static Storybook site |
+| `yarn lint` / `yarn format` | Lint / format the codebase |
+| `yarn firebase:emulators` | Run local Firebase Auth/Firestore emulators |
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Deployment
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-## Install tailwindcss
-
-https://tailwindcss.com/docs/guides/create-react-app
-
-
-## Deployed in Github pages
-
-Refer to [deploy-static-site workflow](.github/workflows/deploy-static-site.yml)
+The app is deployed as a static site to GitHub Pages via
+[`deploy-static-site.yml`](.github/workflows/deploy-static-site.yml) on every
+push to `main`, and Firebase Hosting previews are built per pull request via
+[`firebase-hosting-pull-request.yml`](.github/workflows/firebase-hosting-pull-request.yml).
+Firebase Hosting config (build output directory, SPA rewrites) lives in
+`firebase.json`.

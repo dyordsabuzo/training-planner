@@ -23,27 +23,21 @@ export const EmptyForm: StoryObj<typeof SessionForm> = {
   decorators: []
 };
 
-// export const ExistingExercise: StoryObj<typeof SessionForm> = {
-//   name: 'Existing exercise',
-//   render: () => {
-//     const formData = {};
-//     return (
-//       <SessionForm data={{
-//         id: '123abc',
-//         name: 'Sample exercise',
-//         videoLink: '',
-//         tags: ['tag1', 'tag2'],
-//         targetRep: "",
-//         targetSet: "",
-//         rest: "",
-//         supersets: ['superset1'],
-//         alternatives: []
-//       }} type={''} 
-//       closeForm={() => {
-//         console.log('form closed')
-//       }}      
-//       />
-//     )
-//   },
-//   decorators: []
-// };
+export const ExistingSession: StoryObj<typeof SessionForm> = {
+  name: 'Existing session',
+  render: () => {
+    return (
+      <SessionForm data={{
+        id: '123abc',
+        name: 'Leg day session',
+        tags: ['tag1', 'tag2'],
+        supersets: ['superset1']
+      }} type={'edit'}
+      closeForm={() => {
+        console.log('form closed')
+      }}
+      />
+    )
+  },
+  decorators: []
+};

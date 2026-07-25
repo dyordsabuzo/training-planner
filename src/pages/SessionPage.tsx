@@ -5,6 +5,7 @@ import { SummaryPage } from "./SummaryPage";
 import { ExercisePage } from "./train/ExercisePage";
 import SourceDataContext from "../context/SourceDataContext";
 import WrapperPage from "./WrapperPage";
+import { Button } from "../components/form/Button";
 
 const SessionPage = () => {
   const sessionContext = useContext(SessionContext);
@@ -174,12 +175,7 @@ const SessionPage = () => {
           }}
         />
 
-        <button
-          type={"submit"}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
-        >
-          LOAD
-        </button>
+        <Button type="submit" className="py-6 px-4" label="LOAD" />
       </form>
     </WrapperPage>
   );

@@ -1,4 +1,5 @@
 import { Input } from "../../components/form/Input";
+import { Button } from "../../components/form/Button";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import SessionContext from "../../context/SessionContext";
 import { RestTimer } from "../timer/RestTimer";
@@ -302,35 +303,33 @@ export const ExercisePage = () => {
   return (
     <WrapperPage>
       <div
-        className={`h-[45vh] 
-          flex flex-col place-content-center
-          gap-4 shadow-md 
-          rounded-sm mx-4 mt-8
-          bg-blue-500
-          min-h-[30rem]
-          relative
-      `}
+        className="min-h-[60vh] sm:min-h-[30rem]
+          flex flex-col
+          gap-4 shadow-md
+          rounded-lg mx-4 mt-8
+          bg-primary
+          relative"
       >
-        <div className={`flex flex-col pt-4 pl-4`}>
-          <span className={`text-white text-xs font-base`}>
+        <div className="flex flex-col pt-4 pl-4">
+          <span className="text-white text-xs font-base">
             {[sessionData.week, sessionData.annotation]
               .filter((s: string) => typeof s === "string" && s.trim() !== "")
               .join(" - ")}
           </span>
-          <span className={`text-white text-base font-bold`}>
+          <span className="text-white text-base font-bold">
             {supersetData.name}{" "}
           </span>
         </div>
-        <div className={`w-full h-full flex flex-col rounded-tl-3xl bg-white`}>
+        <div className="w-full h-full flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
           <div
-            className={`self-end
+            className="self-end
               flex items-center
-              text-white text-sm  font-bold bg-green-500 h-6
-              rounded-l-xl mt-3 p-2 px-4
-            `}
+              text-white text-sm font-bold bg-success-600 h-6
+              rounded-l-xl mt-3 p-2 px-4"
+            aria-live="polite"
           >
-            <span className={``}>Set</span>
-            <span className={`text-3xl rounded-full bg-green-500 px-2 py-1`}>
+            <span>Set</span>
+            <span className="text-3xl rounded-full bg-success-600 px-2 py-1">
               {exerciseState.exerciseSet + 1}
             </span>
             <span>of {parseInt(supersetData.targetSet)}</span>
@@ -379,13 +378,12 @@ export const ExercisePage = () => {
           )}
         </div>
       </div>
-      <button
-        type={"button"}
-        className="col-span-2 bg-gray-500 hover:bg-gray-700 text-white font-bold mx-4 py-4 px-4 rounded"
+      <Button
+        decoration="delete"
+        className="min-h-11 mx-4"
+        label="CANCEL SESSION"
         onClick={() => sessionContext.wrapSession()}
-      >
-        CANCEL SESSION
-      </button>
+      />
     </WrapperPage>
   );
 };

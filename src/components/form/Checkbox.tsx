@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useId, useState} from "react";
 
 type CheckboxProps = {
     label: string
@@ -8,6 +8,7 @@ type CheckboxProps = {
 
 export const Checkbox = ({label, checked, toggleSelection}:CheckboxProps) => {
     const [selected, setSelected] = useState<boolean>(checked ?? true)
+    const id = useId()
 
     const checkboxHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSelected(!selected)
@@ -15,14 +16,14 @@ export const Checkbox = ({label, checked, toggleSelection}:CheckboxProps) => {
     }
 
     return (
-        <div className={`flex items-center`}>
-            <input checked={selected} id="default-checkbox" type="checkbox" value=""
-                   className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500
-                        dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 
+        <div className={`flex items-center min-h-11`}>
+            <input checked={selected} id={id} type="checkbox" value=""
+                   className={`w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary
+                        dark:focus:ring-primary-400 dark:ring-offset-gray-800 focus:ring-2
                         dark:bg-gray-700 dark:border-gray-600`}
                    onChange={checkboxHandler}
             />
-            <label htmlFor="default-checkbox" className={`ml-2 text-sm text-gray-900 dark:text-gray-300`}>
+            <label htmlFor={id} className={`ml-2 text-sm text-text-light dark:text-text-dark`}>
                 {label}
             </label>
         </div>

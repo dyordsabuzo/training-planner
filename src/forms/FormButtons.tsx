@@ -1,4 +1,5 @@
 import { Button } from "../components/form/Button";
+import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 
 type Props = {
   onCancel?: () => void;
@@ -11,7 +12,7 @@ export const FormButtons = ({ onCancel, onDelete }: Props) => {
         <Button label={"Save"} type="submit" decoration="save" />
         <Button label={"Cancel"} decoration="cancel" onClick={onCancel} />
       </div>
-      <Button label={"Delete"} decoration="delete" onClick={onDelete} />
+      {onDelete && <ConfirmDeleteButton onDelete={onDelete} />}
     </div>
   );
 };

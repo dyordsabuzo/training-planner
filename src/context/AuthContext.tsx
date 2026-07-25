@@ -67,7 +67,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
 
     const auth = getAuth(app);
 
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR !== "false") {
       connectAuthEmulator(auth, "http://localhost:9099");
     }
 

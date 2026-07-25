@@ -3,12 +3,15 @@ import React, {useContext, useEffect, useState} from "react";
 import {SupersetListing} from "../management/SupersetListing";
 import {SessionListing} from "../management/SessionListing";
 import {PlanListing} from "../management/PlanListing";
+import {RelationshipMap} from "../management/RelationshipMap";
 import WrapperPage from "./WrapperPage";
 import SourceDataContext from "../context/SourceDataContext";
 
 type ListingPageProps = {
     list: string
 }
+
+const categories = ["Exercises", "Supersets", "Sessions", "Plans", "Relationships"];
 
 const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     const [activeTab, setActiveTab] = useState<string>("Exercises");
@@ -18,15 +21,6 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     const tabClicked = (value: string) => {
         setActiveTab(value);
     }
-
-    const activeCssTab = `
-        text-white bg-gray-400 active dark:bg-gray-800 dark:text-white
-    `;
-
-    const standardCssTab = `
-        inline-block p-3 rounded-t-lg hover:text-gray-600 hover:bg-gray-200 
-        dark:hover:bg-gray-800 dark:hover:text-gray-300
-    `;
 
     useEffect(() => {
         if (!isSourceInitialised) {
@@ -38,31 +32,41 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     }, [isSourceInitialised, sourceContext])
 
     return (
-        <WrapperPage>
-            <div className={`w-full flex flex-col gap-2 pt-4`}>
-                <div className={'w-full px-2 space-x-2 text-sm flex items-between place-content-between'}>
-                    <ul className={`
-                            w-full
-                            flex flex-nowrap text-sm font-medium text-center text-gray-500 border-b 
-                            border-gray-200 dark:border-gray-700 dark:text-gray-400`}>
-                        {["Exercises", "Supersets", "Sessions", "Plans"].map(category => (
-                            <li className="mr-1" key={category}>
-                                <button
-                                    className={`
-                                    ${standardCssTab}
-                                    ${activeTab === category ? activeCssTab : ""}`}
-                                    onClick={(e) => tabClicked(category)}>
-                                    {category}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+        <WrapperPage className="max-w-4xl">
+            <div className="w-full flex flex-col gap-4 pt-4">
+                <h1 className="px-2 text-2xl font-bold text-text-light dark:text-text-dark">
+                    Manage training setup
+                </h1>
+
+                <div
+                    role="tablist"
+                    aria-label="Manage sections"
+                    className="flex gap-1 px-2 overflow-x-auto"
+                >
+                    {categories.map(category => (
+                        <button
+                            key={category}
+                            role="tab"
+                            aria-selected={activeTab === category}
+                            className={`min-h-11 shrink-0 px-4 rounded-full text-sm font-medium
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                                ${
+                                    activeTab === category
+                                        ? "bg-primary text-white"
+                                        : "text-text-light dark:text-text-dark hover:bg-primary-50 dark:hover:bg-primary-800/40"
+                                }`}
+                            onClick={() => tabClicked(category)}>
+                            {category}
+                        </button>
+                    ))}
                 </div>
-                <div className={`w-full`}>
+
+                <div className="w-full px-2">
                     {activeTab === "Exercises" && <ExerciseListing/>}
                     {activeTab === "Supersets" && <SupersetListing/>}
                     {activeTab === "Sessions" && <SessionListing/>}
                     {activeTab === "Plans" && <PlanListing/>}
+                    {activeTab === "Relationships" && <RelationshipMap/>}
                 </div>
             </div>
         </WrapperPage>

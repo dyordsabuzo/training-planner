@@ -6,7 +6,7 @@ import { Button } from "../../components/form/Button";
 import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useNavigate } from "react-router";
-import WrapperPage from "../WrapperPage";
+import { AuthLayout } from "./AuthLayout";
 import { Loading } from "../helpers/Loading";
 
 export const ForgotPassword = () => {
@@ -29,67 +29,72 @@ export const ForgotPassword = () => {
   }
 
   return (
-    <WrapperPage>
-      <div className="flex flex-col gap-4 place-items-center py-4">
-        <div className="flex flex-col gap-4 w-full border-2 border-gray-300 rounded-t-3xl p-4">
-          <form
-            onSubmit={forgotPasswordHandler}
-            className="flex flex-col gap-2 w-full"
-          >
-            <span className="text-2xl font-bold py-2">
-              Forgot your password?
-            </span>
-            <span className="text-sm text-gray-500">
-              Enter your email address and we will send you a link to reset your
-              password.
-            </span>
-            <Input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              required={true}
-              changeValue={(input) => {
-                setEmail(input);
-              }}
-            />
-            {error && resetSent && (
-              <span className="text-sm text-red-500">{error}</span>
-            )}
+    <AuthLayout
+      heroHeadline="Forgot your password?"
+      heroSubtext="No worries — we'll send you a link to get back into your account."
+    >
+      <div className="flex flex-col gap-4 w-full rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 bg-white dark:bg-surface-dark">
+        <form
+          onSubmit={forgotPasswordHandler}
+          className="flex flex-col gap-2 w-full"
+        >
+          <h2 className="text-2xl font-bold py-2 text-text-light dark:text-text-dark">
+            Forgot your password?
+          </h2>
+          <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+            Enter your email address and we will send you a link to reset your
+            password.
+          </span>
+          <Input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            required={true}
+            changeValue={(input) => {
+              setEmail(input);
+            }}
+          />
+          {error && resetSent && (
+            <span className="text-sm text-danger">{error}</span>
+          )}
 
-            {!resetSent && (
-              <Button type="submit" className="my-2">
-                <span className="flex items-center place-self-center gap-2 p-2">
-                  Send reset email
-                </span>
-              </Button>
-            )}
-            {!error && resetSent && (
-              <span className="text-sm text-green-600 py-2 block">
-                Reset email sent! If your account exists in our system, you will
-                receive an email shortly with a link to reset your password. If
-                you don't receive an email, consider signing up for an account.
+          {!resetSent && (
+            <Button type="submit" className="my-2 min-h-11">
+              <span className="flex items-center place-self-center gap-2 p-2">
+                Send reset email
               </span>
-            )}
-          </form>
+            </Button>
+          )}
+          {!error && resetSent && (
+            <span className="text-sm text-success-600 dark:text-success-500 py-2 block">
+              Reset email sent! If your account exists in our system, you will
+              receive an email shortly with a link to reset your password. If
+              you don't receive an email, consider signing up for an account.
+            </span>
+          )}
+        </form>
 
-          <div className="flex justify-between">
-            <span
-              className="text-sm text-blue-500 hover:underline hover:text-blue-700 font-semibold cursor-pointer flex gap-2"
-              onClick={() => navigate("/login")}
-            >
-              <FontAwesomeIcon size="lg" icon={faArrowLeft} />
-              Login
-            </span>
-            <span
-              className="text-sm text-blue-500 hover:underline hover:text-blue-700 font-semibold cursor-pointer flex gap-2"
-              onClick={() => navigate("/signup")}
-            >
-              Sign up
-              <FontAwesomeIcon size="lg" icon={faArrowRight} />
-            </span>
-          </div>
+        <div className="flex justify-between">
+          <button
+            type="button"
+            className="min-h-11 text-sm text-primary hover:underline hover:text-primary-700 font-semibold flex items-center gap-2
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            onClick={() => navigate("/login")}
+          >
+            <FontAwesomeIcon size="lg" icon={faArrowLeft} />
+            Login
+          </button>
+          <button
+            type="button"
+            className="min-h-11 text-sm text-primary hover:underline hover:text-primary-700 font-semibold flex items-center gap-2
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            onClick={() => navigate("/signup")}
+          >
+            Sign up
+            <FontAwesomeIcon size="lg" icon={faArrowRight} />
+          </button>
         </div>
       </div>
-    </WrapperPage>
+    </AuthLayout>
   );
 };

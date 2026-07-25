@@ -2,7 +2,8 @@ import { IncrementDecrement } from "../components/others/IncrementDecrement";
 import React, { useContext, useState } from "react";
 import { Input } from "../components/form/Input";
 import SourceDataContext from "../context/SourceDataContext";
-import { Button } from "../components/form/Button";
+import { Modal } from "../components/others/Modal";
+import { FormButtons } from "./FormButtons";
 
 type Props = {
   weekData: any;
@@ -39,76 +40,51 @@ export const WeekForm = ({ weekData, clear }: Props) => {
   };
 
   return (
-    <div
-      className="relative z-10"
-      aria-labelledby="modal-title"
-      role="dialog"
-      aria-modal="true"
+    <Modal
+      title={`${weekData.planName} - Week ${weekData.weekNumber + 1}`}
+      isOpen={true}
+      onClose={clear}
     >
-      <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-      <div className="fixed inset-0 z-10 overflow-y-auto">
-        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-          <form
-            onSubmit={handleSubmit}
-            className={`
-                            relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl 
-                            transition-all sm:my-8 sm:w-full sm:max-w-lg
-                        `}
-          >
-            <div className="bg-white px-2 pb-4 pt-5 sm:p-6 sm:pb-4">
-              <div className="sm:flex sm:items-start w-full">
-                <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                  <h3
-                    className="text-base font-semibold leading-6 text-gray-900"
-                    id="modal-title"
-                  >
-                    {weekData.planName} - Week {weekData.weekNumber + 1}
-                  </h3>
-                  <div className="mt-2 grid grid-cols-3">
-                    <IncrementDecrement
-                      value={targetSet}
-                      label={"Set"}
-                      updateValue={setTargetSet}
-                      nonZero={true}
-                    />
-                    <IncrementDecrement
-                      value={targetRep}
-                      label={"Rep"}
-                      updateValue={setTargetRep}
-                      nonZero={true}
-                    />
-                    <IncrementDecrement
-                      value={targetTime}
-                      label={"Time"}
-                      updateValue={setTargetTime}
-                      nonZero={true}
-                    />
-                    <div className={`col-span-3 py-2`}>
-                      <Input
-                        label={"Annotation"}
-                        value={annotation}
-                        placeholder={"Annotation"}
-                        changeValue={setAnnotation}
-                        className={`pr-4`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-              <Button label="Update" type="submit" decoration="save" />
-              <Button
-                label={"Cancel"}
-                decoration="cancel"
-                onClick={() => {
-                  clear();
-                }}
-              />
-            </div>
-          </form>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Input
+          label="Week goal"
+          value={annotation}
+          placeholder="Describe the focus for this week"
+          changeValue={setAnnotation}
+        />
+
+        <div>
+          <div className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-2">
+            Weekly targets
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <IncrementDecrement
+              value={targetSet}
+              label={"Set"}
+              labelDirection="col"
+              updateValue={setTargetSet}
+              nonZero={true}
+            />
+            <IncrementDecrement
+              value={targetRep}
+              label={"Rep"}
+              labelDirection="col"
+              updateValue={setTargetRep}
+              nonZero={true}
+            />
+            <IncrementDecrement
+              value={targetTime}
+              label={"Time"}
+              labelDirection="col"
+              unit={"s"}
+              updateValue={setTargetTime}
+              nonZero={true}
+            />
+          </div>
         </div>
-      </div>
-    </div>
+
+        <FormButtons onCancel={clear} />
+      </form>
+    </Modal>
   );
 };

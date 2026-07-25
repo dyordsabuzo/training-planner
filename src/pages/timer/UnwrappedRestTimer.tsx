@@ -40,7 +40,7 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
       )} */}
       <Button
         label={"Resume"}
-        className={`m-2 py-3 text-lg bg-blue-400 hover:bg-blue-500`}
+        className="m-2 min-h-11 text-lg"
         onClick={() => toggleRest(false)}
       />
     </div>

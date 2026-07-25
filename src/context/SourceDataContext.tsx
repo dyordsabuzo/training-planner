@@ -345,7 +345,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const deletePlan = (plan: any) => {
     deleteFromDB(SourceDbReferences.PLANS, plan);
     let _srcData = sourceData;
-    delete _srcData.plan[plan.name];
+    delete _srcData.plans[plan.name];
     setSourceData(_srcData);
   };
 

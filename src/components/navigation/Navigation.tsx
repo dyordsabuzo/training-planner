@@ -1,173 +1,197 @@
-import { Nav, NavItem } from "reactstrap";
-import { NavLink, useNavigate } from "react-router";
-import "bootstrap/dist/css/bootstrap.min.css";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import {
   faDumbbell,
   faGear,
   faHome,
   faUser,
+  faChevronLeft,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useContext } from "react";
 import AuthContext from "../../context/AuthContext";
+import SidebarContext from "../../context/SidebarContext";
 import { NavIcon } from "./NavIcon";
 import { ProfileIcon } from "./ProfileIcon";
 import { Logo } from "../logo/Logo";
+import { ThemeToggle } from "../others/ThemeToggle";
+import { AUTH_ROUTES } from "../../routes/authRoutes";
 
 const tabs = [
   {
-    // requireUser: false,
-    // route: "/training-planner",
     route: "/",
     icon: faHome,
     label: "Home",
   },
   {
     role: "admin",
-    // requireUser: true,
     route: "/training-planner/manage",
     icon: faGear,
     label: "Manage",
   },
   {
     role: "user",
-    // requireUser: true,
     route: "/training-planner/train",
     icon: faDumbbell,
     label: "Train",
   },
 ];
 
+const sidebarLinkClassName =
+  (isCollapsed: boolean) =>
+  ({ isActive }: { isActive: boolean }) =>
+    `min-h-11 flex items-center gap-3 rounded-lg text-sm font-medium ${
+      isCollapsed ? "justify-center px-0" : "px-3"
+    } ${
+      isActive
+        ? "bg-primary-50 text-primary dark:bg-primary-800/40 dark:text-primary-300"
+        : "text-secondary dark:text-secondary-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+    }`;
+
 const Navigation = () => {
   const authContext = useContext(AuthContext);
   const { user, userPermission } = authContext;
+  const { isCollapsed, toggleSidebar } = useContext(SidebarContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
+
+  const visibleTabs = tabs.filter(
+    (t) =>
+      !t.role ||
+      (t.role && t.role === userPermission?.role) ||
+      userPermission?.role === "admin"
+  );
 
   return (
     <div>
+      {!isAuthRoute && (
+        <ThemeToggle className="fixed top-4 right-4 z-30 bg-white/80 dark:bg-surface-dark/80 backdrop-blur shadow-sm" />
+      )}
+
       <nav
-        className={`navbar navbar-expand-md navbar-light sticky-top 
-                            border border-bottom-1 d-none d-lg-block`}
+        className={`${isAuthRoute ? "hidden" : "hidden lg:flex"} lg:fixed lg:inset-y-0 lg:left-0 lg:z-20
+                   ${isCollapsed ? "lg:w-20" : "lg:w-64"}
+                   lg:flex-col relative
+                   transition-[width] duration-200 ease-in-out
+                   border-r border-gray-200 dark:border-gray-700
+                   bg-white dark:bg-surface-dark`}
         role="navigation"
       >
-        <div className="container-fluid relative">
-          <div
-            className="navbar-brand cursor-pointer fixed flex items-center"
-            onClick={() => navigate("/")}
-          >
-            <Logo className={`w-16`} />
-            <span>Training Planner</span>
-          </div>
-          <Nav className="ml-auto items-center">
-            {user && (
-              <>
-                {userPermission?.role === "admin" && (
-                  <NavItem>
-                    <NavLink to="/training-planner/manage" className="nav-link">
-                      Manage
-                    </NavLink>
-                  </NavItem>
-                )}
-                {userPermission?.role &&
-                  ["user", "admin"].includes(userPermission.role) && (
-                    <NavItem>
-                      <NavLink
-                        to="/training-planner/train"
-                        className="nav-link"
-                      >
-                        Train
-                      </NavLink>
-                    </NavItem>
-                  )}
-              </>
-            )}
-            {!user && (
-              <NavItem>
-                <NavLink to="/login" className="nav-link">
-                  Login
-                </NavLink>
-              </NavItem>
-            )}
-            {user && (
-              <NavItem>
-                <NavLink to="/logout" className="nav-link">
-                  Logout
-                </NavLink>
-              </NavItem>
-            )}
-            {user && (
-              <NavItem>
-                <NavLink to="/logout" className="nav-link">
-                  {user && (
-                    <ProfileIcon
-                      photoUrl={user.photoURL || undefined}
-                      label={user.email?.substring(0, 1)?.toUpperCase() || "U"}
-                    />
-                  )}
-                </NavLink>
-              </NavItem>
-            )}
-          </Nav>
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden lg:flex absolute top-6 -right-3 z-30 w-6 h-6 items-center justify-center rounded-full
+            bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700
+            text-secondary dark:text-secondary-200 shadow-sm
+            hover:text-primary dark:hover:text-primary-300
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <FontAwesomeIcon icon={isCollapsed ? faChevronRight : faChevronLeft} className="text-[10px]" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          title={isCollapsed ? "Training Planner" : undefined}
+          className={`flex items-center gap-2 min-h-11 mt-4 mb-2 focus-visible:outline-none
+                     focus-visible:ring-2 focus-visible:ring-primary rounded-md
+                     ${isCollapsed ? "justify-center mx-2" : "mx-4"}`}
+        >
+          <Logo className="w-9 h-9 shrink-0 text-primary dark:text-primary-300" />
+          {!isCollapsed && (
+            <span className="font-semibold text-text-light dark:text-text-dark whitespace-nowrap">
+              Training Planner
+            </span>
+          )}
+        </button>
+
+        <div className={`flex-1 flex flex-col gap-1 py-2 overflow-y-auto overflow-x-hidden ${isCollapsed ? "px-2" : "px-3"}`}>
+          {visibleTabs.map((tab) => (
+            <NavLink
+              key={tab.route}
+              to={tab.route}
+              title={isCollapsed ? tab.label : undefined}
+              className={sidebarLinkClassName(isCollapsed)}
+            >
+              <FontAwesomeIcon icon={tab.icon} fixedWidth />
+              <span className={isCollapsed ? "sr-only" : "whitespace-nowrap"}>{tab.label}</span>
+            </NavLink>
+          ))}
+          {!user && (
+            <NavLink
+              to="/login"
+              title={isCollapsed ? "Login" : undefined}
+              className={sidebarLinkClassName(isCollapsed)}
+            >
+              <FontAwesomeIcon icon={faUser} fixedWidth />
+              <span className={isCollapsed ? "sr-only" : "whitespace-nowrap"}>Login</span>
+            </NavLink>
+          )}
         </div>
+
+        {user && (
+          <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex items-center gap-2">
+            <NavLink
+              to="/logout"
+              aria-label="Log out"
+              title={isCollapsed ? user.email ?? "Log out" : undefined}
+              className={`min-h-11 flex items-center gap-2 rounded-lg
+                hover:bg-gray-50 dark:hover:bg-gray-800
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                ${isCollapsed ? "justify-center" : "flex-1 min-w-0 px-2"}`}
+            >
+              <ProfileIcon
+                photoUrl={user.photoURL || undefined}
+                label={user.email?.substring(0, 1)?.toUpperCase() || "U"}
+              />
+              {!isCollapsed && (
+                <span className="text-sm text-text-light dark:text-text-dark truncate">
+                  {user.email}
+                </span>
+              )}
+            </NavLink>
+          </div>
+        )}
       </nav>
 
       <nav
-        className={`navbar fixed-bottom navbar-light 
-                    border border-top-1 bg-white
-                    d-block d-lg-none`}
+        className={`${isAuthRoute ? "hidden" : ""} lg:hidden fixed bottom-0 inset-x-0 z-20
+                   border-t border-gray-200 dark:border-gray-700
+                   bg-white dark:bg-surface-dark`}
         role="navigation"
       >
-        <Nav className="w-100">
-          <div className=" d-flex flex-row justify-content-around w-100">
-            {tabs
-              .filter(
-                (t) =>
-                  !t.role ||
-                  (t.role && t.role === userPermission?.role) ||
-                  userPermission?.role === "admin"
-              )
-              .map((tab, index) => (
-                <NavItem key={`tab-${index}`}>
-                  <NavLink
-                    to={tab.route}
-                    className={({ isActive, isPending }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    style={({ isActive, isPending }) => {
-                      return {
-                        color: isActive ? "#922c88" : "#55575b",
-                      };
-                    }}
-                  >
-                    <NavIcon icon={tab.icon} label={tab.label} />
-                  </NavLink>
-                </NavItem>
-              ))}
+        <div className="flex flex-row items-center justify-around">
+          {visibleTabs.map((tab, index) => (
+            <NavLink
+              key={`tab-${index}`}
+              to={tab.route}
+              className={({ isActive }) =>
+                `min-h-11 flex-1 flex items-center justify-center py-2 ${
+                  isActive
+                    ? "text-primary dark:text-primary-300"
+                    : "text-secondary dark:text-secondary-200"
+                }`
+              }
+            >
+              <NavIcon icon={tab.icon} label={tab.label} />
+            </NavLink>
+          ))}
 
-            <NavItem>
-              <NavLink
-                to={user ? "/logout" : "/login"}
-                className="nav-link"
-                style={
-                  !user
-                    ? {
-                        color: "#55575b",
-                      }
-                    : {}
-                }
-              >
-                {!user && (
-                  <NavIcon icon={faUser} label={user ? "Logout" : "Login"} />
-                )}
-                {user && (
-                  <ProfileIcon
-                    photoUrl={user?.photoURL}
-                    label={user?.email?.substring(0, 1)?.toUpperCase() || "U"}
-                  />
-                )}
-              </NavLink>
-            </NavItem>
-          </div>
-        </Nav>
+          <NavLink
+            to={user ? "/logout" : "/login"}
+            className="min-h-11 flex-1 flex items-center justify-center py-2 text-secondary dark:text-secondary-200"
+          >
+            {!user && <NavIcon icon={faUser} label="Login" />}
+            {user && (
+              <ProfileIcon
+                photoUrl={user?.photoURL}
+                label={user?.email?.substring(0, 1)?.toUpperCase() || "U"}
+              />
+            )}
+          </NavLink>
+        </div>
       </nav>
     </div>
   );

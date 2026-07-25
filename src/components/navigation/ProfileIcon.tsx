@@ -10,9 +10,9 @@ export const ProfileIcon = ({ photoUrl, label }: Props) => {
   return (
     <div
       className={`
-                    w-10 h-10 rounded-full border border-1 flex 
+                    w-10 h-10 rounded-full border border-1 flex
                     place-content-center items-center font-bold
-                    bg-blue-500 text-white text-xl
+                    bg-primary text-white text-xl
                     `}
     >
       {label}

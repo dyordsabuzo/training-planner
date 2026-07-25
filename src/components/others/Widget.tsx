@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "../form/Button";
 import { Input } from "../form/Input";
 
 type Props = {
@@ -36,15 +35,21 @@ export const Widget = ({
   };
 
   return (
-    <div className={`grid place-content-center`}>
-      <div className={`text-xs uppercase font-extralight place-self-center`}>
+    <div className="grid place-content-center text-text-light dark:text-text-dark">
+      <div className="text-xs uppercase font-extralight place-self-center">
         {label}
       </div>
-      <div
-        className={`flex gap-1 text-2xl leading-none items-center`}
-        onClick={clickHandler}
-      >
-        {!isEdit && <span>{value}</span>}
+      <div className="flex gap-1 text-2xl leading-none items-center">
+        {!isEdit && (
+          <button
+            type="button"
+            onClick={clickHandler}
+            aria-label={`Edit ${label}`}
+            className="min-h-11 px-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {value}
+          </button>
+        )}
         {isEdit && (
           <Input
             ref={ref}

@@ -36,11 +36,13 @@ export const RestTimer: React.FC<Props> = ({
           </div>
         )}
         {stateLabel && (
-          <span className={`flex place-content-center pt-4`}>{stateLabel}</span>
+          <span className="flex place-content-center pt-4 text-text-light dark:text-text-dark">
+            {stateLabel}
+          </span>
         )}
         <Button
           label={"Resume exercise"}
-          className={`my-3 py-3 text-lg bg-blue-400 hover:bg-blue-500`}
+          className="my-3 min-h-11 text-lg"
           onClick={() => toggleRest(false)}
         />
       </div>

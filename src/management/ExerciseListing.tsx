@@ -1,45 +1,64 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { ExerciseForm } from "../forms/ExerciseForm";
 import { sortObject } from "../common/utils";
 import BaseListing from "./BaseListing";
-import { Button } from "../components/form/Button";
+import { ManageListHeader } from "./ManageListHeader";
+import { EmptyState } from "./EmptyState";
 
 export const ExerciseListing = () => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
+  const [search, setSearch] = useState("");
 
   const sourceDataContext = useContext(SourceDataContext);
 
-  if (formType) {
-    return (
-      <ExerciseForm
-        data={formData}
-        type={formType}
-        closeForm={() => setFormType("")}
-      />
-    );
-  }
+  const exercises = sortObject(
+    (sourceDataContext.sourceData as any).exercises ?? {}
+  );
+  const entries = useMemo(
+    () =>
+      Object.entries(exercises).filter(([key]) =>
+        key.toLowerCase().includes(search.toLowerCase())
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [exercises, search]
+  );
 
   return (
     <BaseListing>
-      <div className={`flex place-content-end`}>
-        <Button
-          label="+ Add Exercise"
-          decoration="text-only"
-          onClick={() => {
-            setFormData({});
-            setFormType("add");
-          }}
+      <ManageListHeader
+        title="Exercises"
+        count={Object.keys(exercises).length}
+        addLabel="Add Exercise"
+        searchPlaceholder="Search exercises..."
+        search={search}
+        onSearchChange={setSearch}
+        onAdd={() => {
+          setFormData({});
+          setFormType("add");
+        }}
+      />
+
+      {entries.length === 0 && (
+        <EmptyState
+          message={
+            search
+              ? "No exercises match your search."
+              : "No exercises yet. Add your first exercise to get started."
+          }
         />
-      </div>
-      <div className={`grid grid-cols-2 gap-2`}>
-        {Object.entries(
-          sortObject((sourceDataContext.sourceData as any).exercises ?? {})
-        ).map(([key, value]) => (
-          <div
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {entries.map(([key, value]) => (
+          <button
+            type="button"
             key={key}
-            className={`grow border border-1 border-blue-200 p-4 rounded-md text-sm cursor-pointer`}
+            className="grow min-h-11 text-left border border-primary-200 dark:border-primary-700
+              bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
+              p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             onClick={() => {
               let _value: any = value;
               if (typeof _value.supersets === "string") {
@@ -50,9 +69,17 @@ export const ExerciseListing = () => {
             }}
           >
             {key}
-          </div>
+          </button>
         ))}
       </div>
+
+      {formType && (
+        <ExerciseForm
+          data={formData}
+          type={formType}
+          closeForm={() => setFormType("")}
+        />
+      )}
     </BaseListing>
   );
 };

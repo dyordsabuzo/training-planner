@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import WrapperPage from "./WrapperPage";
 import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
+import { Button } from "../components/form/Button";
 
 type Props = {
   listing?: string;
@@ -22,26 +23,22 @@ export const MainPage = ({ listing }: Props) => {
   return (
     <WrapperPage>
       <div className={`grid place-content-center pt-12 gap-2`}>
-        <button
-          type={"button"}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-2 rounded"
+        <Button
+          className="py-6 px-2"
+          label="START TRAINING"
           onClick={() => {
             navigate("/training-planner/train");
           }}
-        >
-          START TRAINING
-        </button>
+        />
 
         {userPermission?.role === "admin" && (
-          <button
-            type={"button"}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-6 px-4 rounded"
+          <Button
+            className="py-6 px-4"
+            label="Manage Training Setup"
             onClick={() => {
               navigate("/training-planner/manage");
             }}
-          >
-            Manage Training Setup
-          </button>
+          />
         )}
       </div>
     </WrapperPage>
