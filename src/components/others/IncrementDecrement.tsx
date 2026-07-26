@@ -8,6 +8,7 @@ type Props = {
   labelDirection?: "row" | "col";
   unit?: string;
   nonZero?: boolean;
+  fullWidth?: boolean;
   updateValue: (value: number) => void;
 };
 
@@ -17,6 +18,7 @@ export const IncrementDecrement = ({
   value,
   nonZero = false,
   unit,
+  fullWidth = false,
   updateValue,
 }: Props) => {
   const [v, setV] = useState(value);
@@ -68,7 +70,7 @@ export const IncrementDecrement = ({
 
   return (
     <div
-      className={`flex ${labelDirection === "col" ? "flex-col items-center gap-1" : "flex-row items-center gap-2"}`}
+      className={`flex ${fullWidth ? "w-full" : ""} ${labelDirection === "col" ? "flex-col items-center gap-1" : "flex-row items-center gap-2"}`}
     >
       <span
         className={`text-sm font-medium text-text-light dark:text-text-dark w-fit
@@ -78,8 +80,8 @@ export const IncrementDecrement = ({
       </span>
 
       <div
-        className="inline-flex items-stretch min-h-11 w-fit rounded-full border
-        border-gray-300 dark:border-gray-600 bg-white dark:bg-surface-dark overflow-hidden"
+        className={`inline-flex items-stretch min-h-11 ${fullWidth ? "w-full" : "w-fit"} rounded-full border
+        border-gray-300 dark:border-gray-600 bg-white dark:bg-surface-dark overflow-hidden`}
       >
         <button
           type="button"
@@ -101,10 +103,10 @@ export const IncrementDecrement = ({
           onChange={handleInputChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-12 text-center bg-transparent text-sm font-medium
+          className={`${fullWidth ? "flex-1 min-w-10" : "w-12"} text-center bg-transparent text-sm font-medium
             text-text-light dark:text-text-dark border-x border-gray-200 dark:border-gray-700
             focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10
-            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
         />
 
         {unit && (

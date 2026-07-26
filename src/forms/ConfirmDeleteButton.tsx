@@ -1,12 +1,21 @@
 import { useState } from "react";
+import { IconDefinition } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "../components/form/Button";
 
 type Props = {
   onDelete: () => void;
   label?: string;
+  icon?: IconDefinition;
+  decoration?: string;
 };
 
-export const ConfirmDeleteButton = ({ onDelete, label = "Delete" }: Props) => {
+export const ConfirmDeleteButton = ({
+  onDelete,
+  label = "Delete",
+  icon,
+  decoration = "delete",
+}: Props) => {
   const [confirming, setConfirming] = useState(false);
 
   if (confirming) {
@@ -16,7 +25,11 @@ export const ConfirmDeleteButton = ({ onDelete, label = "Delete" }: Props) => {
           Are you sure? This can't be undone.
         </span>
         <div className="flex gap-2">
-          <Button label={"Yes, delete"} decoration="delete" onClick={onDelete} />
+          <Button
+            label={`Yes, ${label.toLowerCase()}`}
+            decoration="delete"
+            onClick={onDelete}
+          />
           <Button
             label={"Cancel"}
             decoration="cancel"
@@ -28,6 +41,15 @@ export const ConfirmDeleteButton = ({ onDelete, label = "Delete" }: Props) => {
   }
 
   return (
-    <Button label={label} decoration="delete" onClick={() => setConfirming(true)} />
+    <Button decoration={decoration} onClick={() => setConfirming(true)}>
+      {icon ? (
+        <span className="flex items-center gap-2">
+          <FontAwesomeIcon icon={icon} />
+          {label}
+        </span>
+      ) : (
+        label
+      )}
+    </Button>
   );
 };

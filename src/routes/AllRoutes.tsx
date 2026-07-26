@@ -50,6 +50,11 @@ const AppShell = () => {
             errorElement={<ErrorPage />}
           />
           <Route
+            path={"/training-planner/train/:sessionId"}
+            element={user ? <SessionPage /> : <Navigate to="/" />}
+            errorElement={<ErrorPage />}
+          />
+          <Route
             path={"/login"}
             element={<Login />}
             errorElement={<ErrorPage />}

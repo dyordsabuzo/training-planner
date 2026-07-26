@@ -24,9 +24,8 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
   }, [countdownComplete, toggleRest]);
 
   return (
-    <div className={`w-full h-full flex flex-col gap-2 place-content-center`}>
-      {/* {!countdownComplete && ( */}
-      <div className={`flex place-content-center w-full h-full pt-3`}>
+    <div className="w-full h-full flex flex-col gap-2 items-center place-content-center">
+      <div className="flex place-content-center w-full pt-3">
         <Timer
           length={length}
           label="RESTING"
@@ -34,10 +33,11 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
           size={240}
         />
       </div>
-      {/* )} */}
-      {/* {stateLabel && (
-        <span className={`flex place-content-center pt-4`}>{stateLabel}</span>
-      )} */}
+      {stateLabel && (
+        <span className="text-sm text-text-muted-light dark:text-text-muted-dark text-center px-4">
+          {stateLabel}
+        </span>
+      )}
       <Button
         label={"Resume"}
         className="m-2 min-h-11 text-lg"

@@ -6,16 +6,19 @@ import {
   faUser,
   faChevronLeft,
   faChevronRight,
+  faChevronUp,
+  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useContext } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import AuthContext from "../../context/AuthContext";
 import SidebarContext from "../../context/SidebarContext";
 import { NavIcon } from "./NavIcon";
-import { ProfileIcon } from "./ProfileIcon";
+import { ProfileMenu } from "./ProfileMenu";
 import { Logo } from "../logo/Logo";
 import { ThemeToggle } from "../others/ThemeToggle";
 import { AUTH_ROUTES } from "../../routes/authRoutes";
+import { isTrainSessionPath } from "../../routes/trainRoutes";
 
 const tabs = [
   {
@@ -55,6 +58,34 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
+  const isSessionRoute = isTrainSessionPath(location.pathname);
+
+  const [isMobileNavRevealed, setIsMobileNavRevealed] = useState(false);
+  const dragStartY = useRef<number | null>(null);
+
+  useEffect(() => {
+    setIsMobileNavRevealed(false);
+  }, [location.pathname]);
+
+  const DRAG_THRESHOLD = 15;
+
+  const handleHandleTouchStart = (e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+  };
+
+  const handleHandleTouchEnd = (e: React.TouchEvent) => {
+    if (dragStartY.current === null) {
+      return;
+    }
+    const deltaY = e.changedTouches[0].clientY - dragStartY.current;
+    dragStartY.current = null;
+
+    if (deltaY < -DRAG_THRESHOLD) {
+      setIsMobileNavRevealed(true);
+    } else if (deltaY > DRAG_THRESHOLD) {
+      setIsMobileNavRevealed(false);
+    }
+  };
 
   const visibleTabs = tabs.filter(
     (t) =>
@@ -133,66 +164,86 @@ const Navigation = () => {
 
         {user && (
           <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex items-center gap-2">
-            <NavLink
-              to="/logout"
-              aria-label="Log out"
-              title={isCollapsed ? user.email ?? "Log out" : undefined}
-              className={`min-h-11 flex items-center gap-2 rounded-lg
-                hover:bg-gray-50 dark:hover:bg-gray-800
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                ${isCollapsed ? "justify-center" : "flex-1 min-w-0 px-2"}`}
-            >
-              <ProfileIcon
-                photoUrl={user.photoURL || undefined}
-                label={user.email?.substring(0, 1)?.toUpperCase() || "U"}
-              />
-              {!isCollapsed && (
-                <span className="text-sm text-text-light dark:text-text-dark truncate">
-                  {user.email}
-                </span>
-              )}
-            </NavLink>
+            <ProfileMenu
+              email={user.email}
+              photoUrl={user.photoURL}
+              showEmail={!isCollapsed}
+              menuAlign="left"
+            />
           </div>
         )}
       </nav>
 
-      <nav
-        className={`${isAuthRoute ? "hidden" : ""} lg:hidden fixed bottom-0 inset-x-0 z-20
-                   border-t border-gray-200 dark:border-gray-700
-                   bg-white dark:bg-surface-dark`}
-        role="navigation"
-      >
-        <div className="flex flex-row items-center justify-around">
-          {visibleTabs.map((tab, index) => (
-            <NavLink
-              key={`tab-${index}`}
-              to={tab.route}
-              className={({ isActive }) =>
-                `min-h-11 flex-1 flex items-center justify-center py-2 ${
-                  isActive
-                    ? "text-primary dark:text-primary-300"
-                    : "text-secondary dark:text-secondary-200"
-                }`
-              }
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-20">
+        {isSessionRoute && !isAuthRoute && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => setIsMobileNavRevealed((revealed) => !revealed)}
+              onTouchStart={handleHandleTouchStart}
+              onTouchEnd={handleHandleTouchEnd}
+              aria-label={isMobileNavRevealed ? "Hide menu" : "Show menu"}
+              aria-expanded={isMobileNavRevealed}
+              className="w-16 h-8 flex items-center justify-center rounded-t-full
+                border border-b-0 border-gray-200 dark:border-gray-700
+                bg-white dark:bg-surface-dark text-secondary dark:text-secondary-200
+                shadow-sm transition-transform duration-150 active:scale-95
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <NavIcon icon={tab.icon} label={tab.label} />
-            </NavLink>
-          ))}
-
-          <NavLink
-            to={user ? "/logout" : "/login"}
-            className="min-h-11 flex-1 flex items-center justify-center py-2 text-secondary dark:text-secondary-200"
-          >
-            {!user && <NavIcon icon={faUser} label="Login" />}
-            {user && (
-              <ProfileIcon
-                photoUrl={user?.photoURL}
-                label={user?.email?.substring(0, 1)?.toUpperCase() || "U"}
+              <FontAwesomeIcon
+                icon={isMobileNavRevealed ? faChevronDown : faChevronUp}
+                className="text-xs transition-transform duration-300"
               />
-            )}
-          </NavLink>
+            </button>
+          </div>
+        )}
+
+        <div
+          className={`overflow-hidden transition-[max-height] duration-300 ease-in-out
+            ${isAuthRoute || (isSessionRoute && !isMobileNavRevealed) ? "max-h-0" : "max-h-24"}`}
+        >
+          <nav
+            className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark"
+            role="navigation"
+          >
+            <div className="flex flex-row items-center justify-around">
+              {visibleTabs.map((tab, index) => (
+                <NavLink
+                  key={`tab-${index}`}
+                  to={tab.route}
+                  className={({ isActive }) =>
+                    `min-h-11 flex-1 flex items-center justify-center py-2 ${
+                      isActive
+                        ? "text-primary dark:text-primary-300"
+                        : "text-secondary dark:text-secondary-200"
+                    }`
+                  }
+                >
+                  <NavIcon icon={tab.icon} label={tab.label} />
+                </NavLink>
+              ))}
+
+              {user ? (
+                <div className="min-h-11 flex-1 flex items-center justify-center py-2">
+                  <ProfileMenu
+                    email={user.email}
+                    photoUrl={user.photoURL}
+                    showEmail={false}
+                    menuAlign="right"
+                  />
+                </div>
+              ) : (
+                <NavLink
+                  to="/login"
+                  className="min-h-11 flex-1 flex items-center justify-center py-2 text-secondary dark:text-secondary-200"
+                >
+                  <NavIcon icon={faUser} label="Login" />
+                </NavLink>
+              )}
+            </div>
+          </nav>
         </div>
-      </nav>
+      </div>
     </div>
   );
 };

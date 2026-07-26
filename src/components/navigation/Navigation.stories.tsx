@@ -44,3 +44,20 @@ export const LoggedInAdmin: StoryObj<typeof Navigation> = {
     }),
   ],
 };
+
+export const InTrainSession: StoryObj<typeof Navigation> = {
+  name: "In a train session (mobile nav collapsed by default)",
+  render: () => (
+    <MemoryRouter initialEntries={["/training-planner/train/test-session-id"]}>
+      <SidebarContextProvider>
+        <Navigation />
+      </SidebarContextProvider>
+    </MemoryRouter>
+  ),
+  decorators: [
+    withMockAuthContext({
+      user: { email: "admin@trainingplanner.com", photoURL: null },
+      userPermission: { role: "user", plans: [] },
+    }),
+  ],
+};

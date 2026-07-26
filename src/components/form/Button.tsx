@@ -4,11 +4,12 @@ type ButtonProps = {
   onClick?: () => void;
   className?: string;
   decoration?: string;
+  disabled?: boolean;
   children?: React.ReactNode;
 };
 
 const baseClasses =
-  "min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-dark";
+  "min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-dark disabled:opacity-50 disabled:pointer-events-none";
 
 export const Button = ({
   label,
@@ -16,12 +17,15 @@ export const Button = ({
   className,
   type = "button",
   decoration = "basic",
+  disabled,
   children,
 }: ButtonProps) => {
   const setDecoration = (d: string) => {
     switch (d) {
       case "text-only":
         return "text-sm px-2 hover:bg-success-50 dark:hover:bg-success-700/20 text-success-700 dark:text-success-500 font-bold rounded-md";
+      case "text-danger":
+        return "text-sm px-3 hover:bg-danger-50 dark:hover:bg-danger-700/20 text-danger hover:text-danger-700 dark:text-danger-500 font-semibold rounded-md";
       case "save":
         return "text-xs px-4 bg-primary hover:bg-primary-700 text-white font-bold rounded-md";
       case "cancel":
@@ -42,6 +46,7 @@ export const Button = ({
       className={`${baseClasses} ${setDecoration(decoration)} ${className ?? ""}`}
       type={type}
       onClick={onClick}
+      disabled={disabled}
     >
       {children ?? label}
     </button>
