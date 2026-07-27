@@ -6,8 +6,7 @@ import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router";
-import WrapperPage from "../WrapperPage";
-import { Logo } from "../../components/logo/Logo";
+import { AuthLayout } from "./AuthLayout";
 import { Loading } from "../helpers/Loading";
 
 export const Login = () => {
@@ -44,77 +43,77 @@ export const Login = () => {
   }
 
   return (
-    <WrapperPage>
-      <div className="flex flex-col gap-4 place-items-center py-4 bg-blue-500 mt-10 relative">
-        {/* <Logo className={`absolute w-40 -right-20 -top-6`} /> */}
-        <div className="flex flex-col w-full px-4 pb-2 text-white">
-          <span className="text-2xl font-bold">Hi there!</span>
-          <span>Welcome to Training Planner</span>
-        </div>
-        <form
-          onSubmit={loginHandler}
-          className="flex flex-col gap-2 w-full rounded-t-3xl p-4 bg-white"
-        >
-          <span className="text-2xl font-bold py-2">Login</span>
+    <AuthLayout
+      heroHeadline="Plan smarter. Train harder."
+      heroSubtext="Everything you need to build, run, and stick to your training program."
+    >
+      <form
+        onSubmit={loginHandler}
+        className="flex flex-col gap-2 w-full rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 bg-white dark:bg-surface-dark"
+      >
+        <h2 className="text-2xl font-bold py-2 text-text-light dark:text-text-dark">Login</h2>
+        <Input
+          type="email"
+          placeholder="Email address"
+          value={email}
+          required={true}
+          changeValue={(input) => {
+            setEmail(input);
+          }}
+        />
+        <div className="flex flex-col gap-1 mb-4">
           <Input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            required={true}
+            type="password"
+            placeholder="Password"
             changeValue={(input) => {
-              setEmail(input);
+              setPassword(input);
             }}
+            value={password}
+            required={true}
           />
-          <div className="flex flex-col gap-1 mb-4">
-            <Input
-              type="password"
-              placeholder="Password"
-              changeValue={(input) => {
-                setPassword(input);
-              }}
-              value={password}
-              required={true}
-            />
-            <span
-              className="text-xs flex justify-end text-blue-500 hover:underline hover:text-blue-700 font-semibold cursor-pointer"
-              onClick={() => navigate("/forgot-password")}
-            >
-              Forgot password?
-            </span>
-            {loginClicked && error && (
-              <span className="text-xs text-red-500">{error}</span>
-            )}
-          </div>
-
-          <Button type="submit">
-            <span className="flex items-center place-self-center gap-2 p-2">
-              <FontAwesomeIcon size="lg" icon={faUser} />
-              Login
-            </span>
-          </Button>
-          <Button
-            onClick={loginWithGoogleHandler}
-            decoration="custom"
-            className="bg-green-500 text-white hover:bg-green-700 font-bold rounded px-2"
+          <button
+            type="button"
+            className="min-h-11 text-xs flex justify-end items-center text-primary hover:underline hover:text-primary-700 font-semibold
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            onClick={() => navigate("/forgot-password")}
           >
-            <span className="flex items-center place-self-center gap-2 p-2">
-              <FontAwesomeIcon size="lg" icon={faGoogle} />
-              Login with Google
-            </span>
-          </Button>
+            Forgot password?
+          </button>
+          {loginClicked && error && (
+            <span className="text-xs text-danger">{error}</span>
+          )}
+        </div>
 
-          <div className="flex text-xs text-gray-500 gap-1 justify-center py-3">
-            <span>Don't have an account?</span>
-            <span
-              className="text-blue-500 hover:underline hover:text-blue-700 font-semibold cursor-pointer"
-              onClick={() => navigate("/signup")}
-            >
-              Sign up
-            </span>
-          </div>
-        </form>
-      </div>
-    </WrapperPage>
+        <Button type="submit">
+          <span className="flex items-center place-self-center gap-2 p-2">
+            <FontAwesomeIcon size="lg" icon={faUser} />
+            Login
+          </span>
+        </Button>
+        <Button
+          onClick={loginWithGoogleHandler}
+          decoration="custom"
+          className="min-h-11 bg-success-600 text-white hover:bg-success-700 font-bold rounded px-2"
+        >
+          <span className="flex items-center place-self-center gap-2 p-2">
+            <FontAwesomeIcon size="lg" icon={faGoogle} />
+            Login with Google
+          </span>
+        </Button>
+
+        <div className="flex text-xs text-text-muted-light dark:text-text-muted-dark gap-1 justify-center py-3">
+          <span>Don't have an account?</span>
+          <button
+            type="button"
+            className="text-primary hover:underline hover:text-primary-700 font-semibold
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            onClick={() => navigate("/signup")}
+          >
+            Sign up
+          </button>
+        </div>
+      </form>
+    </AuthLayout>
   );
 };
 

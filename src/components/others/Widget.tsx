@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "../form/Button";
 import { Input } from "../form/Input";
 
 type Props = {
   label: string;
   value: string;
   unit: string;
+  editable?: boolean;
   onValueChange?: (v: any) => void;
 };
 
@@ -13,6 +13,7 @@ export const Widget = ({
   label,
   value,
   unit,
+  editable = true,
   onValueChange = () => {},
 }: Props) => {
   const [isEdit, setIsEdit] = useState<boolean>(false);
@@ -36,16 +37,23 @@ export const Widget = ({
   };
 
   return (
-    <div className={`grid place-content-center`}>
-      <div className={`text-xs uppercase font-extralight place-self-center`}>
+    <div className="grid place-content-center text-text-light dark:text-text-dark">
+      <div className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark place-self-center mb-0.5">
         {label}
       </div>
-      <div
-        className={`flex gap-1 text-2xl leading-none items-center`}
-        onClick={clickHandler}
-      >
-        {!isEdit && <span>{value}</span>}
-        {isEdit && (
+      <div className="flex gap-1 text-2xl leading-none items-center">
+        {!editable && <span className="px-1">{value}</span>}
+        {editable && !isEdit && (
+          <button
+            type="button"
+            onClick={clickHandler}
+            aria-label={`Edit ${label}`}
+            className="min-h-11 px-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {value}
+          </button>
+        )}
+        {editable && isEdit && (
           <Input
             ref={ref}
             className={`!w-14`}

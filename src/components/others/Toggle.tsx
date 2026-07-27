@@ -1,5 +1,3 @@
-import React, { useState } from "react";
-
 type Props = {
   label: string;
   value: boolean;
@@ -8,26 +6,27 @@ type Props = {
 
 export const Toggle = ({ label, value, toggle }: Props) => {
   return (
-    <label
-      htmlFor={label}
-      className={`relative flex items-center gap-2 mb-1 text-sm font-medium
-        text-gray-900 text-gray-900`}
-    >
-      {label}
-      <div
-        className={`w-14 h-7 flex items-center rounded-full p-1 cursor-pointer ${
-          value ? "bg-green-400" : "bg-gray-300"
-        }`}
-        onClick={() => {
-          toggle(!value);
-        }}
+    <span className="flex items-center gap-2">
+      <span className="text-sm font-medium text-text-light dark:text-text-dark">
+        {label}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        aria-label={label}
+        onClick={() => toggle(!value)}
+        className={`min-h-11 w-14 flex items-center rounded-full p-1
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+          dark:focus-visible:ring-offset-surface-dark
+          ${value ? "bg-primary" : "bg-gray-300 dark:bg-gray-600"}`}
       >
-        <div
+        <span
           className={`bg-white w-6 h-6 rounded-full shadow-md transform duration-300 ease-in-out ${
             value ? "translate-x-6" : ""
           }`}
-        ></div>
-      </div>
-    </label>
+        />
+      </button>
+    </span>
   );
 };

@@ -37,8 +37,7 @@ export const Input = forwardRef<HTMLInputElement, Props>(
       <div className={`w-full ${className}`} ref={ref}>
         <label
           htmlFor={label}
-          className={`block mb-1 text-sm font-medium 
-                      text-gray-900 text-gray-900`}
+          className="block mb-1 text-sm font-medium text-text-light dark:text-text-dark"
         >
           {label}
         </label>
@@ -46,12 +45,10 @@ export const Input = forwardRef<HTMLInputElement, Props>(
           type={type}
           id={label}
           className={`
-                          ${readonly ? "bg-gray-200" : "bg-white"}
-                          border border-gray-300 text-gray-900 text-sm rounded-lg 
-                          focus:ring-blue-500 focus:border-blue-500 block p-2.5 
-                          dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 
-                          dark:focus:ring-blue-500 
-                          dark:focus:border-blue-500 w-full`}
+                          ${readonly ? "bg-gray-200 dark:bg-gray-800" : "bg-white dark:bg-surface-dark"}
+                          border border-gray-300 dark:border-gray-600 text-text-light dark:text-text-dark
+                          text-sm rounded-lg focus:ring-2 focus:ring-primary focus:border-primary
+                          block min-h-11 p-2.5 dark:placeholder-gray-400 w-full`}
           placeholder={placeholder}
           value={fieldValue}
           required={required}

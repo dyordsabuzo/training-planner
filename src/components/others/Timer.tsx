@@ -14,9 +14,14 @@ const RenderTime = ({ label = "RESTING", remainingTime = 60 }: RenderProps) => {
   }
 
   return (
-    <div className={`flex flex-col items-center`}>
-      <div className={`text-md`}>{label}</div>
-      <div className={`text-6xl`}>
+    <div
+      className="flex flex-col items-center text-text-light dark:text-text-dark"
+      role="timer"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div className="text-md">{label}</div>
+      <div className="text-6xl">
         {("0" + minutes).slice(-2)}:{("0" + seconds).slice(-2)}
       </div>
     </div>

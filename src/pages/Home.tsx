@@ -2,14 +2,15 @@ import WrapperPage from "./WrapperPage";
 import { useContext } from "react";
 import AuthContext from "../context/AuthContext";
 import { Loading } from "./helpers/Loading";
-import { useNavigate } from "react-router";
-import { Logo } from "../components/logo/Logo";
+import { Link } from "react-router";
+
+const linkClassName =
+  "font-bold text-primary hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
 export const Home = () => {
   const authContext = useContext(AuthContext);
   const { user, userPermission, isLoading } = authContext;
   const { role, plans = [] } = userPermission || {};
-  const navigate = useNavigate();
 
   if (isLoading) {
     return <Loading />;
@@ -27,12 +28,9 @@ export const Home = () => {
             training programs.
           </p>
           <p>
-            <span
-              className="font-bold cursor-pointer text-blue-500"
-              onClick={() => navigate("/training-planner/manage")}
-            >
+            <Link to="/training-planner/manage" className={linkClassName}>
               Click here to start managing users and training programs.
-            </span>
+            </Link>
           </p>
         </div>
       </WrapperPage>
@@ -52,13 +50,9 @@ export const Home = () => {
               In order to start training, you need to be assigned at least one
               training program.
             </p>
-            {/* <p>
-              Access to the training programs is restricted to users with an
-              active subscription.
-            </p> */}
             <p>
               Please contact the administrator at{" "}
-              <a href="mailto:trainingplanner6@gmail.com">
+              <a href="mailto:trainingplanner6@gmail.com" className={linkClassName}>
                 trainingplanner6@gmail.com
               </a>{" "}
               to get access to specific training program(s).
@@ -68,31 +62,22 @@ export const Home = () => {
         {plans?.length > 0 && (
           <p>
             Click on{" "}
-            <span
-              className="font-bold cursor-pointer text-blue-500"
-              onClick={() => navigate("/training-planner/train")}
-            >
+            <Link to="/training-planner/train" className={linkClassName}>
               Train
-            </span>{" "}
+            </Link>{" "}
             in the menu bar to start your training program.
           </p>
         )}
         {!user && (
           <p>
             Please{" "}
-            <span
-              className="font-bold cursor-pointer text-blue-500"
-              onClick={() => navigate("/login")}
-            >
+            <Link to="/login" className={linkClassName}>
               login
-            </span>{" "}
+            </Link>{" "}
             to start your training program or{" "}
-            <span
-              className="font-bold cursor-pointer text-blue-500"
-              onClick={() => navigate("/signup")}
-            >
+            <Link to="/signup" className={linkClassName}>
               sign up
-            </span>{" "}
+            </Link>{" "}
             to create an account.
           </p>
         )}

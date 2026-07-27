@@ -20,23 +20,22 @@ export const ButtonSelection = ({
       {label && (
         <label
           htmlFor={label}
-          className={`block mb-1 text-sm font-medium 
-                    text-gray-900 dark:text-gray-900`}
+          className="block mb-1 text-sm font-medium text-text-light dark:text-text-dark"
         >
           {label}
         </label>
       )}
       <div
         className={`
-          flex border border-black-600 w-fit rounded-md
-          divide-x divide-slate-100
+          flex border border-gray-300 dark:border-gray-600 w-fit rounded-md
+          divide-x divide-gray-300 dark:divide-gray-600
         `}
       >
         {options.map((option) => (
           <Button
             key={option}
             className={`
-              ${current === option ? "border border-3 border-green-700 text-white bg-green-500 hover:bg-green-700 rounded-md" : "text-black bg-white"}
+              min-h-11 ${current === option ? "bg-primary hover:bg-primary-700 text-white" : "text-text-light dark:text-text-dark bg-white dark:bg-surface-dark"}
           `}
             decoration="selection"
             label={option}

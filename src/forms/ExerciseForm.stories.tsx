@@ -35,7 +35,7 @@ export const ExistingExercise: StoryObj<typeof ExerciseForm> = {
         data={{
           id: "123abc",
           name: "Sample exercise",
-          videoLink: "",
+          videoLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
           tags: ["tag1", "tag2"],
           targetRep: "",
           targetSet: "",
@@ -45,7 +45,7 @@ export const ExistingExercise: StoryObj<typeof ExerciseForm> = {
           isTimeBased: true,
           isWeightExercise: true,
         }}
-        type={""}
+        type={"edit"}
         closeForm={() => {
           console.log("form closed");
         }}

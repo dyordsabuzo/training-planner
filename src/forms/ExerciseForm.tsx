@@ -4,6 +4,10 @@ import SourceDataContext from "../context/SourceDataContext";
 import { TagInput } from "../components/others/TagInput";
 import { FormButtons } from "./FormButtons";
 import { ButtonSelection } from "../components/form/ButtonSelection";
+import { Modal } from "../components/others/Modal";
+import { DetailField } from "./DetailField";
+import { EditIconButton } from "./EditIconButton";
+import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 
 type ExerciseData = {
   id?: string;
@@ -29,6 +33,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
   const exerciseData: ExerciseData | null = data;
 
   const id = exerciseData?.id ?? "";
+  const [isEditing, setIsEditing] = useState(type !== "edit");
   const [name, setName] = useState(exerciseData?.name ?? "");
   const [videoLink, setVideoLink] = useState(exerciseData?.videoLink ?? "");
   const [isWeightExercise, setIsWeightExercise] = useState(
@@ -39,9 +44,6 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
   const [targetSet, setTargetSet] = useState<string>(
     exerciseData?.targetSet ?? ""
   );
-  // const [isTimeBased, setIsTimeBased] = useState<boolean>(
-  //   exerciseData?.isTimeBased ?? false
-  // );
   const [rest, setRest] = useState<string>(exerciseData?.rest ?? "");
   const [supersets, setSupersets] = useState<string[]>(
     exerciseData?.supersets ?? []
@@ -52,6 +54,23 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
+
+  const resetFields = () => {
+    setName(exerciseData?.name ?? "");
+    setVideoLink(exerciseData?.videoLink ?? "");
+    setIsWeightExercise(exerciseData?.isWeightExercise ?? true);
+    setTags(exerciseData?.tags ?? []);
+    setTargetRep(exerciseData?.targetRep ?? "");
+    setTargetSet(exerciseData?.targetSet ?? "");
+    setRest(exerciseData?.rest ?? "");
+    setSupersets(exerciseData?.supersets ?? []);
+    setAlternatives(exerciseData?.alternatives ?? []);
+  };
+
+  const handleDelete = () => {
+    sourceDataContext.deleteExercise(data);
+    closeForm();
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -68,7 +87,6 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         alternatives,
         targetWeight: 0,
         isWeightExercise,
-        // isTimeBased,
       });
       closeForm();
     }
@@ -86,94 +104,114 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         alternatives,
         targetWeight: 0,
         isWeightExercise,
-        // isTimeBased,
       });
-      closeForm();
+      setIsEditing(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`flex flex-col gap-4 px-2`}>
-      <Input
-        label={"Exercise Name"}
-        required
-        value={name}
-        placeholder={"Exercise name"}
-        changeValue={setName}
-      />
-      <Input
-        label={"Video link"}
-        value={videoLink}
-        placeholder={"Video link"}
-        changeValue={setVideoLink}
-      />
-      <ButtonSelection
-        label="Weight exercise?"
-        options={["Yes", "No"]}
-        selection={isWeightExercise ? "Yes" : "No"}
-        onSelect={(value: string) => {
-          setIsWeightExercise(value === "Yes");
-        }}
-      />
-      {/* <Toggle
-        label="Is this exercise time based?"
-        value={isTimeBased}
-        toggle={setIsTimeBased}
-      /> */}
-      <TagInput
-        label={"Supersets"}
-        list={supersets}
-        options={Object.keys(sourceData.supersets ?? {})}
-        updateList={setSupersets}
-      />
-      {/* <Input
-        label={"Tags"}
-        value={tags}
-        placeholder={"Tags"}
-        changeValue={setTags}
-      /> */}
-      <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
-
-      <details className={`duration-300`}>
-        <summary className={`text-sm font-light`}>Advanced settings</summary>
-        <div className={`grid grid-cols-2 gap-3 pt-2`}>
-          <TagInput
-            label={"Alternatives"}
-            list={alternatives}
-            options={Object.keys(sourceData.exercises ?? {})}
-            updateList={setAlternatives}
-            className={`col-span-2 pt-2`}
-          />
-          <Input
-            label={"Target Rep"}
-            value={targetRep}
-            placeholder={"Target Rep"}
-            changeValue={setTargetRep}
-          />
-          <Input
-            label={"Target Set"}
-            value={targetSet}
-            placeholder={"Target Set"}
-            changeValue={setTargetSet}
-          />
-          <Input
-            label={"Rest in seconds"}
-            value={rest}
-            placeholder={"Rest time in seconds"}
-            changeValue={setRest}
-          />
+    <Modal
+      title={type === "add" ? "Add exercise" : "Exercise"}
+      isOpen={true}
+      onClose={closeForm}
+      headerAction={
+        type === "edit" && !isEditing ? (
+          <EditIconButton onClick={() => setIsEditing(true)} />
+        ) : undefined
+      }
+    >
+      {!isEditing ? (
+        <div className="flex flex-col gap-4">
+          <DetailField label="Exercise name" value={name} />
+          <DetailField label="Video link" value={videoLink} isLink />
+          <DetailField label="Weight exercise" value={isWeightExercise ? "Yes" : "No"} />
+          <DetailField label="Supersets" tags={supersets} />
+          <DetailField label="Tags" tags={tags} />
+          <DetailField label="Alternatives" tags={alternatives} />
+          <div className="grid grid-cols-3 gap-3">
+            <DetailField label="Target rep" value={targetRep} />
+            <DetailField label="Target set" value={targetSet} />
+            <DetailField label="Rest (s)" value={rest} />
+          </div>
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <ConfirmDeleteButton onDelete={handleDelete} />
+          </div>
         </div>
-      </details>
+      ) : (
+        <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
+          <Input
+            label={"Exercise Name"}
+            required
+            value={name}
+            placeholder={"Exercise name"}
+            changeValue={setName}
+          />
+          <Input
+            label={"Video link"}
+            value={videoLink}
+            placeholder={"Video link"}
+            changeValue={setVideoLink}
+          />
+          <ButtonSelection
+            label="Weight exercise?"
+            options={["Yes", "No"]}
+            selection={isWeightExercise ? "Yes" : "No"}
+            onSelect={(value: string) => {
+              setIsWeightExercise(value === "Yes");
+            }}
+          />
+          <TagInput
+            label={"Supersets"}
+            list={supersets}
+            options={Object.keys(sourceData.supersets ?? {})}
+            updateList={setSupersets}
+          />
+          <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
 
-      <FormButtons
-        onCancel={() => {
-          closeForm();
-        }}
-        onDelete={() => {
-          sourceDataContext.deleteExercise(data);
-          closeForm();
-        }}
-      />
-    </form>
+          <details className={`duration-300`}>
+            <summary className="text-sm font-light text-text-light dark:text-text-dark">Advanced settings</summary>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2`}>
+              <TagInput
+                label={"Alternatives"}
+                list={alternatives}
+                options={Object.keys(sourceData.exercises ?? {})}
+                updateList={setAlternatives}
+                className={`sm:col-span-2 pt-2`}
+              />
+              <Input
+                label={"Target Rep"}
+                value={targetRep}
+                placeholder={"Target Rep"}
+                changeValue={setTargetRep}
+              />
+              <Input
+                label={"Target Set"}
+                value={targetSet}
+                placeholder={"Target Set"}
+                changeValue={setTargetSet}
+              />
+              <Input
+                label={"Rest in seconds"}
+                value={rest}
+                placeholder={"Rest time in seconds"}
+                changeValue={setRest}
+              />
+            </div>
+          </details>
+
+          <FormButtons
+            onCancel={() => {
+              if (type === "edit") {
+                resetFields();
+                setIsEditing(false);
+              } else {
+                closeForm();
+              }
+            }}
+            onDelete={type === "edit" ? handleDelete : undefined}
+          />
+        </form>
+      )}
+    </Modal>
   );
 };

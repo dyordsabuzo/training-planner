@@ -1,5 +1,7 @@
 import { WatchVideo } from "../../components/others/WatchVideo";
 import { Widget } from "../../components/others/Widget";
+import { IncrementDecrement } from "../../components/others/IncrementDecrement";
+import { Button } from "../../components/form/Button";
 
 type Props = {
   name: string;
@@ -8,6 +10,7 @@ type Props = {
   targetWeight: string;
   targetRep: string;
   targetTime?: string;
+  exerciseLabel?: string;
   updateSupersetData: (value: any) => void;
   completeExercise: () => void;
 };
@@ -19,61 +22,65 @@ export const ExerciseDetails = ({
   targetWeight,
   targetRep,
   targetTime = "0",
+  exerciseLabel,
   updateSupersetData,
   completeExercise,
 }: Props) => {
   return (
-    <div className={`h-full flex flex-col justify-between gap-4`}>
-      <div className={`flex flex-col items-center gap-3 leading-none pt-4`}>
-        <span
-          className={`text-center font-semibold text-3xl w-64 break-words text-wrap`}
-        >
+    <div className="flex-1 flex flex-col justify-between gap-4">
+      <div className="flex flex-col items-center gap-3 leading-none pt-4 px-4">
+        {exerciseLabel && (
+          <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
+            {exerciseLabel}
+          </span>
+        )}
+        <span className="text-center font-semibold text-3xl w-full break-words text-wrap text-text-light dark:text-text-dark">
           {name}
         </span>
         {videoLink && <WatchVideo videoLink={videoLink} />}
       </div>
 
       {type !== "Time-based" && (
-        <div className={`grid grid-cols-2 gap-4 relative`}>
-          <Widget
-            label={"Target Weight"}
-            value={targetWeight}
-            unit={"kg"}
-            onValueChange={(v: any) => {
+        <div className="grid grid-cols-2 gap-3 px-4 sm:gap-6 sm:px-6">
+          <IncrementDecrement
+            label="Weight"
+            labelDirection="col"
+            unit="kg"
+            nonZero
+            fullWidth
+            value={Number(targetWeight) || 0}
+            updateValue={(v: number) => {
               updateSupersetData({ targetWeight: v });
             }}
           />
-          <Widget
-            label={"Target Rep"}
-            value={targetRep}
-            unit={"reps"}
-            onValueChange={(v: any) => {
+          <IncrementDecrement
+            label="Reps"
+            labelDirection="col"
+            unit="reps"
+            nonZero
+            fullWidth
+            value={Number(targetRep) || 0}
+            updateValue={(v: number) => {
               updateSupersetData({ targetRep: v });
             }}
           />
         </div>
       )}
       {type === "Time-based" && (
-        <div
-          className={`grid grid-cols-1 gap-2 cursor-pointer`}
-          onClick={() =>
-            // dispatch({
-            //   type: "update",
-            //   payload: { supersetTimer: true },
-            // })
-            console.log("time based")
-          }
-        >
-          <Widget label={"Target Time"} value={targetTime} unit={"secs"} />
+        <div className="grid grid-cols-1 gap-2 px-4 sm:px-6">
+          <Widget
+            label={"Target Time"}
+            value={targetTime}
+            unit={"secs"}
+            editable={false}
+          />
         </div>
       )}
-      <button
-        type="button"
+      <Button
+        className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6"
         onClick={completeExercise}
-        className="col-span-2 bg-blue-500 hover:bg-blue-700 text-white font-bold m-2 py-4 px-4 rounded"
-      >
-        DONE
-      </button>
+        label="Done"
+      />
     </div>
   );
 };

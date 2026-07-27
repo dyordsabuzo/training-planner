@@ -20,5 +20,9 @@ export const Logout = () => {
     }
   }, [user]);
 
-  return <div>Logout</div>;
+  return (
+    <div className="min-h-screen flex items-center justify-center text-text-light dark:text-text-dark">
+      Logging out...
+    </div>
+  );
 };

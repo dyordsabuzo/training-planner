@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import dayjs from 'dayjs';
 import { PlanForm } from './PlanForm';
 
 const meta: Meta<typeof PlanForm> = {
@@ -23,27 +24,25 @@ export const EmptyForm: StoryObj<typeof PlanForm> = {
   decorators: []
 };
 
-// export const ExistingExercise: StoryObj<typeof PlanForm> = {
-//   name: 'Existing exercise',
-//   render: () => {
-//     const formData = {};
-//     return (
-//       <PlanForm data={{
-//         id: '123abc',
-//         name: 'Sample exercise',
-//         videoLink: '',
-//         tags: ['tag1', 'tag2'],
-//         targetRep: "",
-//         targetSet: "",
-//         rest: "",
-//         supersets: ['superset1'],
-//         alternatives: []
-//       }} type={''} 
-//       closeForm={() => {
-//         console.log('form closed')
-//       }}      
-//       />
-//     )
-//   },
-//   decorators: []
-// };
+export const ExistingPlan: StoryObj<typeof PlanForm> = {
+  name: 'Existing plan',
+  render: () => {
+    return (
+      <PlanForm data={{
+        id: '123abc',
+        name: 'Strength Plan',
+        numberOfWeeks: '8',
+        baselineSet: '3',
+        baselineRep: '10',
+        baselineTime: '',
+        sessions: ['Session A', 'Session B'],
+        startDate: dayjs(),
+      }} type={'edit'}
+      closeForm={() => {
+        console.log('form closed')
+      }}
+      />
+    )
+  },
+  decorators: []
+};
