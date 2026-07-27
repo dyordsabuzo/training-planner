@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import WrapperPage from "../WrapperPage";
 import { Button } from "../../components/form/Button";
 import { Timer } from "../../components/others/Timer";
 
@@ -24,23 +23,23 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
   }, [countdownComplete, toggleRest]);
 
   return (
-    <div className="w-full h-full flex flex-col gap-2 items-center place-content-center">
-      <div className="flex place-content-center w-full pt-3">
+    <div className="flex-1 flex flex-col justify-between">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 pt-3">
         <Timer
           length={length}
           label="RESTING"
           setCountdownComplete={setCountdownComplete}
-          size={240}
+          size={260}
         />
+        {stateLabel && (
+          <span className="text-sm text-text-muted-light dark:text-text-muted-dark text-center px-4">
+            {stateLabel}
+          </span>
+        )}
       </div>
-      {stateLabel && (
-        <span className="text-sm text-text-muted-light dark:text-text-muted-dark text-center px-4">
-          {stateLabel}
-        </span>
-      )}
       <Button
         label={"Resume"}
-        className="m-2 min-h-11 text-lg"
+        className="min-h-11 text-lg mx-4 mb-2 sm:mx-6"
         onClick={() => toggleRest(false)}
       />
     </div>

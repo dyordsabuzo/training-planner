@@ -2,6 +2,7 @@ import { Button } from "../../components/form/Button";
 import { ConfirmDeleteButton } from "../../forms/ConfirmDeleteButton";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import { useNavigate } from "react-router";
+import { faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 import SessionContext from "../../context/SessionContext";
 import WrapperPage from "../WrapperPage";
 import { SummaryPage } from "../SummaryPage";
@@ -219,16 +220,16 @@ export const ExercisePage = () => {
 
   return (
     <WrapperPage
-      className="max-w-[25rem] sm:max-w-xl lg:max-w-4xl"
+      className="max-w-[26rem] sm:max-w-2xl lg:max-w-6xl"
       outerClassName="pb-8 px-2"
     >
       <div className="lg:flex lg:gap-6 lg:items-start">
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-2">
           <div
-            className="min-h-[70vh] sm:min-h-[30rem] lg:min-h-[34rem]
+            className="min-h-[70vh] sm:min-h-[32rem] lg:min-h-[36rem]
               flex flex-col
               gap-4 shadow-md
-              rounded-lg mx-4 mt-8 lg:mx-0
+              rounded-lg mx-2 mt-8 lg:mx-0
               bg-primary
               relative"
           >
@@ -251,7 +252,7 @@ export const ExercisePage = () => {
             <div className="w-full flex-1 flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
               <div
                 className="self-end flex items-center gap-2 text-white text-sm font-semibold
-                  bg-success-600 rounded-l-full mt-3 py-2 pl-5 pr-4"
+                  bg-primary rounded-l-full mt-3 py-2 pl-5 pr-4"
                 aria-live="polite"
               >
                 <span>Set</span>
@@ -304,9 +305,11 @@ export const ExercisePage = () => {
               )}
             </div>
           </div>
-          <div className="mx-4 lg:mx-0">
+          <div className="flex justify-end mx-2 lg:mx-0">
             <ConfirmDeleteButton
               label="Cancel session"
+              icon={faCircleXmark}
+              decoration="text-danger"
               onDelete={() => {
                 sessionContext.wrapSession();
                 navigate("/training-planner/train");
@@ -316,7 +319,7 @@ export const ExercisePage = () => {
         </div>
 
         <aside
-          className="hidden lg:flex lg:flex-col lg:w-72 shrink-0 mt-8
+          className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 mt-8
             border border-gray-200 dark:border-gray-700 rounded-md p-4
             bg-white dark:bg-surface-dark shadow-sm text-text-light dark:text-text-dark"
         >
