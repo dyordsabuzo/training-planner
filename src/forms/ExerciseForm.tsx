@@ -128,7 +128,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
           <DetailField label="Supersets" tags={supersets} />
           <DetailField label="Tags" tags={tags} />
           <DetailField label="Alternatives" tags={alternatives} />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <DetailField label="Target rep" value={targetRep} />
             <DetailField label="Target set" value={targetSet} />
             <DetailField label="Rest (s)" value={rest} />

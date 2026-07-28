@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
 import { isTrainSessionPath } from "../routes/trainRoutes";
@@ -88,18 +88,6 @@ export const SummaryPage = ({
           )}
         </div>
 
-        <Button
-          label={
-            nextSuperset
-              ? "Next superset"
-              : currentSuperset
-                ? "Finish workout"
-                : "Start workout"
-          }
-          onClick={handleButtonClick}
-          className="min-h-11 w-full"
-        />
-
         <div
           className="border border-gray-200 dark:border-gray-700 rounded-md p-4
             bg-white dark:bg-surface-dark shadow-sm flex flex-col"
@@ -112,6 +100,27 @@ export const SummaryPage = ({
             doneUpToIndex={currentSuperset ? supersetIndex : -1}
           />
         </div>
+
+        {!sessionComplete && (
+          <div
+            className="flex justify-center text-primary/50 dark:text-primary-300/50 animate-bounce"
+            aria-hidden="true"
+          >
+            <FontAwesomeIcon icon={faChevronDown} />
+          </div>
+        )}
+
+        <Button
+          label={
+            nextSuperset
+              ? "Next superset"
+              : currentSuperset
+                ? "Finish workout"
+                : "Start workout"
+          }
+          onClick={handleButtonClick}
+          className="min-h-11 w-full"
+        />
       </div>
     </WrapperPage>
   );

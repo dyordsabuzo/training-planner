@@ -75,7 +75,7 @@ export const Modal = ({ title, children, isOpen, onClose, size = "md", headerAct
           className={`relative w-full ${size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"}
             max-h-[100dvh] sm:max-h-[85vh] overflow-y-auto
             rounded-t-2xl sm:rounded-lg bg-white dark:bg-surface-dark
-            text-text-light dark:text-text-dark shadow-xl p-6`}
+            text-text-light dark:text-text-dark shadow-xl p-6 animate-slide-up`}
         >
           <div className="flex items-start justify-between gap-4 mb-4">
             <h3 id="modal-title" className="text-base font-semibold">

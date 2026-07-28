@@ -88,6 +88,26 @@ module.exports = {
           },
         },
       },
+      keyframes: {
+        "exercise-enter": {
+          "0%": { opacity: "0", transform: "translateX(16px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "roll-down": {
+          "0%": { opacity: "0", transform: "translateY(-100%)" },
+          "60%": { opacity: "1" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(24px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "exercise-enter": "exercise-enter 280ms ease-out",
+        "roll-down": "roll-down 320ms ease-out",
+        "slide-up": "slide-up 320ms ease-out",
+      },
     },
   },
   plugins: [],

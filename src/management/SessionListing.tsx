@@ -66,7 +66,12 @@ export const SessionListing = () => {
                          }}>
                         <span className="font-bold">{key}</span>
                         <>
-                            {(value as any).supersets.map((e: string) => (
+                            {(Array.isArray((value as any).supersets)
+                                ? (value as any).supersets
+                                : typeof (value as any).supersets === "string"
+                                    ? (value as any).supersets.split(",")
+                                    : []
+                            ).map((e: string) => (
                                 <div className="text-xs text-text-muted-light dark:text-text-muted-dark"
                                      key={e}>
                                     {e}

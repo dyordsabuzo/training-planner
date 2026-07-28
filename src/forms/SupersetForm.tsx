@@ -127,7 +127,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
           <DetailField label="Superset type" value={type} />
           <DetailField label="Linked sessions" tags={sessions} />
           <DetailField label="Tags" tags={tags} />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {type === "Rep-based" && <DetailField label="Target rep" value={targetRep} />}
             {type === "Time-based" && <DetailField label="Target time (s)" value={targetTime} />}
             <DetailField label="Target set" value={targetSet} />

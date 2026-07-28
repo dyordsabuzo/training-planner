@@ -256,13 +256,19 @@ export const ExercisePage = () => {
                 aria-live="polite"
               >
                 <span>Set</span>
-                <span className="text-xl font-bold leading-none">
-                  {exerciseState.exerciseSet + 1}
+                <span className="relative h-6 w-6 overflow-hidden">
+                  <span
+                    key={exerciseState.exerciseSet}
+                    className="absolute inset-0 flex items-center justify-center text-xl font-bold
+                      leading-none animate-roll-down"
+                  >
+                    {exerciseState.exerciseSet + 1}
+                  </span>
                 </span>
                 <span>of {parseInt(supersetData.targetSet)}</span>
               </div>
               {exerciseState.supersetRest && (
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col animate-slide-up">
                   <UnwrappedRestTimer
                     length={parseInt(supersetData.rest) || 120}
                     stateLabel={`Completed ${pluralize(exerciseState.exerciseSet, "set")} of ${parseInt(supersetData.targetSet)}`}
@@ -288,6 +294,7 @@ export const ExercisePage = () => {
                     exerciseData.targetTime || supersetData.targetTime || "0"
                   }
                   exerciseLabel={exerciseLabel}
+                  transitionKey={`${exerciseState.supersetCounter}-${exerciseState.exerciseCounter}`}
                   videoLink={exerciseData.exercise?.videoLink}
                   completeExercise={handleCompleteExercise}
                   updateSupersetData={(data: any) => {
@@ -310,6 +317,7 @@ export const ExercisePage = () => {
               label="Cancel session"
               icon={faCircleXmark}
               decoration="text-danger"
+              useModal
               onDelete={() => {
                 sessionContext.wrapSession();
                 navigate("/training-planner/train");

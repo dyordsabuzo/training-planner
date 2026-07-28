@@ -110,14 +110,14 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
       {!isEditing ? (
         <div className="flex flex-col gap-4">
           <DetailField label="Plan name" value={name} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <DetailField label="Number of weeks" value={numberOfWeeks} />
             <DetailField
               label="Start date"
               value={startDate?.isValid() ? startDate.format("MMM D, YYYY") : undefined}
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <DetailField label="Baseline set" value={baselineSet} />
             <DetailField label="Baseline rep" value={baselineRep} />
             <DetailField label="Baseline time" value={baselineTime} />

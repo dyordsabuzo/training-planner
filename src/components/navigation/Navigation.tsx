@@ -199,8 +199,8 @@ const Navigation = () => {
         )}
 
         <div
-          className={`overflow-hidden transition-[max-height] duration-300 ease-in-out
-            ${isAuthRoute || (isSessionRoute && !isMobileNavRevealed) ? "max-h-0" : "max-h-24"}`}
+          className={`transition-[max-height] duration-300 ease-in-out
+            ${isAuthRoute || (isSessionRoute && !isMobileNavRevealed) ? "max-h-0 overflow-hidden" : "max-h-24 overflow-visible"}`}
         >
           <nav
             className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark"

@@ -87,7 +87,7 @@ export const IncrementDecrement = ({
           type="button"
           aria-label={`Decrease ${label}`}
           disabled={atFloor}
-          className="min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
+          className="min-w-8 sm:min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
             hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10"
           onClick={() => commit(v - 1)}
@@ -103,14 +103,14 @@ export const IncrementDecrement = ({
           onChange={handleInputChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className={`${fullWidth ? "flex-1 min-w-10" : "w-12"} text-center bg-transparent text-sm font-medium
-            text-text-light dark:text-text-dark border-x border-gray-200 dark:border-gray-700
+          className={`${fullWidth ? "flex-1 min-w-4 sm:min-w-10" : "w-12"} text-center bg-transparent text-sm font-medium
+            text-text-light dark:text-text-dark border-l ${unit ? "" : "border-r"} border-gray-200 dark:border-gray-700
             focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10
             [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
         />
 
         {unit && (
-          <span className="flex items-center pr-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+          <span className="flex items-center shrink-0 whitespace-nowrap pl-0.5 pr-1 sm:pl-1 sm:pr-2 text-xs sm:text-sm text-text-muted-light dark:text-text-muted-dark border-r border-gray-200 dark:border-gray-700">
             {unit}
           </span>
         )}
@@ -118,7 +118,7 @@ export const IncrementDecrement = ({
         <button
           type="button"
           aria-label={`Increase ${label}`}
-          className="min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
+          className="min-w-8 sm:min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
             hover:bg-gray-100 dark:hover:bg-gray-700
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10"
           onClick={() => commit(v + 1)}

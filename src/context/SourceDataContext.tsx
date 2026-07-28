@@ -173,13 +173,19 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           (sObject: any) => sObject.name === s
         );
 
+        // Only back-link an existing superset — never auto-create a new one
+        // for a name that doesn't match anything (e.g. a typo/stray value
+        // typed into the tag field).
+        if (!superset) {
+          return;
+        }
+
         const exerciseList: string[] = superset?.exercises ?? [];
         if (!exerciseList.includes(exercise.name)) {
           exerciseList.push(exercise.name);
         }
         superset = {
           ...superset,
-          name: s,
           exercises: exerciseList,
         };
 
@@ -196,13 +202,20 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           (s: any) => s.name === session
         );
 
+        // Only back-link an existing session — never auto-create a new one
+        // for a name that doesn't match anything (e.g. a typo/stray value
+        // typed into the "Linked sessions" tag field). Sessions should only
+        // be created via the Add Session button.
+        if (!sessionObject) {
+          return;
+        }
+
         const supersetList: string[] = sessionObject?.supersets ?? [];
         if (!supersetList.includes(superset.name)) {
           supersetList.push(superset.name);
         }
         sessionObject = {
           ...sessionObject,
-          name: session,
           supersets: supersetList,
         };
 

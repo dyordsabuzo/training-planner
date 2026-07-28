@@ -108,8 +108,18 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
       const res = await signInWithPopup(auth, googleProvider);
       const [firstName, lastName] = (res.user.displayName as string).split(" ");
       console.log(`Welcome ${firstName} ${lastName}`);
-    } catch (err) {
-      setErrorObject("Authentication error.  Invalid email/password.");
+    } catch (err: any) {
+      console.error("Google sign-in failed:", err);
+      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
+        return;
+      }
+      if (err?.code === "auth/popup-blocked") {
+        setErrorObject("Your browser blocked the sign-in popup. Please allow popups for this site and try again.");
+      } else if (err?.code === "auth/unauthorized-domain") {
+        setErrorObject("This domain isn't authorized for Google sign-in yet. Please contact the administrator.");
+      } else {
+        setErrorObject("Unable to sign in with Google. Please try again.");
+      }
     }
   };
 

@@ -81,8 +81,8 @@ export const PlanListing = () => {
                 p-4 rounded-md text-sm shadow-sm"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-base">{planName}</span>
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="font-bold text-base break-words">{planName}</span>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                     <span>
                       {weekEntries.length}{" "}
