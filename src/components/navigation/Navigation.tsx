@@ -167,6 +167,9 @@ const Navigation = () => {
             <ProfileMenu
               email={user.email}
               photoUrl={user.photoURL}
+              firstName={userPermission?.firstName}
+              lastName={userPermission?.lastName}
+              isAdmin={userPermission?.role === "admin"}
               showEmail={!isCollapsed}
               menuAlign="left"
             />
@@ -228,6 +231,9 @@ const Navigation = () => {
                   <ProfileMenu
                     email={user.email}
                     photoUrl={user.photoURL}
+                    firstName={userPermission?.firstName}
+                    lastName={userPermission?.lastName}
+                    isAdmin={userPermission?.role === "admin"}
                     showEmail={false}
                     menuAlign="right"
                   />

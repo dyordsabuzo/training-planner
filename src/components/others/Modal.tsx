@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useEffect, useRef, useState } from "react";
+import { faXmark, faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 type Props = {
@@ -16,6 +16,10 @@ const FOCUSABLE_SELECTOR =
 
 export const Modal = ({ title, children, isOpen, onClose, size = "md", headerAction }: Props) => {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -54,6 +58,41 @@ export const Modal = ({ title, children, isOpen, onClose, size = "md", headerAct
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) {
+      return;
+    }
+
+    const updateScrollState = () => {
+      setCanScrollUp(scrollEl.scrollTop > 0);
+      setCanScrollDown(
+        scrollEl.scrollTop + scrollEl.clientHeight < scrollEl.scrollHeight - 1
+      );
+    };
+
+    updateScrollState();
+    scrollEl.addEventListener("scroll", updateScrollState);
+
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    if (contentRef.current) {
+      resizeObserver.observe(contentRef.current);
+    }
+
+    return () => {
+      scrollEl.removeEventListener("scroll", updateScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [isOpen]);
+
+  const scrollToTop = () => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollToBottom = () =>
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+
   if (!isOpen) {
     return null;
   }
@@ -73,11 +112,11 @@ export const Modal = ({ title, children, isOpen, onClose, size = "md", headerAct
           aria-modal="true"
           aria-labelledby="modal-title"
           className={`relative w-full ${size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"}
-            max-h-[100dvh] sm:max-h-[85vh] overflow-y-auto
+            max-h-[100dvh] sm:max-h-[85vh] flex flex-col
             rounded-t-2xl sm:rounded-lg bg-white dark:bg-surface-dark
-            text-text-light dark:text-text-dark shadow-xl p-6 animate-slide-up`}
+            text-text-light dark:text-text-dark shadow-xl animate-slide-up`}
         >
-          <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 shrink-0">
             <h3 id="modal-title" className="text-base font-semibold">
               {title}
             </h3>
@@ -96,7 +135,38 @@ export const Modal = ({ title, children, isOpen, onClose, size = "md", headerAct
               </button>
             </div>
           </div>
-          {children}
+
+          <div ref={scrollRef} className="overflow-y-auto scrollbar-hide px-6 pb-6 flex-1 min-h-0">
+            <div ref={contentRef}>{children}</div>
+          </div>
+
+          {canScrollUp && (
+            <button
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Scroll to top of form"
+              className="absolute top-16 right-4 z-10 min-h-9 min-w-9 flex items-center justify-center rounded-full
+                bg-white/90 dark:bg-surface-dark/90 border border-gray-200 dark:border-gray-700 shadow
+                text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-300
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <FontAwesomeIcon icon={faChevronUp} className="text-xs" />
+            </button>
+          )}
+
+          {canScrollDown && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              aria-label="Scroll to end of form"
+              className="absolute bottom-4 right-4 z-10 min-h-9 min-w-9 flex items-center justify-center rounded-full
+                bg-white/90 dark:bg-surface-dark/90 border border-gray-200 dark:border-gray-700 shadow
+                text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-300
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
+            </button>
+          )}
         </div>
       </div>
     </div>

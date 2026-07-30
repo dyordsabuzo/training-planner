@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import dayjs from 'dayjs';
 import { PlanForm } from './PlanForm';
+import { withMockSourceDataContext } from '../management/__mock__/MockContext';
 
 const meta: Meta<typeof PlanForm> = {
   title: 'forms/PlanForm',
@@ -44,5 +45,17 @@ export const ExistingPlan: StoryObj<typeof PlanForm> = {
       />
     )
   },
-  decorators: []
+  decorators: [
+    withMockSourceDataContext({
+      sourceData: {
+        sessions: {
+          'Session A': { name: 'Session A' },
+          'Session B': { name: 'Session B' },
+          'Session C': { name: 'Session C' },
+        },
+      },
+      editPlan: () => {},
+      deletePlan: () => {},
+    }),
+  ]
 };

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { SupersetForm } from "./SupersetForm";
+import { withMockSourceDataContext } from "../management/__mock__/MockContext";
 
 const meta: Meta<typeof SupersetForm> = {
   title: "forms/SupersetForm",
@@ -48,5 +49,21 @@ export const ExistingSuperset: StoryObj<typeof SupersetForm> = {
       />
     );
   },
-  decorators: [],
+  decorators: [
+    withMockSourceDataContext({
+      sourceData: {
+        exercises: {
+          Squat: { name: "Squat" },
+          Lunge: { name: "Lunge" },
+          "Leg Press": { name: "Leg Press" },
+        },
+        sessions: {
+          "Session A": { name: "Session A" },
+          "Session B": { name: "Session B" },
+        },
+      },
+      editSuperset: () => {},
+      deleteSuperset: () => {},
+    }),
+  ],
 };

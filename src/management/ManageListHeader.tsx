@@ -5,8 +5,8 @@ import { Button } from "../components/form/Button";
 type Props = {
   title: string;
   count: number;
-  addLabel: string;
-  onAdd: () => void;
+  addLabel?: string;
+  onAdd?: () => void;
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
@@ -50,12 +50,14 @@ export const ManageListHeader = ({
           />
         </div>
 
-        <Button onClick={onAdd} className="whitespace-nowrap">
-          <span className="flex items-center gap-2 px-2">
-            <FontAwesomeIcon icon={faPlus} />
-            {addLabel}
-          </span>
-        </Button>
+        {addLabel && onAdd && (
+          <Button onClick={onAdd} className="whitespace-nowrap">
+            <span className="flex items-center gap-2 px-2">
+              <FontAwesomeIcon icon={faPlus} />
+              {addLabel}
+            </span>
+          </Button>
+        )}
       </div>
     </div>
   );

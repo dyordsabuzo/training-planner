@@ -4,7 +4,7 @@ import { SummaryPage } from "./SummaryPage";
 import { withMockSessionDataContext } from "../management/__mock__/MockContext";
 
 const meta: Meta<typeof SummaryPage> = {
-  title: "pages/SummaryPage",
+  title: "pages/components/SummaryPage",
   component: SummaryPage,
   decorators: [
     (Story) => (

@@ -3,6 +3,7 @@ import { addDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { getCollection, getDocumentReference } from "../common/firebase";
 import AuthContext from "./AuthContext";
 import { saveToDB, SourceDbReferences } from "../common/utils";
+import { getEntitiesNeedingRenameUpdate } from "./renameCascade";
 
 // type ContextData = {
 //   sourceData?: any;
@@ -62,10 +63,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         ? await getFromDB(SourceDbReferences.USERDATA, [user.uid])
         : null;
 
-      const plans = await getFromDB(
-        SourceDbReferences.PLANS,
-        userPermission?.plans
-      );
+      // Admins see every plan; everyone else is restricted to the plans
+      // explicitly granted on their users/{uid} doc — an empty/undefined
+      // list here must mean "no plans", not "no filter".
+      const planIdFilter =
+        userPermission?.role === "admin" ? undefined : userPermission?.plans ?? [];
+      const plans = await getFromDB(SourceDbReferences.PLANS, planIdFilter);
 
       setSourceData({
         ...sourceData,
@@ -83,11 +86,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
   const deleteFromDB = (sourceDb: SourceDbReferences, data: any) => {
     deleteDoc(getDocumentReference(sourceDb, data.id)).then(() => {
-      let sourceDataElement = sourceData[sourceDb] ?? {};
-      delete sourceDataElement[data.name];
-      setSourceData({
-        ...sourceData,
-        [sourceDb]: sourceDataElement,
+      setSourceData((prev: any) => {
+        const sourceDataElement = { ...(prev[sourceDb] ?? {}) };
+        delete sourceDataElement[data.name];
+        return { ...prev, [sourceDb]: sourceDataElement };
       });
     });
   };
@@ -132,17 +134,19 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
   const getFromDB = async (
     sourceDb: SourceDbReferences,
-    idFilters: string[] = []
+    idFilters?: string[]
   ): Promise<any> => {
     try {
       const collection = getCollection(sourceDb);
       const snapshot = await getDocs(collection);
 
       let data = {};
-      const docs =
-        idFilters.length > 0
-          ? snapshot.docs.filter((doc) => idFilters.includes(doc.id))
-          : snapshot.docs;
+      // `idFilters` omitted (undefined) means "no filter, return everything".
+      // An explicit array (including an empty one) is a strict allow-list —
+      // empty must mean zero results, not "same as no filter".
+      const docs = idFilters
+        ? snapshot.docs.filter((doc) => idFilters.includes(doc.id))
+        : snapshot.docs;
 
       docs.forEach((doc) => {
         const docData = doc.data();
@@ -226,21 +230,80 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   const updateSourceData = (dbReference: SourceDbReferences, data: any) => {
-    if (data) {
-      const sourceDataElement = sourceData[dbReference];
-      setSourceData({
-        ...sourceData,
-        [dbReference]: {
-          ...sourceDataElement,
-          [data?.name]: data,
-        },
-      });
+    if (!data) {
+      return;
+    }
+    setSourceData((prev: any) => ({
+      ...prev,
+      [dbReference]: {
+        ...(prev[dbReference] ?? {}),
+        [data.name]: data,
+      },
+    }));
+  };
+
+  // Renaming an entity keeps its old dictionary key around unless explicitly
+  // removed — updateSourceData alone only ever adds/overwrites a key, never
+  // deletes one, so a rename would otherwise leave a stale duplicate entry.
+  const renameSourceData = (
+    dbReference: SourceDbReferences,
+    oldName: string,
+    data: any
+  ) => {
+    if (!data) {
+      return;
+    }
+    setSourceData((prev: any) => {
+      const sourceDataElement = { ...(prev[dbReference] ?? {}) };
+      delete sourceDataElement[oldName];
+      sourceDataElement[data.name] = data;
+      return { ...prev, [dbReference]: sourceDataElement };
+    });
+  };
+
+  const findPrevious = (dict: any, id?: string) =>
+    Object.values(dict ?? {}).find((entity: any) => entity.id === id) as any;
+
+  // When an entity is renamed, every other entity that references its old
+  // name by string (e.g. a Superset's `exercises` list) needs that string
+  // updated to the new name, or the reference silently dangles.
+  const applyRenameCascade = async (
+    dbReference: SourceDbReferences,
+    oldName: string,
+    newName: string
+  ) => {
+    const updates = getEntitiesNeedingRenameUpdate(
+      sourceData,
+      dbReference,
+      oldName,
+      newName
+    );
+    for (const { collection, entity } of updates) {
+      const saved = await saveToDB(collection, entity);
+      updateSourceData(collection, saved);
+    }
+  };
+
+  const saveRenamedEntity = async (
+    dbReference: SourceDbReferences,
+    previous: any,
+    data: any
+  ) => {
+    if (!data) {
+      return;
+    }
+    if (previous && previous.name !== data.name) {
+      renameSourceData(dbReference, previous.name, data);
+      await applyRenameCascade(dbReference, previous.name, data.name);
+    } else {
+      updateSourceData(dbReference, data);
     }
   };
 
   const updateExercise = async (exercise: any) => {
+    const previous = findPrevious(sourceData.exercises, exercise.id);
     const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
-    updateSourceData(SourceDbReferences.EXERCISES, data);
+    await saveRenamedEntity(SourceDbReferences.EXERCISES, previous, data);
     linkExerciseWithSupersets(exercise);
   };
 
@@ -252,9 +315,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
   const deleteExercise = (exercise: any) => {
     deleteFromDB(SourceDbReferences.EXERCISES, exercise);
-    let _srcData = sourceData;
-    delete _srcData.exercises[exercise.name];
-    setSourceData(_srcData);
+    setSourceData((prev: any) => {
+      const exercises = { ...(prev.exercises ?? {}) };
+      delete exercises[exercise.name];
+      return { ...prev, exercises };
+    });
   };
 
   const addSuperset = async (superset: any) => {
@@ -264,6 +329,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   const editSuperset = async (superset: any) => {
+    const previous = findPrevious(sourceData.supersets, superset.id);
     const exercises = Object.keys(sourceData.exercises ?? {});
     superset = {
       ...superset,
@@ -272,15 +338,17 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       ),
     };
     const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
-    updateSourceData(SourceDbReferences.SUPERSETS, data);
+    await saveRenamedEntity(SourceDbReferences.SUPERSETS, previous, data);
     linkSupersetWithSessions(superset);
   };
 
   const deleteSuperset = (superset: any) => {
     deleteFromDB(SourceDbReferences.SUPERSETS, superset);
-    let _srcData = sourceData;
-    delete _srcData.supersets[superset.name];
-    setSourceData(_srcData);
+    setSourceData((prev: any) => {
+      const supersets = { ...(prev.supersets ?? {}) };
+      delete supersets[superset.name];
+      return { ...prev, supersets };
+    });
   };
 
   const addSession = async (session: any) => {
@@ -289,15 +357,18 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   const editSession = async (session: any) => {
+    const previous = findPrevious(sourceData.sessions, session.id);
     const data = await saveToDB(SourceDbReferences.SESSIONS, session);
-    updateSourceData(SourceDbReferences.SESSIONS, data);
+    await saveRenamedEntity(SourceDbReferences.SESSIONS, previous, data);
   };
 
   const deleteSession = (session: any) => {
     deleteFromDB(SourceDbReferences.SESSIONS, session);
-    let _srcData = sourceData;
-    delete _srcData.sessions[session.name];
-    setSourceData(_srcData);
+    setSourceData((prev: any) => {
+      const sessions = { ...(prev.sessions ?? {}) };
+      delete sessions[session.name];
+      return { ...prev, sessions };
+    });
   };
 
   const addPlan = async (plan: any) => {
@@ -326,14 +397,14 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   const editPlan = async (plan: any) => {
-    let currentWeeks = sourceData.plans[plan.originalName].weeks;
+    const previous = findPrevious(sourceData.plans, plan.id);
+    let currentWeeks = previous?.weeks ?? {};
     let currentWeeksLength = Object.keys(currentWeeks).length;
 
     if (parseInt(plan.numberOfWeeks || "0") > currentWeeksLength) {
       Array.from(
         Array(parseInt(plan.numberOfWeeks) - currentWeeksLength).keys()
       ).forEach((week) => {
-        console.log(week);
         currentWeeks = {
           ...currentWeeks,
           [`Week ${week + 1 + currentWeeksLength}`]: {
@@ -352,14 +423,16 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     };
 
     const data = await saveToDB(SourceDbReferences.PLANS, plan);
-    updateSourceData(SourceDbReferences.PLANS, data);
+    await saveRenamedEntity(SourceDbReferences.PLANS, previous, data);
   };
 
   const deletePlan = (plan: any) => {
     deleteFromDB(SourceDbReferences.PLANS, plan);
-    let _srcData = sourceData;
-    delete _srcData.plans[plan.name];
-    setSourceData(_srcData);
+    setSourceData((prev: any) => {
+      const plans = { ...(prev.plans ?? {}) };
+      delete plans[plan.name];
+      return { ...prev, plans };
+    });
   };
 
   const updateWeekPlan = async (planName: string, weekData: any) => {

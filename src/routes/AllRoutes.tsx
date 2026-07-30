@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import Navigation from "../components/navigation/Navigation";
 import ErrorPage from "../pages/ErrorPage";
 import ListingPage from "../pages/ListingPage";
+import AdminPage from "../pages/AdminPage";
+import ProfilePage from "../pages/ProfilePage";
 import SessionPage from "../pages/SessionPage";
 import { Login } from "../pages/auth/Login";
 import { ForgotPassword } from "../pages/auth/ForgotPassword";
@@ -17,7 +19,7 @@ import { AUTH_ROUTES } from "./authRoutes";
 
 const AppShell = () => {
   const authContext = useContext(AuthContext);
-  const { user } = authContext;
+  const { user, userPermission } = authContext;
   const { isCollapsed } = useContext(SidebarContext);
   const location = useLocation();
   const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
@@ -40,8 +42,28 @@ const AppShell = () => {
           <Route
             path={"/training-planner/manage"}
             element={
-              user ? <ListingPage list={"exercises"} /> : <Navigate to="/" />
+              userPermission?.role === "admin" ? (
+                <ListingPage list={"exercises"} />
+              ) : (
+                <Navigate to="/" />
+              )
             }
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/admin"}
+            element={
+              userPermission?.role === "admin" ? (
+                <AdminPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/profile"}
+            element={user ? <ProfilePage /> : <Navigate to="/" />}
             errorElement={<ErrorPage />}
           />
           <Route

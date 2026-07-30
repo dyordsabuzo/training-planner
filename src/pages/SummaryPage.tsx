@@ -1,5 +1,5 @@
 import { Button } from "../components/form/Button";
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
+import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { isTrainSessionPath } from "../routes/trainRoutes";
 
 type Props = {
@@ -35,6 +36,12 @@ export const SummaryPage = ({
   const navigate = useNavigate();
   const location = useLocation();
   const isSessionRoute = isTrainSessionPath(location.pathname);
+  const [moodAfter, setMoodAfter] = useState<MoodValue>({});
+
+  const handleMoodAfterChange = (value: MoodValue) => {
+    setMoodAfter(value);
+    updateUserData({ mood: { after: value } });
+  };
 
   const handleButtonClick = () => {
     if (sessionComplete) {
@@ -100,6 +107,14 @@ export const SummaryPage = ({
             doneUpToIndex={currentSuperset ? supersetIndex : -1}
           />
         </div>
+
+        {sessionComplete && (
+          <MoodCheckIn
+            title="How are you feeling after this session?"
+            value={moodAfter}
+            onChange={handleMoodAfterChange}
+          />
+        )}
 
         {!sessionComplete && (
           <div

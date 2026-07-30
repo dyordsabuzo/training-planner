@@ -13,7 +13,7 @@ type Props = {
 export const DetailField = ({ label, value, tags, isLink, className }: Props) => {
   return (
     <div className={className}>
-      <div className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">
+      <div className="text-xs font-normal uppercase tracking-wide text-text-muted-light/70 dark:text-text-muted-dark/70 mb-1">
         {label}
       </div>
       {tags ? (

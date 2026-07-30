@@ -1,13 +1,24 @@
 import { Input } from "../components/form/Input";
-import React, { useContext, useState } from "react";
+import { MultiSelect } from "../components/form/MultiSelect";
+import { ReorderableSelect } from "../components/form/ReorderableSelect";
+import { IncrementDecrement } from "../components/others/IncrementDecrement";
+import { CollapsibleSection } from "../components/others/CollapsibleSection";
+import React, { useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { TagInput } from "../components/others/TagInput";
 import { FormButtons } from "./FormButtons";
 import { ButtonSelection } from "../components/form/ButtonSelection";
 import { Modal } from "../components/others/Modal";
 import { DetailField } from "./DetailField";
-import { EditIconButton } from "./EditIconButton";
 import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
+import { useEntityForm } from "./useEntityForm";
+import { findDuplicateName } from "../common/nameValidation";
+import { toStringArray } from "../common/utils";
+import {
+  buildRelationshipGraph,
+  getDirectReferencers,
+  nodeId,
+} from "../management/buildRelationshipGraph";
 
 type FormData = {
   id?: string;
@@ -32,17 +43,15 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const formData = data;
 
   const id = formData?.id ?? "";
-  const [isEditing, setIsEditing] = useState(entryType !== "edit");
   const [name, setName] = useState(formData?.name ?? "");
-  const [sessions, setSessions] = useState<string[]>(formData?.sessions ?? []);
+  const [nameError, setNameError] = useState<string>();
+  const [sessions, setSessions] = useState<string[]>(toStringArray(formData?.sessions));
   const [exercises, setExercises] = useState<string[]>(
-    formData?.exercises ?? []
+    toStringArray(formData?.exercises)
   );
 
-  const [exerciseCombo, setExerciseCombo] = useState<any>([]);
-
   const [rest, setRest] = useState<string>(formData?.rest ?? "");
-  const [tags, setTags] = useState(formData?.tags ?? []);
+  const [tags, setTags] = useState(toStringArray(formData?.tags));
   const [type, setType] = useState<string>(formData?.type ?? "Rep-based");
 
   const [targetRep, setTargetRep] = useState(formData?.targetRep ?? "");
@@ -58,23 +67,39 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
 
   const resetFields = () => {
     setName(formData?.name ?? "");
-    setSessions(formData?.sessions ?? []);
-    setExercises(formData?.exercises ?? []);
+    setNameError(undefined);
+    setSessions(toStringArray(formData?.sessions));
+    setExercises(toStringArray(formData?.exercises));
     setRest(formData?.rest ?? "");
-    setTags(formData?.tags ?? []);
+    setTags(toStringArray(formData?.tags));
     setType(formData?.type ?? "Rep-based");
     setTargetRep(formData?.targetRep ?? "");
     setTargetSet(formData?.targetSet ?? "");
     setTargetTime(formData?.targetTime ?? "");
   };
 
-  const handleDelete = () => {
-    sourceDataContext.deleteSuperset(data);
-    closeForm();
-  };
+  const { isEditing, setIsEditing, headerAction, handleCancel, handleDelete } =
+    useEntityForm({
+      type: entryType,
+      resetFields,
+      onDelete: () => sourceDataContext.deleteSuperset(data),
+      closeForm,
+    });
+
+  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
+  const usageCount =
+    entryType === "edit" && name
+      ? getDirectReferencers(nodeId("superset", name), graph.edges).length
+      : 0;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (findDuplicateName(sourceData.supersets, name, id)) {
+      setNameError("A superset with this name already exists.");
+      return;
+    }
+    setNameError(undefined);
 
     if (entryType === "add") {
       sourceDataContext.addSuperset({
@@ -114,11 +139,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
       isOpen={true}
       onClose={closeForm}
       size="lg"
-      headerAction={
-        entryType === "edit" && !isEditing ? (
-          <EditIconButton onClick={() => setIsEditing(true)} />
-        ) : undefined
-      }
+      headerAction={headerAction}
     >
       {!isEditing ? (
         <div className="flex flex-col gap-4">
@@ -134,7 +155,14 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
             <DetailField label="Rest (s)" value={rest} />
           </div>
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-            <ConfirmDeleteButton onDelete={handleDelete} />
+            <ConfirmDeleteButton
+              onDelete={handleDelete}
+              impactMessage={
+                usageCount > 0
+                  ? `This superset is used by ${usageCount} session${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
+                  : undefined
+              }
+            />
           </div>
         </div>
       ) : (
@@ -144,53 +172,17 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
             required
             value={name}
             placeholder={"Exercise name"}
+            error={nameError}
             changeValue={setName}
           />
-          <div className={`flex flex-col`}>
-            <label className="block mb-1 text-sm font-medium text-text-light dark:text-text-dark">
-              Exercises
-            </label>
-            <div className={`flex flex-col sm:flex-row gap-1 py-1`}>
-              <TagInput
-                key={"exercises-main-1"}
-                list={exercises}
-                placeholder="Select main exercise"
-                options={exerciseOptions}
-                updateList={(e) => {
-                  if (exerciseCombo.length > 0) {
-                    console.log("superset form");
-                  }
-                }}
-                className={`flex grow`}
-              />
-              <TagInput
-                key={"exercises-alt-1"}
-                list={exercises}
-                placeholder="Select alternatives"
-                options={exerciseOptions}
-                updateList={setExercises}
-                className={`flex grow`}
-              />
-            </div>
-            <div className={`flex flex-col sm:flex-row gap-1 py-1`}>
-              <TagInput
-                key={"exercises-main-2"}
-                list={exercises}
-                placeholder="Select main exercise"
-                options={exerciseOptions}
-                updateList={setExercises}
-                className={`flex grow`}
-              />
-              <TagInput
-                key={"exercises-alt-2"}
-                list={exercises}
-                placeholder="Select alternatives"
-                options={exerciseOptions}
-                updateList={setExercises}
-                className={`flex grow`}
-              />
-            </div>
-          </div>
+          <ReorderableSelect
+            label={"Exercises"}
+            selected={exercises}
+            options={exerciseOptions}
+            onChange={setExercises}
+            placeholder="Select an exercise to add"
+            emptyMessage="No exercises added yet"
+          />
           <ButtonSelection
             label="Superset type"
             options={["Rep-based", "Time-based"]}
@@ -199,18 +191,20 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
               setType(value);
             }}
           />
-          <TagInput
-            key={"sessions"}
+          <MultiSelect
             label={"Linked sessions"}
-            list={sessions}
+            selected={sessions}
             options={sessionOptions}
-            updateList={setSessions}
+            onChange={setSessions}
+            placeholder="Select sessions"
           />
-          <Input
-            label={"Rest time in seconds"}
-            value={rest}
-            placeholder={"Rest time in seconds"}
-            changeValue={setRest}
+          <IncrementDecrement
+            label={"Rest time"}
+            value={Number(rest) || 0}
+            unit={"s"}
+            nonZero
+            fullWidth
+            updateValue={(v) => setRest(String(v))}
           />
           <TagInput
             key={"tags"}
@@ -220,47 +214,36 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
             updateList={setTags}
           />
 
-          <details className={`duration-300`}>
-            <summary className="text-sm font-semibold cursor-pointer py-2 text-text-light dark:text-text-dark">
-              Advanced settings
-            </summary>
-            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2`}>
-              {type === "Rep-based" && (
-                <Input
-                  label={"Target Rep"}
-                  value={targetRep}
-                  placeholder={"Target Rep"}
-                  changeValue={setTargetRep}
-                />
-              )}
-              {type === "Time-based" && (
-                <Input
-                  label={"Target Time (in seconds)"}
-                  value={targetTime}
-                  placeholder={"Target Time"}
-                  changeValue={setTargetTime}
-                />
-              )}
-              <Input
-                label={"Target Set"}
-                value={targetSet}
-                placeholder={"Target Set"}
-                changeValue={setTargetSet}
+          <CollapsibleSection label="Advanced settings">
+            {type === "Rep-based" && (
+              <IncrementDecrement
+                label={"Target Rep"}
+                value={Number(targetRep) || 0}
+                nonZero
+                fullWidth
+                updateValue={(v) => setTargetRep(String(v))}
               />
-            </div>
-          </details>
+            )}
+            {type === "Time-based" && (
+              <IncrementDecrement
+                label={"Target Time"}
+                value={Number(targetTime) || 0}
+                unit={"s"}
+                nonZero
+                fullWidth
+                updateValue={(v) => setTargetTime(String(v))}
+              />
+            )}
+            <IncrementDecrement
+              label={"Target Set"}
+              value={Number(targetSet) || 0}
+              nonZero
+              fullWidth
+              updateValue={(v) => setTargetSet(String(v))}
+            />
+          </CollapsibleSection>
 
-          <FormButtons
-            onCancel={() => {
-              if (entryType === "edit") {
-                resetFields();
-                setIsEditing(false);
-              } else {
-                closeForm();
-              }
-            }}
-            onDelete={entryType === "edit" ? handleDelete : undefined}
-          />
+          <FormButtons onCancel={handleCancel} onDelete={entryType === "edit" ? handleDelete : undefined} />
         </form>
       )}
     </Modal>

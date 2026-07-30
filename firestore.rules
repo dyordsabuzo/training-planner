@@ -1,0 +1,89 @@
+rules_version = '2';
+
+// NOT YET DEPLOYED. Review carefully (ideally against the Firestore
+// emulator) before running `firebase deploy --only firestore:rules`.
+//
+// Model: a users/{uid} doc (auto-created on first login, see
+// AuthContext.tsx) carries `role` ("admin" | "user") and `plans` (a list of
+// plan doc IDs the user has been granted access to). Admins have full
+// access to everything; regular users can read the shared exercise/
+// superset/session library (needed to run any training plan they've been
+// granted) but can only read the specific plans listed in their own
+// `plans` array, and can never write to any content collection.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function ownUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && ownUserDoc().role == 'admin';
+    }
+
+    function hasPlanAccess(planId) {
+      return isAdmin()
+        || (isSignedIn()
+            && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && planId in ownUserDoc().plans);
+    }
+
+    // Shared training-content library: any signed-in user can read it (a
+    // granted plan references exercises/supersets/sessions by name), but
+    // only an admin can create/edit/delete entries.
+    match /exercises/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /supersets/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /sessions/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Plans: readable only by an admin or a user explicitly granted this
+    // plan's ID; writable only by an admin.
+    match /plans/{planId} {
+      allow read: if hasPlanAccess(planId);
+      allow write: if isAdmin();
+    }
+
+    // Per-user training history/progress: only the owning user or an admin.
+    match /userdata/{uid} {
+      allow read, write: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // User profiles / role / plan grants.
+    // - A user can always read their own doc; an admin can read/list any.
+    // - A user may create their OWN doc once, but only with the safe
+    //   defaults AuthContext.tsx provisions on first login (role "user",
+    //   no plans) — this stops a client from self-granting admin/plans by
+    //   racing the auto-provision write.
+    // - A user may update their OWN doc (e.g. firstName/lastName on the
+    //   Profile page) as long as `role` and `plans` are left unchanged —
+    //   only an admin can change those, or touch another user's doc at all.
+    match /users/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'user'
+        && request.resource.data.plans.size() == 0;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && request.auth.uid == uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.plans == resource.data.plans);
+      allow delete: if isAdmin();
+    }
+  }
+}

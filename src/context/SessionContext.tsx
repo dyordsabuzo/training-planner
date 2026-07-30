@@ -28,19 +28,11 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   const authContext = useContext(AuthContext);
   const { user } = authContext;
 
-  const initialiseSession = (data: any) => {
-    setSessionData(data);
-  };
-
-  const wrapSession = () => {
-    setSessionData(null);
-    setIsRunning(false);
-  };
-
-  const updateUserData = async (data: any) => {
-    const { plan, session, week } = sessionData;
-
-    console.log(data);
+  const saveSessionUserData = async (
+    data: any,
+    sessionInfo: { plan: string; week: string; session: string }
+  ) => {
+    const { plan, week, session } = sessionInfo;
 
     if (user) {
       const userData = {
@@ -53,9 +45,28 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
           },
         },
       };
-      console.log(userData);
       await saveToDB(SourceDbReferences.USERDATA, userData);
     }
+  };
+
+  const initialiseSession = (data: any) => {
+    setSessionData(data);
+
+    // Persist the pre-session mood check-in (if provided) right away, using
+    // the freshly-passed session info — sessionData state isn't updated yet
+    // at this point in the render cycle.
+    if (data?.moodBefore) {
+      saveSessionUserData({ mood: { before: data.moodBefore } }, data);
+    }
+  };
+
+  const wrapSession = () => {
+    setSessionData(null);
+    setIsRunning(false);
+  };
+
+  const updateUserData = async (data: any) => {
+    await saveSessionUserData(data, sessionData);
   };
 
   return (

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import dayjs, { Dayjs } from "dayjs";
 
 type InputProps = {
@@ -19,13 +18,10 @@ export const DateInput = ({
   changeValue,
   className,
 }: InputProps) => {
-  const [fieldValue, setFieldValue] = useState<Dayjs | null>(value);
-
   const changeValueHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = dayjs(e.target.value);
     if (date.isValid()) {
       changeValue(date);
-      setFieldValue(date);
     }
   };
 
@@ -33,7 +29,7 @@ export const DateInput = ({
     <div className={`w-full ${className}`}>
       <label
         htmlFor={label}
-        className="block mb-1 text-sm font-medium text-text-light dark:text-text-dark"
+        className="block mb-1 text-xs font-normal uppercase tracking-wide text-text-muted-light/70 dark:text-text-muted-dark/70"
       >
         {label}
       </label>
@@ -45,7 +41,7 @@ export const DateInput = ({
           border border-gray-300 dark:border-gray-600 text-text-light dark:text-text-dark
           text-sm rounded-lg focus:ring-2 focus:ring-primary focus:border-primary
           block min-h-11 p-2.5 w-full`}
-        value={fieldValue ? fieldValue.format("YYYY-MM-DD") : ""}
+        value={value ? value.format("YYYY-MM-DD") : ""}
         required={required}
         readOnly={readonly}
         onChange={changeValueHandler}

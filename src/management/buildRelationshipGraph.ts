@@ -93,6 +93,12 @@ const traverse = (startId: string, adjacency: Map<string, Set<string>>): Set<str
   return visited;
 };
 
+// Direct incoming edges only (not the full ancestor traversal below) — used
+// for "used by N" delete-safety messaging, where a single-typed count (e.g.
+// "used by 2 supersets") is more honest than a mixed-type ancestor count.
+export const getDirectReferencers = (nodeId: string, edges: GraphEdge[]): string[] =>
+  edges.filter((e) => e.target === nodeId).map((e) => e.source);
+
 // Highlights only genuine ancestors (upstream, e.g. the Sessions/Plans a Superset
 // belongs to) and descendants (downstream, e.g. the Exercises within a Superset) of
 // the selected node — not siblings reached only via a shared parent/child (e.g. two

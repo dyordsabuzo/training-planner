@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { SessionForm } from './SessionForm';
+import { withMockSourceDataContext } from '../management/__mock__/MockContext';
 
 const meta: Meta<typeof SessionForm> = {
   title: 'forms/SessionForm',
@@ -39,5 +40,17 @@ export const ExistingSession: StoryObj<typeof SessionForm> = {
       />
     )
   },
-  decorators: []
+  decorators: [
+    withMockSourceDataContext({
+      sourceData: {
+        supersets: {
+          superset1: { name: 'superset1' },
+          superset2: { name: 'superset2' },
+          superset3: { name: 'superset3' },
+        },
+      },
+      editSession: () => {},
+      deleteSession: () => {},
+    }),
+  ]
 };

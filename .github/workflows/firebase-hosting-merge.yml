@@ -26,3 +26,17 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200 }}
           channelId: live
           projectId: training-planner-387200
+
+      # action-hosting-deploy only ever deploys Hosting. Anything else declared
+      # in firebase.json (currently just Firestore rules) needs the CLI directly.
+      - name: Write Firebase service account credentials
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200 }}' > "${{ runner.temp }}/firebase-service-account.json"
+
+      - name: Deploy Firestore rules
+        run: yarn firebase deploy --only firestore:rules --project training-planner-387200
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+
+      - name: Clean up service account credentials
+        if: always()
+        run: rm -f "${{ runner.temp }}/firebase-service-account.json"

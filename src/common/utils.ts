@@ -20,6 +20,26 @@ export enum SourceDbReferences {
   USERDATA = "userdata",
 }
 
+export const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value : typeof value === "string" && value ? value.split(",") : [];
+
+// Full name only when both parts are set — otherwise falls back to the
+// portion of the email before "@", since a partial name ("Sam" with no
+// last name) is treated the same as no name at all.
+export const getDisplayName = (
+  firstName?: string,
+  lastName?: string,
+  email?: string
+): string => {
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`;
+  }
+  // `?? "User"` alone doesn't catch this: an empty-string email produces an
+  // empty-string prefix (`"".split("@")[0] === ""`), which is falsy but not
+  // null/undefined, so the `??` fallback never fires.
+  return email?.split("@")[0] || "User";
+};
+
 export const sortObject = (data: any) => {
   return Object.keys(data)
     .sort((a, b) => {

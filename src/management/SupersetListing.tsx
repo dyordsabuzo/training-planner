@@ -1,12 +1,79 @@
 import React, { useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { SupersetForm } from "../forms/SupersetForm";
-import { sortObject } from "../common/utils";
+import { sortObject, toStringArray } from "../common/utils";
 import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
+import { EntityCard } from "./EntityCard";
+import { DataTable, DataTableColumn } from "../components/form/DataTable";
+import { Badge } from "../components/others/Badge";
+import {
+  buildRelationshipGraph,
+  getDirectReferencers,
+  nodeId,
+} from "./buildRelationshipGraph";
 
-export const SupersetListing = () => {
+type Props = {
+  viewMode?: "card" | "table";
+};
+
+type SupersetRow = {
+  key: string;
+  superset: any;
+  sessions: string[];
+  usageCount: number;
+};
+
+const columns: DataTableColumn<SupersetRow>[] = [
+  {
+    key: "name",
+    header: "Name",
+    render: (row) => <span className="font-bold">{row.superset.name ?? row.key}</span>,
+  },
+  {
+    key: "exercises",
+    header: "Exercises",
+    render: (row) => {
+      const exercises = toStringArray(row.superset.exercises);
+      return exercises.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {exercises.map((e) => (
+            <Badge key={e} variant="neutral">{e}</Badge>
+          ))}
+        </div>
+      ) : (
+        <span className="text-text-muted-light dark:text-text-muted-dark italic">None</span>
+      );
+    },
+  },
+  {
+    key: "tags",
+    header: "Tags",
+    render: (row) => {
+      const tags = toStringArray(row.superset.tags);
+      return tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {tags.map((t) => (
+            <Badge key={t} variant="primary">{t}</Badge>
+          ))}
+        </div>
+      ) : (
+        <span className="text-text-muted-light dark:text-text-muted-dark italic">None</span>
+      );
+    },
+  },
+  {
+    key: "usage",
+    header: "Used by",
+    render: (row) =>
+      row.usageCount > 0
+        ? `${row.usageCount} session${row.usageCount === 1 ? "" : "s"}`
+        : "—",
+  },
+];
+
+export const SupersetListing = ({ viewMode = "card" }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
@@ -23,6 +90,23 @@ export const SupersetListing = () => {
     [supersets, search]
   );
 
+  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
+
+  const rows: SupersetRow[] = entries.map(([key, value]) => {
+    const superset: any = value;
+    return {
+      key,
+      superset,
+      sessions: toStringArray(superset.sessions ?? superset.session),
+      usageCount: getDirectReferencers(nodeId("superset", key), graph.edges).length,
+    };
+  });
+
+  const openSuperset = (superset: any, sessions: string[]) => {
+    setFormData({ ...superset, sessions });
+    setFormType("edit");
+  };
+
   return (
     <BaseListing>
       <ManageListHeader
@@ -38,45 +122,46 @@ export const SupersetListing = () => {
         }}
       />
 
-      {entries.length === 0 && (
-        <EmptyState
-          message={
+      {viewMode === "table" ? (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          getRowKey={(row) => row.key}
+          onRowClick={(row) => openSuperset(row.superset, row.sessions)}
+          emptyMessage={
             search
               ? "No supersets match your search."
               : "No supersets yet. Add your first superset to get started."
           }
         />
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {entries.map(([key, value]) => (
-          <button
-            type="button"
-            key={key}
-            className="flex flex-col min-h-11 text-left border border-primary-200 dark:border-primary-700
-              bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
-              p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            onClick={() => {
-              let _value: any = value;
-              if (!_value.sessions && _value.session) {
-                _value.sessions = _value.session.split(",");
+      ) : (
+        <>
+          {entries.length === 0 && (
+            <EmptyState
+              message={
+                search
+                  ? "No supersets match your search."
+                  : "No supersets yet. Add your first superset to get started."
               }
-              setFormData(_value);
-              setFormType("edit");
-            }}
-          >
-            <span className="font-bold">{(value as any).name}</span>
-            <>
-              {((value as any).exercises ?? []).map((e: any) => (
-                <div className="text-xs text-text-muted-light dark:text-text-muted-dark" key={e}>
-                  {e}
-                </div>
-              ))}
-            </>
-          </button>
-        ))}
-      </div>
+            />
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {rows.map(({ key, superset, sessions, usageCount }) => (
+              <EntityCard
+                key={key}
+                title={superset.name ?? key}
+                relatedLabel="Exercises"
+                relatedItems={toStringArray(superset.exercises)}
+                tags={superset.tags}
+                usageCount={usageCount}
+                usageLabel="session"
+                onClick={() => openSuperset(superset, sessions)}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {formType && (
         <SupersetForm

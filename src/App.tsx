@@ -2,6 +2,7 @@ import React from "react";
 import "./App.css";
 import { SessionContextProvider } from "./context/SessionContext";
 import { SourceDataContextProvider } from "./context/SourceDataContext";
+import { UserManagementContextProvider } from "./context/UserManagementContext";
 import { AuthContextProvider } from "./context/AuthContext";
 import { ThemeContextProvider } from "./context/ThemeContext";
 import { SidebarContextProvider } from "./context/SidebarContext";
@@ -15,7 +16,9 @@ function App() {
           <AuthContextProvider>
             <SessionContextProvider>
               <SourceDataContextProvider>
-                <AllRoutes />
+                <UserManagementContextProvider>
+                  <AllRoutes />
+                </UserManagementContextProvider>
               </SourceDataContextProvider>
             </SessionContextProvider>
           </AuthContextProvider>

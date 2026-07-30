@@ -68,13 +68,26 @@ export const IncrementDecrement = ({
 
   const atFloor = nonZero && v <= 0;
 
+  const containerDirectionClasses =
+    labelDirection === "col"
+      ? "flex-col items-center gap-1"
+      : labelDirection === "row"
+        ? "flex-row items-center gap-2"
+        : "flex-col items-start gap-1";
+
+  const labelClasses =
+    labelDirection === "col"
+      ? "text-center w-fit"
+      : labelDirection === "row"
+        ? "w-32 shrink-0"
+        : "w-full text-left";
+
   return (
     <div
-      className={`flex ${fullWidth ? "w-full" : ""} ${labelDirection === "col" ? "flex-col items-center gap-1" : "flex-row items-center gap-2"}`}
+      className={`flex ${fullWidth ? "w-full" : ""} ${containerDirectionClasses}`}
     >
       <span
-        className={`text-sm font-medium text-text-light dark:text-text-dark w-fit
-          ${labelDirection === "col" ? "text-center" : ""}`}
+        className={`text-xs font-normal uppercase tracking-wide text-text-muted-light/70 dark:text-text-muted-dark/70 whitespace-nowrap ${labelClasses}`}
       >
         {label}
       </span>

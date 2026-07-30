@@ -1,13 +1,23 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { Input } from "../components/form/Input";
+import { MultiSelect } from "../components/form/MultiSelect";
+import { IncrementDecrement } from "../components/others/IncrementDecrement";
+import { CollapsibleSection } from "../components/others/CollapsibleSection";
 import SourceDataContext from "../context/SourceDataContext";
 import { TagInput } from "../components/others/TagInput";
 import { FormButtons } from "./FormButtons";
 import { ButtonSelection } from "../components/form/ButtonSelection";
 import { Modal } from "../components/others/Modal";
 import { DetailField } from "./DetailField";
-import { EditIconButton } from "./EditIconButton";
 import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
+import { useEntityForm } from "./useEntityForm";
+import { findDuplicateName } from "../common/nameValidation";
+import { toStringArray } from "../common/utils";
+import {
+  buildRelationshipGraph,
+  getDirectReferencers,
+  nodeId,
+} from "../management/buildRelationshipGraph";
 
 type ExerciseData = {
   id?: string;
@@ -33,23 +43,23 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
   const exerciseData: ExerciseData | null = data;
 
   const id = exerciseData?.id ?? "";
-  const [isEditing, setIsEditing] = useState(type !== "edit");
   const [name, setName] = useState(exerciseData?.name ?? "");
+  const [nameError, setNameError] = useState<string>();
   const [videoLink, setVideoLink] = useState(exerciseData?.videoLink ?? "");
   const [isWeightExercise, setIsWeightExercise] = useState(
     exerciseData?.isWeightExercise ?? true
   );
-  const [tags, setTags] = useState(exerciseData?.tags ?? []);
+  const [tags, setTags] = useState(toStringArray(exerciseData?.tags));
   const [targetRep, setTargetRep] = useState(exerciseData?.targetRep ?? "");
   const [targetSet, setTargetSet] = useState<string>(
     exerciseData?.targetSet ?? ""
   );
   const [rest, setRest] = useState<string>(exerciseData?.rest ?? "");
   const [supersets, setSupersets] = useState<string[]>(
-    exerciseData?.supersets ?? []
+    toStringArray(exerciseData?.supersets)
   );
   const [alternatives, setAlternatives] = useState<string[]>(
-    exerciseData?.alternatives ?? []
+    toStringArray(exerciseData?.alternatives)
   );
 
   const sourceDataContext = useContext(SourceDataContext);
@@ -57,23 +67,39 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
 
   const resetFields = () => {
     setName(exerciseData?.name ?? "");
+    setNameError(undefined);
     setVideoLink(exerciseData?.videoLink ?? "");
     setIsWeightExercise(exerciseData?.isWeightExercise ?? true);
-    setTags(exerciseData?.tags ?? []);
+    setTags(toStringArray(exerciseData?.tags));
     setTargetRep(exerciseData?.targetRep ?? "");
     setTargetSet(exerciseData?.targetSet ?? "");
     setRest(exerciseData?.rest ?? "");
-    setSupersets(exerciseData?.supersets ?? []);
-    setAlternatives(exerciseData?.alternatives ?? []);
+    setSupersets(toStringArray(exerciseData?.supersets));
+    setAlternatives(toStringArray(exerciseData?.alternatives));
   };
 
-  const handleDelete = () => {
-    sourceDataContext.deleteExercise(data);
-    closeForm();
-  };
+  const { isEditing, setIsEditing, headerAction, handleCancel, handleDelete } =
+    useEntityForm({
+      type,
+      resetFields,
+      onDelete: () => sourceDataContext.deleteExercise(data),
+      closeForm,
+    });
+
+  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
+  const usageCount =
+    type === "edit" && name
+      ? getDirectReferencers(nodeId("exercise", name), graph.edges).length
+      : 0;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (findDuplicateName(sourceData.exercises, name, id)) {
+      setNameError("An exercise with this name already exists.");
+      return;
+    }
+    setNameError(undefined);
 
     if (type === "add") {
       sourceDataContext.addExercise({
@@ -114,11 +140,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
       title={type === "add" ? "Add exercise" : "Exercise"}
       isOpen={true}
       onClose={closeForm}
-      headerAction={
-        type === "edit" && !isEditing ? (
-          <EditIconButton onClick={() => setIsEditing(true)} />
-        ) : undefined
-      }
+      headerAction={headerAction}
     >
       {!isEditing ? (
         <div className="flex flex-col gap-4">
@@ -134,7 +156,14 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
             <DetailField label="Rest (s)" value={rest} />
           </div>
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-            <ConfirmDeleteButton onDelete={handleDelete} />
+            <ConfirmDeleteButton
+              onDelete={handleDelete}
+              impactMessage={
+                usageCount > 0
+                  ? `This exercise is used by ${usageCount} superset${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
+                  : undefined
+              }
+            />
           </div>
         </div>
       ) : (
@@ -144,6 +173,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
             required
             value={name}
             placeholder={"Exercise name"}
+            error={nameError}
             changeValue={setName}
           />
           <Input
@@ -160,56 +190,49 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
               setIsWeightExercise(value === "Yes");
             }}
           />
-          <TagInput
-            label={"Supersets"}
-            list={supersets}
-            options={Object.keys(sourceData.supersets ?? {})}
-            updateList={setSupersets}
-          />
-          <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
+          <CollapsibleSection label="Advanced settings">
+            <MultiSelect
+              label={"Supersets"}
+              selected={supersets}
+              options={Object.keys(sourceData.supersets ?? {})}
+              onChange={setSupersets}
+              placeholder="Select supersets"
+            />
+            <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
+            <MultiSelect
+              label={"Alternatives"}
+              selected={alternatives}
+              options={Object.keys(sourceData.exercises ?? {}).filter(
+                (n) => n !== name
+              )}
+              onChange={setAlternatives}
+              placeholder="Select alternative exercises"
+            />
+            <IncrementDecrement
+              label={"Target Rep"}
+              value={Number(targetRep) || 0}
+              nonZero
+              fullWidth
+              updateValue={(v) => setTargetRep(String(v))}
+            />
+            <IncrementDecrement
+              label={"Target Set"}
+              value={Number(targetSet) || 0}
+              nonZero
+              fullWidth
+              updateValue={(v) => setTargetSet(String(v))}
+            />
+            <IncrementDecrement
+              label={"Rest"}
+              value={Number(rest) || 0}
+              unit={"s"}
+              nonZero
+              fullWidth
+              updateValue={(v) => setRest(String(v))}
+            />
+          </CollapsibleSection>
 
-          <details className={`duration-300`}>
-            <summary className="text-sm font-light text-text-light dark:text-text-dark">Advanced settings</summary>
-            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2`}>
-              <TagInput
-                label={"Alternatives"}
-                list={alternatives}
-                options={Object.keys(sourceData.exercises ?? {})}
-                updateList={setAlternatives}
-                className={`sm:col-span-2 pt-2`}
-              />
-              <Input
-                label={"Target Rep"}
-                value={targetRep}
-                placeholder={"Target Rep"}
-                changeValue={setTargetRep}
-              />
-              <Input
-                label={"Target Set"}
-                value={targetSet}
-                placeholder={"Target Set"}
-                changeValue={setTargetSet}
-              />
-              <Input
-                label={"Rest in seconds"}
-                value={rest}
-                placeholder={"Rest time in seconds"}
-                changeValue={setRest}
-              />
-            </div>
-          </details>
-
-          <FormButtons
-            onCancel={() => {
-              if (type === "edit") {
-                resetFields();
-                setIsEditing(false);
-              } else {
-                closeForm();
-              }
-            }}
-            onDelete={type === "edit" ? handleDelete : undefined}
-          />
+          <FormButtons onCancel={handleCancel} onDelete={type === "edit" ? handleDelete : undefined} />
         </form>
       )}
     </Modal>

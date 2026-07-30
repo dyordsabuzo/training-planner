@@ -3,7 +3,7 @@ import ListingPage from "./ListingPage";
 import { withMockSourceDataContext } from "../management/__mock__/MockContext";
 
 const meta: Meta<typeof ListingPage> = {
-  title: "pages/ListingPage",
+  title: "pages/components/ListingPage",
   component: ListingPage,
 };
 

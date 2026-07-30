@@ -2,6 +2,7 @@ import { ComponentType } from "react";
 import SourceDataContext from "../../context/SourceDataContext";
 import SessionContext from "../../context/SessionContext";
 import AuthContext from "../../context/AuthContext";
+import UserManagementContext from "../../context/UserManagementContext";
 
 export const withMockSourceDataContext =
   (customData: any) => (Story: ComponentType) => (
@@ -22,4 +23,11 @@ export const withMockAuthContext =
     <AuthContext.Provider value={customData}>
       <Story />
     </AuthContext.Provider>
+  );
+
+export const withMockUserManagementContext =
+  (customData: any) => (Story: ComponentType) => (
+    <UserManagementContext.Provider value={customData}>
+      <Story />
+    </UserManagementContext.Provider>
   );

@@ -32,8 +32,6 @@ export const Button = ({
         return "text-xs px-4 text-text-light dark:text-text-dark bg-white dark:bg-surface-dark font-bold rounded-md border border-gray-300 dark:border-gray-600";
       case "delete":
         return "text-xs px-4 bg-danger hover:bg-danger-700 text-white font-bold rounded-md";
-      case "selection":
-        return "text-sm px-3";
       case "custom":
         return "";
       default:

@@ -11,6 +11,7 @@ import { Button } from "../components/form/Button";
 import { Loading } from "./helpers/Loading";
 import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
+import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 
 const sortWeekKeys = (keys: string[]) =>
   [...keys].sort((a, b) => {
@@ -46,6 +47,7 @@ const SessionPage = () => {
 
   const [sessionData, setSessionData] = useState<any>({});
   const [isContextInitialised, setIsContextInitialised] = useState(false);
+  const [moodBefore, setMoodBefore] = useState<MoodValue>({});
 
   useEffect(() => {
     if (!isContextInitialised) {
@@ -286,12 +288,22 @@ const SessionPage = () => {
           </div>
         )}
 
+        {sessionData.session && (
+          <MoodCheckIn
+            title="How are you feeling before this session?"
+            value={moodBefore}
+            onChange={setMoodBefore}
+          />
+        )}
+
         <Button
           type="button"
           className="min-h-11 py-3 text-base"
           label="Start session"
           disabled={!sessionData.session}
-          onClick={() => sessionContext.initialiseSession(sessionData)}
+          onClick={() =>
+            sessionContext.initialiseSession({ ...sessionData, moodBefore })
+          }
         />
       </div>
     </WrapperPage>

@@ -34,6 +34,14 @@ export const WithExerciseList: StoryObj<typeof ExerciseListing> = {
             supersets: ["abc", "def"],
             tags: ["tag1", "tag2"],
           },
+          // Regression guard: legacy records can store `tags`/`supersets` as
+          // a raw comma-separated string rather than a real array — must
+          // not crash the card render (see EntityCard.tsx / toStringArray).
+          "Legacy exercise": {
+            name: "Legacy exercise",
+            supersets: "abc,def",
+            tags: "tag1,tag2",
+          },
         },
       },
     }),

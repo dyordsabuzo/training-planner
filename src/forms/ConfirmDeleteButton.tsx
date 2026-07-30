@@ -10,6 +10,7 @@ type Props = {
   icon?: IconDefinition;
   decoration?: string;
   useModal?: boolean;
+  impactMessage?: string;
 };
 
 export const ConfirmDeleteButton = ({
@@ -17,11 +18,12 @@ export const ConfirmDeleteButton = ({
   label = "Delete",
   icon,
   decoration = "delete",
-  useModal = false,
+  useModal = true,
+  impactMessage,
 }: Props) => {
   const [confirming, setConfirming] = useState(false);
 
-  const confirmMessage = "Are you sure? This can't be undone.";
+  const confirmMessage = impactMessage ?? "Are you sure? This can't be undone.";
 
   const confirmActions = (
     <div className={useModal ? "flex justify-end gap-2" : "flex gap-2"}>

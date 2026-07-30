@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toStringArray } from "../../common/utils";
 
 type Props = {
   label?: string;
@@ -17,7 +18,7 @@ export const TagInput = ({
   updateList,
   className,
 }: Props) => {
-  const [tagList, setTagList] = useState(list || []);
+  const [tagList, setTagList] = useState(toStringArray(list));
   const [inputValue, setInputValue] = useState("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +52,7 @@ export const TagInput = ({
       {label !== "" && (
         <label
           htmlFor={label}
-          className="block mb-1 text-sm font-medium text-text-light dark:text-text-dark"
+          className="block mb-1 text-xs font-normal uppercase tracking-wide text-text-muted-light/70 dark:text-text-muted-dark/70"
         >
           {label}
         </label>

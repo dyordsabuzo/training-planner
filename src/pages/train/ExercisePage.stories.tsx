@@ -5,7 +5,7 @@ import { withMockSessionDataContext } from "../../management/__mock__/MockContex
 import { SessionData } from "../../types/SessionData";
 
 const meta: Meta<typeof ExercisePage> = {
-  title: "pages/ExercisePage",
+  title: "pages/components/ExercisePage",
   component: ExercisePage,
   decorators: [
     (Story) => (

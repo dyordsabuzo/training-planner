@@ -1,5 +1,5 @@
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faChevronRight, faPen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SourceDataContext from "../context/SourceDataContext";
 import { EmptyState } from "./EmptyState";
@@ -150,7 +150,7 @@ export const RelationshipMap = () => {
       <div>
         <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Relationships</h2>
         <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-          Select an item to see how it connects. Double-click an item to edit it.
+          Select an item to see how it connects. Click the pencil icon to edit it.
         </p>
       </div>
 
@@ -261,25 +261,39 @@ export const RelationshipMap = () => {
                     )}
 
                     {column.nodes.map((node) => (
-                      <button
-                        key={node.id}
-                        ref={registerNodeRef(node.id)}
-                        type="button"
-                        onClick={() => setSelectedId(isSelected(node.id) ? null : node.id)}
-                        onDoubleClick={() => setEditingNode({ type: node.type, name: node.label })}
-                        title={`${node.label} (double-click to edit)`}
-                        className={`min-h-11 w-full text-left px-3 py-2 rounded-lg text-sm font-medium
-                          break-words transition-all duration-150
-                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                          ${
-                            isDimmed(node.id)
-                              ? "opacity-30 bg-gray-50 dark:bg-gray-800 text-text-muted-light dark:text-text-muted-dark"
-                              : theme.badge
-                          }
-                          ${isSelected(node.id) ? `ring-2 ${theme.selectedRing}` : ""}`}
-                      >
-                        {node.label}
-                      </button>
+                      <div key={node.id} className="relative">
+                        <button
+                          ref={registerNodeRef(node.id)}
+                          type="button"
+                          onClick={() => setSelectedId(isSelected(node.id) ? null : node.id)}
+                          onDoubleClick={() => setEditingNode({ type: node.type, name: node.label })}
+                          title={node.label}
+                          className={`min-h-11 w-full text-left pl-3 pr-8 py-2 rounded-lg text-sm font-medium
+                            break-words transition-all duration-150
+                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                            ${
+                              isDimmed(node.id)
+                                ? "opacity-30 bg-gray-50 dark:bg-gray-800 text-text-muted-light dark:text-text-muted-dark"
+                                : theme.badge
+                            }
+                            ${isSelected(node.id) ? `ring-2 ${theme.selectedRing}` : ""}`}
+                        >
+                          {node.label}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingNode({ type: node.type, name: node.label });
+                          }}
+                          aria-label={`Edit ${node.label}`}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 min-h-8 min-w-8 flex items-center justify-center rounded-full
+                            text-current opacity-70 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10
+                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          <FontAwesomeIcon icon={faPen} className="text-xs" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 );

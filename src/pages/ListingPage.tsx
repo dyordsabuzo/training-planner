@@ -1,6 +1,6 @@
 import {ExerciseListing} from "../management/ExerciseListing";
 import React, {useContext, useEffect, useRef, useState} from "react";
-import {faChevronLeft, faChevronRight} from "@fortawesome/free-solid-svg-icons";
+import {faChevronLeft, faChevronRight, faTableCellsLarge, faTableList} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {SupersetListing} from "../management/SupersetListing";
 import {SessionListing} from "../management/SessionListing";
@@ -19,6 +19,7 @@ const TAB_SCROLL_AMOUNT = 160;
 
 const ListingPage: React.FC<ListingPageProps> = ({list}) => {
     const [activeTab, setActiveTab] = useState<string>("Exercises");
+    const [viewMode, setViewMode] = useState<"card" | "table">("card");
     const [isSourceInitialised, setIsSourceInitialised] = useState(false)
     const sourceContext = useContext(SourceDataContext)
     const tabListRef = useRef<HTMLDivElement>(null);
@@ -130,11 +131,55 @@ const ListingPage: React.FC<ListingPageProps> = ({list}) => {
                     </button>
                 </div>
 
+                {activeTab !== "Relationships" && (
+                    <div className="flex justify-end px-2">
+                        <div
+                            role="radiogroup"
+                            aria-label="View mode"
+                            className="inline-flex rounded-full border border-gray-300 dark:border-gray-600
+                                bg-gray-100 dark:bg-gray-800 overflow-hidden"
+                        >
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={viewMode === "card"}
+                                aria-label="Card view"
+                                onClick={() => setViewMode("card")}
+                                className={`min-h-11 min-w-11 flex items-center justify-center px-3
+                                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10
+                                    ${
+                                        viewMode === "card"
+                                            ? "bg-primary text-white"
+                                            : "text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary-300"
+                                    }`}
+                            >
+                                <FontAwesomeIcon icon={faTableCellsLarge} />
+                            </button>
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={viewMode === "table"}
+                                aria-label="Table view"
+                                onClick={() => setViewMode("table")}
+                                className={`min-h-11 min-w-11 flex items-center justify-center px-3
+                                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10
+                                    ${
+                                        viewMode === "table"
+                                            ? "bg-primary text-white"
+                                            : "text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary-300"
+                                    }`}
+                            >
+                                <FontAwesomeIcon icon={faTableList} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="w-full px-2">
-                    {activeTab === "Exercises" && <ExerciseListing/>}
-                    {activeTab === "Supersets" && <SupersetListing/>}
-                    {activeTab === "Sessions" && <SessionListing/>}
-                    {activeTab === "Plans" && <PlanListing/>}
+                    {activeTab === "Exercises" && <ExerciseListing viewMode={viewMode}/>}
+                    {activeTab === "Supersets" && <SupersetListing viewMode={viewMode}/>}
+                    {activeTab === "Sessions" && <SessionListing viewMode={viewMode}/>}
+                    {activeTab === "Plans" && <PlanListing viewMode={viewMode}/>}
                     {activeTab === "Relationships" && <RelationshipMap/>}
                 </div>
             </div>

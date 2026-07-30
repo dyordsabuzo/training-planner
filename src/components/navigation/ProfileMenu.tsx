@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { faRightFromBracket, faUserShield } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ProfileIcon } from "./ProfileIcon";
+import { getDisplayName } from "../../common/utils";
 
 type Props = {
   email?: string | null;
   photoUrl?: string | null;
+  firstName?: string;
+  lastName?: string;
+  isAdmin?: boolean;
   showEmail?: boolean;
   menuAlign?: "left" | "right";
 };
@@ -14,9 +18,13 @@ type Props = {
 export const ProfileMenu = ({
   email,
   photoUrl,
+  firstName,
+  lastName,
+  isAdmin = false,
   showEmail = true,
   menuAlign = "left",
 }: Props) => {
+  const displayName = getDisplayName(firstName, lastName, email ?? undefined);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -80,12 +88,36 @@ export const ProfileMenu = ({
             border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark
             shadow-lg py-1 ${menuAlign === "right" ? "right-0" : "left-0"}`}
         >
-          <div
-            className="px-3 py-2 text-xs text-text-muted-light dark:text-text-muted-dark
-              truncate border-b border-gray-100 dark:border-gray-700"
+          <Link
+            to="/training-planner/profile"
+            role="menuitem"
+            onClick={() => setIsOpen(false)}
+            className="block px-3 py-2 border-b border-gray-100 dark:border-gray-700
+              hover:bg-gray-50 dark:hover:bg-gray-800
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
           >
-            {email}
-          </div>
+            <div className="text-sm font-bold text-text-light dark:text-text-dark truncate">
+              {displayName}
+            </div>
+            <div className="text-xs text-text-muted-light dark:text-text-muted-dark truncate">
+              {email}
+            </div>
+          </Link>
+
+          {isAdmin && (
+            <Link
+              to="/training-planner/admin"
+              role="menuitem"
+              onClick={() => setIsOpen(false)}
+              className="min-h-11 flex items-center gap-2 px-3 text-sm text-text-light dark:text-text-dark
+                hover:bg-gray-50 dark:hover:bg-gray-800
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+            >
+              <FontAwesomeIcon icon={faUserShield} fixedWidth />
+              Admin
+            </Link>
+          )}
+
           <Link
             to="/logout"
             role="menuitem"

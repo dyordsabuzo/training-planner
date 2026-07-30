@@ -16,7 +16,7 @@ import {
   connectAuthEmulator,
 } from "firebase/auth";
 import { getDocumentReference } from "../common/firebase";
-import { getDoc } from "firebase/firestore";
+import { getDoc, setDoc } from "firebase/firestore";
 
 type _Props = {
   children: ReactNode;
@@ -25,6 +25,10 @@ type _Props = {
 export type UserPermission = {
   role: string;
   plans: string[];
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  displayName?: string;
 };
 
 const AuthContext = createContext({
@@ -44,6 +48,7 @@ const AuthContext = createContext({
   logoutUser: () => {},
   getUserProfileImage: () => {},
   getUid: () => {},
+  updateProfile: (data: { firstName?: string; lastName?: string }) => {},
 });
 
 export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
@@ -92,8 +97,36 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   useEffect(() => {
     if (user) {
       const docRef = getDocumentReference("users", user.uid);
-      getDoc(docRef).then((doc) => {
-        setUserPermission(doc.data() as UserPermission);
+      getDoc(docRef).then(async (snapshot) => {
+        if (snapshot.exists()) {
+          const existing = snapshot.data() as UserPermission;
+
+          // A doc created before auto-provisioning existed (e.g. a role
+          // manually set to "admin" via the Firestore console) may be
+          // missing email/displayName entirely — backfill from the live
+          // Auth record so the Users admin table has something to show.
+          if (!existing.email) {
+            const patch = { email: user.email ?? "", displayName: user.displayName ?? "" };
+            await setDoc(docRef, patch, { merge: true });
+            setUserPermission({ ...existing, ...patch });
+            return;
+          }
+
+          setUserPermission(existing);
+          return;
+        }
+
+        // First login for this account (any sign-in method) — no
+        // users/{uid} doc exists yet, so provision one with safe defaults.
+        // Only an admin can grant a role/plan access beyond this afterward.
+        const defaultPermission: UserPermission = { role: "user", plans: [] };
+        await setDoc(docRef, {
+          ...defaultPermission,
+          email: user.email ?? "",
+          displayName: user.displayName ?? "",
+          createdAt: new Date().toISOString(),
+        });
+        setUserPermission(defaultPermission);
       });
     } else {
       setUserPermission(null);
@@ -248,6 +281,15 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     return user?.uid;
   };
 
+  const updateProfile = async (data: { firstName?: string; lastName?: string }) => {
+    if (!user) {
+      return;
+    }
+    const docRef = getDocumentReference("users", user.uid);
+    await setDoc(docRef, data, { merge: true });
+    setUserPermission((prev) => (prev ? { ...prev, ...data } : prev));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -266,6 +308,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         logoutUser: logoutUser,
         getUserProfileImage: getUserProfileImage,
         getUid: getUid,
+        updateProfile,
         confirmReset,
       }}
     >

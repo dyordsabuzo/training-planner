@@ -8,7 +8,7 @@ import { Loading } from "../pages/helpers/Loading";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
 import BaseListing from "./BaseListing";
-import { EditIconButton } from "../forms/EditIconButton";
+import { DataTable, DataTableColumn } from "../components/form/DataTable";
 
 type SelectedWeekData = {
   weekKey: string;
@@ -20,7 +20,30 @@ type SelectedWeekData = {
   annotation: string;
 };
 
-export const PlanListing = () => {
+type Props = {
+  viewMode?: "card" | "table";
+};
+
+type PlanRow = {
+  planName: string;
+  plan: any;
+  weekCount: number;
+  sessionCount: number;
+  startDate: ReturnType<typeof toDate>;
+};
+
+const columns: DataTableColumn<PlanRow>[] = [
+  { key: "name", header: "Plan name", render: (row) => <span className="font-bold">{row.planName}</span> },
+  { key: "weeks", header: "Weeks", render: (row) => row.weekCount },
+  { key: "sessions", header: "Sessions", render: (row) => row.sessionCount },
+  {
+    key: "startDate",
+    header: "Start date",
+    render: (row) => (row.startDate ? row.startDate.format("MMM D, YYYY") : "—"),
+  },
+];
+
+export const PlanListing = ({ viewMode = "card" }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
@@ -55,6 +78,32 @@ export const PlanListing = () => {
         }}
       />
 
+      {viewMode === "table" ? (
+        <DataTable
+          columns={columns}
+          rows={entries.map(([planName, value]) => {
+            const plan: any = value;
+            return {
+              planName,
+              plan,
+              weekCount: Object.keys(plan.weeks ?? {}).length,
+              sessionCount: (plan.sessions ?? []).length,
+              startDate: toDate(plan.startDate),
+            };
+          })}
+          getRowKey={(row) => row.planName}
+          onRowClick={(row) => {
+            setFormData(row.plan);
+            setFormType("edit");
+          }}
+          emptyMessage={
+            search
+              ? "No plans match your search."
+              : "No plans yet. Create your first training plan to get started."
+          }
+        />
+      ) : (
+        <>
       {entries.length === 0 && (
         <EmptyState
           message={
@@ -73,35 +122,42 @@ export const PlanListing = () => {
           const currentWeekNumber = getCurrentWeekNumber(plan);
           const sessionCount = (plan.sessions ?? []).length;
 
+          const openPlan = () => {
+            setFormData(plan);
+            setFormType("edit");
+          };
+
           return (
             <div
               key={planName}
+              role="button"
+              tabIndex={0}
+              onClick={openPlan}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openPlan();
+                }
+              }}
               className="flex flex-col gap-4 border border-primary-200 dark:border-primary-700
                 bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
-                p-4 rounded-md text-sm shadow-sm"
+                p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex flex-col gap-1 min-w-0">
-                  <span className="font-bold text-base break-words">{planName}</span>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                    <span>
-                      {weekEntries.length}{" "}
-                      {weekEntries.length === 1 ? "week" : "weeks"}
-                    </span>
-                    <span>
-                      {sessionCount} {sessionCount === 1 ? "session" : "sessions"}
-                    </span>
-                    {startDate && (
-                      <span>Starts {startDate.format("MMM D, YYYY")}</span>
-                    )}
-                  </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="font-bold text-base break-words">{planName}</span>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                  <span>
+                    {weekEntries.length}{" "}
+                    {weekEntries.length === 1 ? "week" : "weeks"}
+                  </span>
+                  <span>
+                    {sessionCount} {sessionCount === 1 ? "session" : "sessions"}
+                  </span>
+                  {startDate && (
+                    <span>Starts {startDate.format("MMM D, YYYY")}</span>
+                  )}
                 </div>
-                <EditIconButton
-                  onClick={() => {
-                    setFormData(plan);
-                    setFormType("edit");
-                  }}
-                />
               </div>
 
               {weekEntries.length === 0 ? (
@@ -120,13 +176,14 @@ export const PlanListing = () => {
                         key={weekKey}
                         type="button"
                         title={hasNote ? week.annotation : undefined}
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedWeekData({
                             ...week,
                             weekKey,
                             planName,
-                          })
-                        }
+                          });
+                        }}
                         className={`relative min-h-11 px-3 rounded-lg text-sm font-medium border transition-colors
                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
                           ${
@@ -156,6 +213,8 @@ export const PlanListing = () => {
           );
         })}
       </div>
+        </>
+      )}
 
       {formType && (
         <PlanForm

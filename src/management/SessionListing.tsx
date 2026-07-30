@@ -1,90 +1,161 @@
-import React, {useContext, useMemo, useState} from "react";
+import React, { useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
-import {SessionForm} from "../forms/SessionForm";
-import {sortObject} from "../common/utils";
+import { SessionForm } from "../forms/SessionForm";
+import { sortObject, toStringArray } from "../common/utils";
 import BaseListing from "./BaseListing";
-import {ManageListHeader} from "./ManageListHeader";
-import {EmptyState} from "./EmptyState";
+import { ManageListHeader } from "./ManageListHeader";
+import { EmptyState } from "./EmptyState";
+import { EntityCard } from "./EntityCard";
+import { DataTable, DataTableColumn } from "../components/form/DataTable";
+import { Badge } from "../components/others/Badge";
+import {
+  buildRelationshipGraph,
+  getDirectReferencers,
+  nodeId,
+} from "./buildRelationshipGraph";
 
-export const SessionListing = () => {
-    const [formData, setFormData] = useState<any>({})
-    const [formType, setFormType] = useState("")
-    const [search, setSearch] = useState("")
+type Props = {
+  viewMode?: "card" | "table";
+};
 
-    const sourceDataContext = useContext(SourceDataContext)
-    const sourceData: any = sourceDataContext.sourceData
+type SessionRow = {
+  key: string;
+  session: any;
+  usageCount: number;
+};
 
-    const sessions = sortObject(sourceData.sessions ?? {})
-    const entries = useMemo(
-        () =>
-            Object.entries(sessions).filter(([key]) =>
-                key.toLowerCase().includes(search.toLowerCase())
-            ),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [sessions, search]
-    )
+const columns: DataTableColumn<SessionRow>[] = [
+  { key: "name", header: "Name", render: (row) => <span className="font-bold">{row.key}</span> },
+  {
+    key: "supersets",
+    header: "Supersets",
+    render: (row) => {
+      const supersets = toStringArray(row.session.supersets);
+      return supersets.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {supersets.map((s) => (
+            <Badge key={s} variant="neutral">{s}</Badge>
+          ))}
+        </div>
+      ) : (
+        <span className="text-text-muted-light dark:text-text-muted-dark italic">None</span>
+      );
+    },
+  },
+  {
+    key: "tags",
+    header: "Tags",
+    render: (row) => {
+      const tags = toStringArray(row.session.tags);
+      return tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {tags.map((t) => (
+            <Badge key={t} variant="primary">{t}</Badge>
+          ))}
+        </div>
+      ) : (
+        <span className="text-text-muted-light dark:text-text-muted-dark italic">None</span>
+      );
+    },
+  },
+  {
+    key: "usage",
+    header: "Used by",
+    render: (row) =>
+      row.usageCount > 0 ? `${row.usageCount} plan${row.usageCount === 1 ? "" : "s"}` : "—",
+  },
+];
 
-    return (
-        <BaseListing>
-            <ManageListHeader
-                title="Sessions"
-                count={Object.keys(sessions).length}
-                addLabel="Add Session"
-                searchPlaceholder="Search sessions..."
-                search={search}
-                onSearchChange={setSearch}
-                onAdd={() => {
-                    setFormData({})
-                    setFormType("add")
-                }}
+export const SessionListing = ({ viewMode = "card" }: Props) => {
+  const [formData, setFormData] = useState<any>({});
+  const [formType, setFormType] = useState("");
+  const [search, setSearch] = useState("");
+
+  const sourceDataContext = useContext(SourceDataContext);
+  const sourceData: any = sourceDataContext.sourceData;
+
+  const sessions = sortObject(sourceData.sessions ?? {});
+  const entries = useMemo(
+    () =>
+      Object.entries(sessions).filter(([key]) =>
+        key.toLowerCase().includes(search.toLowerCase())
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessions, search]
+  );
+
+  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
+
+  const rows: SessionRow[] = entries.map(([key, value]) => ({
+    key,
+    session: value,
+    usageCount: getDirectReferencers(nodeId("session", key), graph.edges).length,
+  }));
+
+  const openSession = (session: any) => {
+    setFormData({ ...session, supersets: toStringArray(session.supersets) });
+    setFormType("edit");
+  };
+
+  return (
+    <BaseListing>
+      <ManageListHeader
+        title="Sessions"
+        count={Object.keys(sessions).length}
+        addLabel="Add Session"
+        searchPlaceholder="Search sessions..."
+        search={search}
+        onSearchChange={setSearch}
+        onAdd={() => {
+          setFormData({});
+          setFormType("add");
+        }}
+      />
+
+      {viewMode === "table" ? (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          getRowKey={(row) => row.key}
+          onRowClick={(row) => openSession(row.session)}
+          emptyMessage={
+            search
+              ? "No sessions match your search."
+              : "No sessions yet. Add your first session to get started."
+          }
+        />
+      ) : (
+        <>
+          {entries.length === 0 && (
+            <EmptyState
+              message={
+                search
+                  ? "No sessions match your search."
+                  : "No sessions yet. Add your first session to get started."
+              }
             />
+          )}
 
-            {entries.length === 0 && (
-                <EmptyState
-                    message={
-                        search
-                            ? "No sessions match your search."
-                            : "No sessions yet. Add your first session to get started."
-                    }
-                />
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {rows.map(({ key, session, usageCount }) => (
+              <EntityCard
+                key={key}
+                title={key}
+                relatedLabel="Supersets"
+                relatedItems={toStringArray(session.supersets)}
+                tags={session.tags}
+                usageCount={usageCount}
+                usageLabel="plan"
+                onClick={() => openSession(session)}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {entries.map(([key, value]) => (
-                    <button type="button" key={key}
-                         className="min-h-11 text-left border border-primary-200 dark:border-primary-700
-                            bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
-                            p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow
-                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                         onClick={() => {
-                             let _value: any = value
-                             if (typeof _value.supersets === "string") {
-                                 _value.supersets = _value.supersets.split(",")
-                             }
-                             setFormData(_value)
-                             setFormType("edit")
-                         }}>
-                        <span className="font-bold">{key}</span>
-                        <>
-                            {(Array.isArray((value as any).supersets)
-                                ? (value as any).supersets
-                                : typeof (value as any).supersets === "string"
-                                    ? (value as any).supersets.split(",")
-                                    : []
-                            ).map((e: string) => (
-                                <div className="text-xs text-text-muted-light dark:text-text-muted-dark"
-                                     key={e}>
-                                    {e}
-                                </div>
-                            ))}
-                        </>
-                    </button>
-                ))}
-            </div>
-
-            {formType && (
-                <SessionForm data={formData} type={formType} closeForm={() => setFormType("")}/>
-            )}
-        </BaseListing>
-    )
-}
+      {formType && (
+        <SessionForm data={formData} type={formType} closeForm={() => setFormType("")} />
+      )}
+    </BaseListing>
+  );
+};

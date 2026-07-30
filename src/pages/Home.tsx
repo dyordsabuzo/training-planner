@@ -29,7 +29,12 @@ export const Home = () => {
           </p>
           <p>
             <Link to="/training-planner/manage" className={linkClassName}>
-              Click here to start managing users and training programs.
+              Click here to manage training programs.
+            </Link>
+          </p>
+          <p>
+            <Link to="/training-planner/admin" className={linkClassName}>
+              Click here to manage users.
             </Link>
           </p>
         </div>

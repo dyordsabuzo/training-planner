@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { Button } from "./Button";
-
 type Props = {
   label?: string;
   options: string[];
@@ -14,36 +11,52 @@ export const ButtonSelection = ({
   selection,
   onSelect,
 }: Props) => {
-  const [current, setCurrent] = useState<string>(selection);
+  const activeIndex = Math.max(options.indexOf(selection), 0);
+
   return (
-    <div className={`flex flex-row gap-2 items-center`}>
+    <div>
       {label && (
         <label
           htmlFor={label}
-          className="block mb-1 text-sm font-medium text-text-light dark:text-text-dark"
+          className="block mb-1 text-xs font-normal uppercase tracking-wide text-text-muted-light/70 dark:text-text-muted-dark/70"
         >
           {label}
         </label>
       )}
       <div
-        className={`
-          flex border border-gray-300 dark:border-gray-600 w-fit rounded-md
-          divide-x divide-gray-300 dark:divide-gray-600
-        `}
+        role="radiogroup"
+        aria-label={label}
+        className="relative inline-flex w-fit rounded-full overflow-hidden
+          border border-gray-300 dark:border-gray-600
+          bg-gray-100 dark:bg-gray-800"
       >
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 rounded-full bg-primary
+            transition-transform duration-200 ease-in-out"
+          style={{
+            width: `${100 / options.length}%`,
+            transform: `translateX(${activeIndex * 100}%)`,
+          }}
+        />
         {options.map((option) => (
-          <Button
+          <button
             key={option}
-            className={`
-              min-h-11 ${current === option ? "bg-primary hover:bg-primary-700 text-white" : "text-text-light dark:text-text-dark bg-white dark:bg-surface-dark"}
-          `}
-            decoration="selection"
-            label={option}
-            onClick={() => {
-              setCurrent(option);
-              onSelect(option);
-            }}
-          />
+            type="button"
+            role="radio"
+            aria-checked={selection === option}
+            onClick={() => onSelect(option)}
+            className={`relative flex-1 py-1.5 px-4 rounded-full text-sm font-medium
+              whitespace-nowrap transition-colors duration-200
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10
+              ${
+                selection === option
+                  ? "text-white"
+                  : "text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary-300"
+              }`}
+          >
+            {option}
+          </button>
         ))}
       </div>
     </div>

@@ -8,7 +8,7 @@ import {
 } from "../management/__mock__/MockContext";
 
 const meta: Meta<typeof SessionPage> = {
-  title: "pages/SessionPage",
+  title: "pages/components/SessionPage",
   component: SessionPage,
 };
 
