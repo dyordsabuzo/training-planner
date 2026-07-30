@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useState } from "react";
-import { addDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
+import { addDoc, getDocs, updateDoc, deleteDoc, query, where, documentId } from "firebase/firestore";
 import { getCollection, getDocumentReference } from "../common/firebase";
 import AuthContext from "./AuthContext";
 import { saveToDB, SourceDbReferences } from "../common/utils";
@@ -137,18 +137,27 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     idFilters?: string[]
   ): Promise<any> => {
     try {
-      const collection = getCollection(sourceDb);
-      const snapshot = await getDocs(collection);
-
-      let data = {};
       // `idFilters` omitted (undefined) means "no filter, return everything".
       // An explicit array (including an empty one) is a strict allow-list —
       // empty must mean zero results, not "same as no filter".
-      const docs = idFilters
-        ? snapshot.docs.filter((doc) => idFilters.includes(doc.id))
-        : snapshot.docs;
+      if (idFilters && idFilters.length === 0) {
+        return {};
+      }
 
-      docs.forEach((doc) => {
+      const collection = getCollection(sourceDb);
+      // A broad, unconstrained getDocs(collection) can't be granted by a
+      // security rule that depends on which specific document is being read
+      // (e.g. "is this plan ID in my grants?") — Firestore can't prove that
+      // holds for every possible result and denies the whole query for
+      // anyone the rule isn't unconditionally true for (i.e. non-admins).
+      // Scoping the query itself to the exact granted IDs lets Firestore
+      // verify the rule per requested ID instead.
+      const snapshot = idFilters
+        ? await getDocs(query(collection, where(documentId(), "in", idFilters)))
+        : await getDocs(collection);
+
+      let data = {};
+      snapshot.docs.forEach((doc) => {
         const docData = doc.data();
 
         if (docData.name) {

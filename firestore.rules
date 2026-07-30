@@ -1,8 +1,5 @@
 rules_version = '2';
 
-// NOT YET DEPLOYED. Review carefully (ideally against the Firestore
-// emulator) before running `firebase deploy --only firestore:rules`.
-//
 // Model: a users/{uid} doc (auto-created on first login, see
 // AuthContext.tsx) carries `role` ("admin" | "user") and `plans` (a list of
 // plan doc IDs the user has been granted access to). Admins have full
