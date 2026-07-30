@@ -41,6 +41,25 @@ export const RegularUser: StoryObj<typeof UserForm> = {
   ],
 };
 
+export const BackfillMissingData: StoryObj<typeof UserForm> = {
+  name: "Backfilling a doc with only role/plans",
+  render: () => (
+    <UserForm
+      data={{
+        id: "uid-user-2",
+        role: "user",
+        plans: [],
+      }}
+      closeForm={() => console.log("close form")}
+      onSave={(data) => console.log("save", data)}
+    />
+  ),
+  decorators: [
+    withMockSourceDataContext({ sourceData: { plans: mockPlans } }),
+    withMockAuthContext({ getUid: () => "uid-admin-1" }),
+  ],
+};
+
 export const EditingSelf: StoryObj<typeof UserForm> = {
   name: "Editing your own account (role locked)",
   render: () => (

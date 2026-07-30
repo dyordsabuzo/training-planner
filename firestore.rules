@@ -67,17 +67,21 @@ service cloud.firestore {
     // - A user may create their OWN doc once, but only with the safe
     //   defaults AuthContext.tsx provisions on first login (role "user",
     //   no plans) — this stops a client from self-granting admin/plans by
-    //   racing the auto-provision write.
+    //   racing the auto-provision write. An admin may create a doc for ANY
+    //   uid with any role/plans — this is the "Add missing user" repair
+    //   path (AddUserForm.tsx) for an Auth account that never got
+    //   auto-provisioned (e.g. created directly in the console).
     // - A user may update their OWN doc (e.g. firstName/lastName on the
     //   Profile page) as long as `role` and `plans` are left unchanged —
     //   only an admin can change those, or touch another user's doc at all.
     match /users/{uid} {
       allow get: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow list: if isAdmin();
-      allow create: if isSignedIn()
-        && request.auth.uid == uid
-        && request.resource.data.role == 'user'
-        && request.resource.data.plans.size() == 0;
+      allow create: if isAdmin()
+        || (isSignedIn()
+            && request.auth.uid == uid
+            && request.resource.data.role == 'user'
+            && request.resource.data.plans.size() == 0);
       allow update: if isAdmin()
         || (isSignedIn()
             && request.auth.uid == uid

@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import UserManagementContext, { AppUser } from "../context/UserManagementContext";
 import SourceDataContext from "../context/SourceDataContext";
 import { UserForm } from "../forms/UserForm";
+import { AddUserForm } from "../forms/AddUserForm";
 import { DataTable, DataTableColumn } from "../components/form/DataTable";
 import { Badge } from "../components/others/Badge";
 import { ManageListHeader } from "./ManageListHeader";
@@ -60,12 +61,13 @@ const buildColumns = (planNameById: Record<string, string>): DataTableColumn<App
 // action: a user must sign up themselves first, since creating a Firebase
 // Auth account from here would require the Admin SDK this app doesn't have.
 export const UserListing = () => {
-  const { users, fetchUsers, saveUser } = useContext(UserManagementContext);
+  const { users, fetchUsers, saveUser, createUser } = useContext(UserManagementContext);
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
   const [isInitialised, setIsInitialised] = useState(false);
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     if (!isInitialised) {
@@ -105,9 +107,11 @@ export const UserListing = () => {
       <ManageListHeader
         title="Users"
         count={users.length}
+        addLabel="Add missing user"
         searchPlaceholder="Search users..."
         search={search}
         onSearchChange={setSearch}
+        onAdd={() => setIsAdding(true)}
       />
 
       <DataTable
@@ -123,6 +127,17 @@ export const UserListing = () => {
           data={editingUser}
           closeForm={() => setEditingUser(null)}
           onSave={saveUser}
+        />
+      )}
+
+      {isAdding && (
+        <AddUserForm
+          existingIds={users.map((u) => u.id)}
+          closeForm={() => setIsAdding(false)}
+          onSave={(data) => {
+            createUser(data);
+            setIsAdding(false);
+          }}
         />
       )}
     </BaseListing>

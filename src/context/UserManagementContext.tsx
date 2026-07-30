@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useState } from "react";
-import { getDocs, updateDoc } from "firebase/firestore";
+import { getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { getCollection, getDocumentReference } from "../common/firebase";
 
 export type AppUser = {
@@ -16,6 +16,7 @@ const UserManagementContext = createContext({
   users: null as AppUser[] | null,
   fetchUsers: () => {},
   saveUser: (user: AppUser) => {},
+  createUser: (user: AppUser) => {},
 });
 
 export default UserManagementContext;
@@ -50,14 +51,34 @@ export const UserManagementContextProvider: React.FC<Props> = ({ children }) => 
 
   const saveUser = async (user: AppUser) => {
     await updateDoc(getDocumentReference("users", user.id), {
+      email: user.email ?? "",
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
       role: user.role,
       plans: user.plans,
     });
     setUsers((prev) => (prev ?? []).map((u) => (u.id === user.id ? user : u)));
   };
 
+  // Admin-only repair path for a Firebase Auth account that has no
+  // users/{uid} doc at all yet — e.g. created directly in the Firebase
+  // console, or the browser closed before the app finished auto-provisioning
+  // it on first login. The admin supplies the UID themselves (copied from
+  // the console), since looking up an Auth account by email requires the
+  // Admin SDK, which this client-only app doesn't have.
+  const createUser = async (user: AppUser) => {
+    await setDoc(getDocumentReference("users", user.id), {
+      email: user.email ?? "",
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
+      role: user.role,
+      plans: user.plans,
+    });
+    setUsers((prev) => [...(prev ?? []), user]);
+  };
+
   return (
-    <UserManagementContext.Provider value={{ users, fetchUsers, saveUser }}>
+    <UserManagementContext.Provider value={{ users, fetchUsers, saveUser, createUser }}>
       {children}
     </UserManagementContext.Provider>
   );

@@ -1,6 +1,7 @@
 import React, { useContext, useState } from "react";
 import { Modal } from "../components/others/Modal";
 import { DetailField } from "./DetailField";
+import { Input } from "../components/form/Input";
 import { ButtonSelection } from "../components/form/ButtonSelection";
 import { MultiSelect } from "../components/form/MultiSelect";
 import { FormButtons } from "./FormButtons";
@@ -8,6 +9,7 @@ import { useEntityForm } from "./useEntityForm";
 import SourceDataContext from "../context/SourceDataContext";
 import AuthContext from "../context/AuthContext";
 import { AppUser } from "../context/UserManagementContext";
+import { getDisplayName } from "../common/utils";
 
 type Props = {
   data: AppUser;
@@ -15,10 +17,13 @@ type Props = {
   onSave: (data: AppUser) => void;
 };
 
-// Admin-only: edit an existing registered user's role and granted plan
-// access. There's no "add" or "delete" here — creating a Firebase Auth
-// account or removing one both require the Admin SDK, which this
-// client-only app doesn't have. Users must sign up themselves first.
+// Admin-only: edit an existing registered user's profile, role, and granted
+// plan access. Email/first/last name here only edit the Firestore *cache*
+// of that data (used for display) — not the person's real Firebase Auth
+// login credential — which makes this the tool for backfilling a doc that's
+// missing fields (e.g. one created before auto-provisioning existed).
+// There's no "delete" here — removing a Firebase Auth account requires the
+// Admin SDK, which this client-only app doesn't have.
 export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -33,6 +38,9 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const planNameById = Object.fromEntries(planEntries.map(([name, plan]) => [plan.id, name]));
   const toPlanNames = (planIds: string[]) => planIds.map((id) => planNameById[id] ?? id);
 
+  const [email, setEmail] = useState(data.email ?? "");
+  const [firstName, setFirstName] = useState(data.firstName ?? "");
+  const [lastName, setLastName] = useState(data.lastName ?? "");
   const [role, setRole] = useState(data.role ?? "user");
   const [planNames, setPlanNames] = useState<string[]>(toPlanNames(data.plans ?? []));
 
@@ -40,6 +48,9 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const isSelf = authContext.getUid() === data.id;
 
   const resetFields = () => {
+    setEmail(data.email ?? "");
+    setFirstName(data.firstName ?? "");
+    setLastName(data.lastName ?? "");
     setRole(data.role ?? "user");
     setPlanNames(toPlanNames(data.plans ?? []));
   };
@@ -54,7 +65,7 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const planIds = planNames.map((name) => planIdByName[name]).filter(Boolean);
-    onSave({ ...data, role, plans: planIds });
+    onSave({ ...data, email, firstName, lastName, role, plans: planIds });
     setIsEditing(false);
   };
 
@@ -62,7 +73,7 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
 
   return (
     <Modal
-      title={data.displayName || data.email || "User"}
+      title={getDisplayName(data.firstName, data.lastName, data.email)}
       isOpen={true}
       onClose={closeForm}
       headerAction={headerAction}
@@ -70,13 +81,16 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
       {!isEditing ? (
         <div className="flex flex-col gap-4">
           <DetailField label="Email" value={data.email} />
-          {data.displayName && <DetailField label="Name" value={data.displayName} />}
+          <DetailField label="First name" value={data.firstName} />
+          <DetailField label="Last name" value={data.lastName} />
           <DetailField label="Role" value={roleLabel} />
           <DetailField label="Granted plans" tags={planNames} />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <DetailField label="Email" value={data.email} />
+          <Input label="Email" value={email} placeholder="Email" changeValue={setEmail} />
+          <Input label="First name" value={firstName} placeholder="First name" changeValue={setFirstName} />
+          <Input label="Last name" value={lastName} placeholder="Last name" changeValue={setLastName} />
 
           {isSelf ? (
             <div>
