@@ -18,7 +18,7 @@ type Props = {
   onChange: (value: MoodValue) => void;
 };
 
-const RATINGS = [
+export const RATINGS = [
   { value: 1, icon: faFaceTired, label: "Exhausted" },
   { value: 2, icon: faFaceFrown, label: "Low" },
   { value: 3, icon: faFaceMeh, label: "Okay" },

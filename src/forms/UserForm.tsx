@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { Modal } from "../components/others/Modal";
 import { DetailField } from "./DetailField";
 import { Input } from "../components/form/Input";
-import { ButtonSelection } from "../components/form/ButtonSelection";
+import { Toggle } from "../components/others/Toggle";
 import { MultiSelect } from "../components/form/MultiSelect";
 import { FormButtons } from "./FormButtons";
 import { useEntityForm } from "./useEntityForm";
@@ -100,12 +100,16 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
               </p>
             </div>
           ) : (
-            <ButtonSelection
-              label="Role"
-              options={["User", "Admin"]}
-              selection={roleLabel}
-              onSelect={(value) => setRole(value === "Admin" ? "admin" : "user")}
-            />
+            <div className="flex items-center gap-3">
+              <Toggle
+                label="Admin access"
+                value={role === "admin"}
+                toggle={(value) => setRole(value ? "admin" : "user")}
+              />
+              <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                {roleLabel}
+              </span>
+            </div>
           )}
 
           <MultiSelect

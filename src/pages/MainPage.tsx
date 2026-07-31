@@ -15,7 +15,7 @@ export const MainPage = ({ listing }: Props) => {
 
   useEffect(() => {
     if (!user) {
-      navigate("/");
+      navigate("/login");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);

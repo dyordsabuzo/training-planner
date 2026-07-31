@@ -33,16 +33,22 @@ const AppShell = () => {
         }`}
       >
         <Routes>
-          <Route path={"/*"} element={<Home />} errorElement={<ErrorPage />} />
+          <Route
+            path={"/*"}
+            element={user ? <Home /> : <Navigate to="/login" />}
+            errorElement={<ErrorPage />}
+          />
           <Route
             path={"/training-planner"}
-            element={user ? <MainPage /> : <Navigate to="/" />}
+            element={user ? <MainPage /> : <Navigate to="/login" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/manage"}
             element={
-              userPermission?.role === "admin" ? (
+              !user ? (
+                <Navigate to="/login" />
+              ) : userPermission?.role === "admin" ? (
                 <ListingPage list={"exercises"} />
               ) : (
                 <Navigate to="/" />
@@ -53,7 +59,9 @@ const AppShell = () => {
           <Route
             path={"/training-planner/admin"}
             element={
-              userPermission?.role === "admin" ? (
+              !user ? (
+                <Navigate to="/login" />
+              ) : userPermission?.role === "admin" ? (
                 <AdminPage />
               ) : (
                 <Navigate to="/" />
@@ -63,17 +71,17 @@ const AppShell = () => {
           />
           <Route
             path={"/training-planner/profile"}
-            element={user ? <ProfilePage /> : <Navigate to="/" />}
+            element={user ? <ProfilePage /> : <Navigate to="/login" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/train"}
-            element={user ? <SessionPage /> : <Navigate to="/" />}
+            element={user ? <SessionPage /> : <Navigate to="/login" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/train/:sessionId"}
-            element={user ? <SessionPage /> : <Navigate to="/" />}
+            element={user ? <SessionPage /> : <Navigate to="/login" />}
             errorElement={<ErrorPage />}
           />
           <Route
