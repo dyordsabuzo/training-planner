@@ -49,7 +49,20 @@ const AppShell = () => {
               !user ? (
                 <Navigate to="/login" />
               ) : userPermission?.role === "admin" ? (
-                <ListingPage list={"exercises"} />
+                <ListingPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/manage/:tab"}
+            element={
+              !user ? (
+                <Navigate to="/login" />
+              ) : userPermission?.role === "admin" ? (
+                <ListingPage />
               ) : (
                 <Navigate to="/" />
               )

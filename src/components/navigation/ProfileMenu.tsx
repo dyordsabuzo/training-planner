@@ -75,7 +75,7 @@ export const ProfileMenu = ({
         />
         {showEmail && (
           <span className="text-sm text-text-light dark:text-text-dark truncate">
-            {email}
+            {displayName}
           </span>
         )}
       </button>
