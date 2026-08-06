@@ -1,5 +1,6 @@
-import { Badge } from "../components/others/Badge";
+
 import { toStringArray } from "../common/utils";
+import { Badge } from "@dyordsabuzo/ui-components";
 
 type Props = {
   title: string;

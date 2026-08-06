@@ -11,7 +11,7 @@ import {
 } from "../management/__mock__/MockContext";
 
 const meta: Meta<typeof Home> = {
-  title: "pages/Home",
+  title: "pages/main/Home",
   component: Home,
   decorators: [
     // Home relies on App.tsx's outer wrapper for its page background — that

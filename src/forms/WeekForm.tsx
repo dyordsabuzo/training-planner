@@ -1,9 +1,10 @@
-import { IncrementDecrement } from "../components/others/IncrementDecrement";
+
 import React, { useContext, useState } from "react";
-import { Input } from "../components/form/Input";
+
 import SourceDataContext from "../context/SourceDataContext";
-import { Modal } from "../components/others/Modal";
+
 import { FormButtons } from "./FormButtons";
+import { IncrementDecrement, Input, Modal } from "@dyordsabuzo/ui-components";
 
 type Props = {
   weekData: any;

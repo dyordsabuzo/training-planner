@@ -1,8 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarWeek, faListCheck } from "@fortawesome/free-solid-svg-icons";
-import { Card } from "../../components/others/Card";
-import { Badge } from "../../components/others/Badge";
-import { Button } from "../../components/form/Button";
+import { Card, Badge, Button } from "@dyordsabuzo/ui-components";
 
 type Props = {
   planName: string;

@@ -6,8 +6,8 @@ import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
 import { EntityCard } from "./EntityCard";
-import { DataTable, DataTableColumn } from "../components/form/DataTable";
-import { Badge } from "../components/others/Badge";
+
+import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,

@@ -7,10 +7,11 @@ import { SummaryPage } from "./SummaryPage";
 import { ExercisePage } from "./train/ExercisePage";
 import SourceDataContext from "../context/SourceDataContext";
 import WrapperPage from "./WrapperPage";
-import { Button } from "../components/form/Button";
+
 import { Loading } from "./helpers/Loading";
 import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
+import { Button } from "@dyordsabuzo/ui-components";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 
 const sortWeekKeys = (keys: string[]) =>

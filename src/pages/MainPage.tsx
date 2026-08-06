@@ -2,7 +2,7 @@ import { useContext, useEffect } from "react";
 import WrapperPage from "./WrapperPage";
 import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
-import { Button } from "../components/form/Button";
+import { Button } from "@dyordsabuzo/ui-components";
 
 type Props = {
   listing?: string;

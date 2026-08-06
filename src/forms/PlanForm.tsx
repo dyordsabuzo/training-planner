@@ -1,18 +1,18 @@
-import { Input } from "../components/form/Input";
-import { ReorderableSelect } from "../components/form/ReorderableSelect";
-import { IncrementDecrement } from "../components/others/IncrementDecrement";
+
+
 import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
-import { DateInput } from "../components/date/DateInput";
+
 import dayjs, { Dayjs } from "dayjs";
 import { FormButtons } from "./FormButtons";
-import { Modal } from "../components/others/Modal";
+
 import { DetailField } from "./DetailField";
 import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toDate } from "../common/planWeek";
 import { toStringArray } from "../common/utils";
+import { Input, ReorderableSelect, IncrementDecrement, DateInput, Modal } from "@dyordsabuzo/ui-components";
 
 type FormData = {
   id?: string;

@@ -1,114 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  presets: [require("@dyordsabuzo/ui-components/tailwind.preset")],
   darkMode: "class",
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
     "./src/**/*.stories.{js,ts,jsx,tsx}",
+    "./node_modules/@dyordsabuzo/ui-components/dist/**/*.{js,mjs}",
   ],
   theme: {
-    extend: {
-      colors: {
-        primary: {
-          DEFAULT: "#7c2d8f",
-          50: "#f8f0f9",
-          100: "#efd9f2",
-          200: "#e0b3e5",
-          300: "#cc85d3",
-          400: "#b055bd",
-          500: "#922c88",
-          600: "#7c2d8f",
-          700: "#5f2270",
-          800: "#421950",
-          900: "#2b1035",
-        },
-        secondary: {
-          DEFAULT: "#55575b",
-          50: "#f4f4f5",
-          100: "#e4e4e6",
-          200: "#c9cacd",
-          300: "#a6a8ac",
-          400: "#83868b",
-          500: "#696c71",
-          600: "#55575b",
-          700: "#434548",
-          800: "#333436",
-          900: "#242526",
-        },
-        accent: {
-          DEFAULT: "#0ea5e9",
-          50: "#f0f9ff",
-          100: "#e0f2fe",
-          200: "#bae6fd",
-          300: "#7dd3fc",
-          400: "#38bdf8",
-          500: "#0ea5e9",
-          600: "#0284c7",
-          700: "#0369a1",
-          800: "#075985",
-          900: "#0c4a6e",
-        },
-        success: {
-          DEFAULT: "#16a34a",
-          50: "#f0fdf4",
-          100: "#dcfce7",
-          500: "#22c55e",
-          600: "#16a34a",
-          700: "#15803d",
-        },
-        warning: {
-          DEFAULT: "#eab308",
-          50: "#fefce8",
-          100: "#fef9c3",
-          500: "#eab308",
-          600: "#ca8a04",
-          700: "#a16207",
-        },
-        danger: {
-          DEFAULT: "#dc2626",
-          50: "#fef2f2",
-          100: "#fee2e2",
-          500: "#ef4444",
-          600: "#dc2626",
-          700: "#b91c1c",
-        },
-        surface: {
-          light: "#ffffff",
-          dark: "#1f2937",
-        },
-        background: {
-          light: "#f9fafb",
-          dark: "#111827",
-        },
-        text: {
-          light: "#111827",
-          dark: "#f3f4f6",
-          muted: {
-            light: "#6b7280",
-            dark: "#9ca3af",
-          },
-        },
-      },
-      keyframes: {
-        "exercise-enter": {
-          "0%": { opacity: "0", transform: "translateX(16px)" },
-          "100%": { opacity: "1", transform: "translateX(0)" },
-        },
-        "roll-down": {
-          "0%": { opacity: "0", transform: "translateY(-100%)" },
-          "60%": { opacity: "1" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
-        "slide-up": {
-          "0%": { opacity: "0", transform: "translateY(24px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
-      },
-      animation: {
-        "exercise-enter": "exercise-enter 280ms ease-out",
-        "roll-down": "roll-down 320ms ease-out",
-        "slide-up": "slide-up 320ms ease-out",
-      },
-    },
+    extend: {},
   },
   plugins: [],
 };

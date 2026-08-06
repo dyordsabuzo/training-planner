@@ -1,6 +1,6 @@
 import { faPlus, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Button } from "../components/form/Button";
+import { Button } from "@dyordsabuzo/ui-components";
 
 type Props = {
   title: string;

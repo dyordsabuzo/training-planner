@@ -1,4 +1,4 @@
-import { Button } from "../components/form/Button";
+
 import React, { useContext, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
@@ -7,8 +7,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
-import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
+
 import { isTrainSessionPath } from "../routes/trainRoutes";
+import { Button } from "@dyordsabuzo/ui-components";
+import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 
 type Props = {
   currentSuperset?: any;

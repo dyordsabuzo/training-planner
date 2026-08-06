@@ -2,13 +2,13 @@
 import { useContext, useEffect, useState } from "react";
 
 import AuthContext from "../../context/AuthContext";
-import { Input } from "../../components/form/Input";
-import { Button } from "../../components/form/Button";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router";
 import { AuthLayout } from "./AuthLayout";
 import { Loading } from "../helpers/Loading";
+import { Input, Button } from "@dyordsabuzo/ui-components";
 
 export const PasswordReset = () => {
   const authContext = useContext(AuthContext);

@@ -1,6 +1,6 @@
 import { useRouteError } from "react-router";
 import { useNavigate } from "react-router";
-import { Button } from "../components/form/Button";
+import { Button } from "@dyordsabuzo/ui-components";
 
 const ErrorPage = () => {
   const error: any = useRouteError();

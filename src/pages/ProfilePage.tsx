@@ -1,9 +1,9 @@
 import { useContext, useState } from "react";
 import WrapperPage from "./WrapperPage";
 import AuthContext from "../context/AuthContext";
-import { Input } from "../components/form/Input";
-import { Button } from "../components/form/Button";
+
 import { DetailField } from "../forms/DetailField";
+import { Input, Button } from "@dyordsabuzo/ui-components";
 
 const ProfilePage = () => {
   const { user, userPermission, updateProfile } = useContext(AuthContext);

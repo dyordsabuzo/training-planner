@@ -1,7 +1,7 @@
+import { IncrementDecrement, Button } from "@dyordsabuzo/ui-components";
 import { WatchVideo } from "../../components/others/WatchVideo";
 import { Widget } from "../../components/others/Widget";
-import { IncrementDecrement } from "../../components/others/IncrementDecrement";
-import { Button } from "../../components/form/Button";
+
 
 type Props = {
   name: string;

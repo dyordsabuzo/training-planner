@@ -1158,6 +1158,13 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
+"@dyordsabuzo/ui-components@^0.1.0":
+  version "0.1.0"
+  resolved "https://npm.pkg.github.com/download/@dyordsabuzo/ui-components/0.1.0/94d628f5e197e64f6f7b36011b19566f2b77a5b1#94d628f5e197e64f6f7b36011b19566f2b77a5b1"
+  integrity sha512-h9XcKLkZLIQgcplmta/jEcKV+AJNNV31RMj8Msd3ildh36+29fcB1A9TeW3uuVoNf47XjilFl4jjbz++yM7DDw==
+  dependencies:
+    dayjs "^1.11.13"
+
 "@electric-sql/pglite@^0.2.16":
   version "0.2.17"
   resolved "https://registry.yarnpkg.com/@electric-sql/pglite/-/pglite-0.2.17.tgz#23d53a9b7ddd1590d59d7c701aba23b037f08108"

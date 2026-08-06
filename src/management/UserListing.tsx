@@ -3,12 +3,12 @@ import UserManagementContext, { AppUser } from "../context/UserManagementContext
 import SourceDataContext from "../context/SourceDataContext";
 import { UserForm } from "../forms/UserForm";
 import { AddUserForm } from "../forms/AddUserForm";
-import { DataTable, DataTableColumn } from "../components/form/DataTable";
-import { Badge } from "../components/others/Badge";
+
 import { ManageListHeader } from "./ManageListHeader";
 import BaseListing from "./BaseListing";
 import { Loading } from "../pages/helpers/Loading";
 import { getDisplayName } from "../common/utils";
+import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
 
 const buildColumns = (planNameById: Record<string, string>): DataTableColumn<AppUser>[] => [
   {

@@ -1,15 +1,16 @@
-import { Input } from "../components/form/Input";
-import { ReorderableSelect } from "../components/form/ReorderableSelect";
+
+
 import React, { useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
-import { TagInput } from "../components/others/TagInput";
+
 import { FormButtons } from "./FormButtons";
-import { Modal } from "../components/others/Modal";
+
 import { DetailField } from "./DetailField";
 import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
+import { Input, ReorderableSelect, TagInput, Modal } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,

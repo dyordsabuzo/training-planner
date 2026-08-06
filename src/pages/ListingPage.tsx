@@ -7,9 +7,10 @@ import {SupersetListing} from "../management/SupersetListing";
 import {SessionListing} from "../management/SessionListing";
 import {PlanListing} from "../management/PlanListing";
 import {RelationshipMap} from "../management/RelationshipMap";
-import {Tabs} from "../components/others/Tabs";
+
 import WrapperPage from "./WrapperPage";
 import SourceDataContext from "../context/SourceDataContext";
+import { Tabs } from "@dyordsabuzo/ui-components";
 
 const categories = ["Exercises", "Supersets", "Sessions", "Plans", "Relationships"];
 

@@ -1,11 +1,9 @@
 import React, { useContext, useState } from "react";
-import { Modal } from "../components/others/Modal";
-import { Input } from "../components/form/Input";
-import { ButtonSelection } from "../components/form/ButtonSelection";
-import { MultiSelect } from "../components/form/MultiSelect";
+
 import { FormButtons } from "./FormButtons";
 import SourceDataContext from "../context/SourceDataContext";
 import { AppUser } from "../context/UserManagementContext";
+import { Modal, Input, ButtonSelection, MultiSelect } from "@dyordsabuzo/ui-components";
 
 type Props = {
   existingIds: string[];

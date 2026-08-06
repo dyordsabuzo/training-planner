@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Input } from "../form/Input";
+import { Input } from "@dyordsabuzo/ui-components";
 
 type Props = {
   label: string;

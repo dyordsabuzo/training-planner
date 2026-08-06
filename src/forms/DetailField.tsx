@@ -1,6 +1,6 @@
 import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Badge } from "../components/others/Badge";
+import { Badge } from "@dyordsabuzo/ui-components";
 
 type Props = {
   label: string;

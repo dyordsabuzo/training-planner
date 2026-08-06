@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { IconDefinition } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Button } from "../components/form/Button";
-import { Modal } from "../components/others/Modal";
+import { Button, Modal } from "@dyordsabuzo/ui-components";
 
 type Props = {
   onDelete: () => void;

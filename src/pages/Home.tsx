@@ -8,9 +8,7 @@ import { Loading } from "./helpers/Loading";
 import { getDisplayName } from "../common/utils";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { PlanProgressCard } from "./others/PlanProgressCard";
-import { RATINGS } from "../components/others/MoodCheckIn";
-import { Card } from "../components/others/Card";
-import { Button } from "../components/form/Button";
+
 import { EmptyState } from "../management/EmptyState";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -23,6 +21,8 @@ import {
   faClipboardList,
   IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
+import { Card, Button } from "@dyordsabuzo/ui-components";
+import { RATINGS } from "../components/others/MoodCheckIn";
 
 const linkClassName =
   "font-bold text-primary hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";

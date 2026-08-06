@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "../../components/form/Button";
+import { Button } from "@dyordsabuzo/ui-components";
 import { Timer } from "../../components/others/Timer";
 
 type Props = {

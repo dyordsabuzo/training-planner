@@ -1,5 +1,6 @@
-import { Button } from "../components/form/Button";
+
 import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
+import { Button } from "@dyordsabuzo/ui-components";
 
 type Props = {
   onCancel?: () => void;

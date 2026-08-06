@@ -8,7 +8,7 @@ import { Loading } from "../pages/helpers/Loading";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
 import BaseListing from "./BaseListing";
-import { DataTable, DataTableColumn } from "../components/form/DataTable";
+import { DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
 
 type SelectedWeekData = {
   weekKey: string;

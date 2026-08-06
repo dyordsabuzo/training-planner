@@ -1,15 +1,14 @@
 import React, { useContext, useState } from "react";
-import { Modal } from "../components/others/Modal";
+
 import { DetailField } from "./DetailField";
-import { Input } from "../components/form/Input";
-import { Toggle } from "../components/others/Toggle";
-import { MultiSelect } from "../components/form/MultiSelect";
+
 import { FormButtons } from "./FormButtons";
 import { useEntityForm } from "./useEntityForm";
 import SourceDataContext from "../context/SourceDataContext";
 import AuthContext from "../context/AuthContext";
 import { AppUser } from "../context/UserManagementContext";
 import { getDisplayName } from "../common/utils";
+import { Modal, Input, Toggle, MultiSelect } from "@dyordsabuzo/ui-components";
 
 type Props = {
   data: AppUser;

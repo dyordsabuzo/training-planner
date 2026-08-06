@@ -1,4 +1,4 @@
-import { Button } from "../../components/form/Button";
+
 import { ConfirmDeleteButton } from "../../forms/ConfirmDeleteButton";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import { useNavigate } from "react-router";
@@ -10,6 +10,7 @@ import { Loading } from "../helpers/Loading";
 import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
+import { Button } from "@dyordsabuzo/ui-components";
 
 type State = {
   exerciseCounter: number;

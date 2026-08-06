@@ -1,18 +1,15 @@
 import React, { useContext, useMemo, useState } from "react";
-import { Input } from "../components/form/Input";
-import { MultiSelect } from "../components/form/MultiSelect";
-import { IncrementDecrement } from "../components/others/IncrementDecrement";
-import { CollapsibleSection } from "../components/others/CollapsibleSection";
+
 import SourceDataContext from "../context/SourceDataContext";
-import { TagInput } from "../components/others/TagInput";
+
 import { FormButtons } from "./FormButtons";
-import { ButtonSelection } from "../components/form/ButtonSelection";
-import { Modal } from "../components/others/Modal";
+
 import { DetailField } from "./DetailField";
 import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
+import { Input, MultiSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,
