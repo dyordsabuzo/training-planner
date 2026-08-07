@@ -34,6 +34,7 @@ jobs:
           VITE_FBASE_AUTHDOMAIN: ${{ secrets.VITE_FBASE_AUTHDOMAIN }}
           VITE_FBASE_PROJECTID: ${{ secrets.VITE_FBASE_PROJECTID }}
           VITE_FBASE_APPID: ${{ secrets.VITE_FBASE_APPID }}
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
