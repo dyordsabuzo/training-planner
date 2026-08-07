@@ -37,6 +37,7 @@ jobs:
         run: yarn firebase deploy --only firestore:rules --project training-planner-387200
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
       - name: Clean up service account credentials
         if: always()
