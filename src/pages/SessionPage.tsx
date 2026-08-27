@@ -121,13 +121,15 @@ const SessionPage = () => {
     sessionSupersets.forEach((s: string) => {
       let { targetRep, targetSet, annotation } = sessionData;
       let { sessions, rest, tags, ...superset } = sourceData.supersets[s];
-      let exercises = superset.exercises.map((e: string) => {
-        const exercise = sourceData.exercises[e];
-        return {
-          exercise,
-          targetWeight: exercise.targetWeight || 0,
-        };
-      });
+      let exercises = superset.exercises
+        .filter((e: string) => sourceData.exercises[e])
+        .map((e: string) => {
+          const exercise = sourceData.exercises[e];
+          return {
+            exercise,
+            targetWeight: exercise.targetWeight || 0,
+          };
+        });
 
       if (exercises.length < 2) {
         exercises.push({});
