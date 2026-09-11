@@ -13,6 +13,7 @@ import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { Button } from "@dyordsabuzo/ui-components";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
+import { resolveSessionSupersets } from "./resolveSessionSupersets";
 
 const sortWeekKeys = (keys: string[]) =>
   [...keys].sort((a, b) => {
@@ -115,44 +116,11 @@ const SessionPage = () => {
   };
 
   const selectSession = (session: string) => {
-    let supersets = {};
-    const sessionSupersets = sourceData.sessions[session].supersets;
-
-    sessionSupersets.forEach((s: string) => {
-      let { targetRep, targetSet, annotation } = sessionData;
-      let { sessions, rest, tags, ...superset } = sourceData.supersets[s];
-      let exercises = superset.exercises
-        .filter((e: string) => sourceData.exercises[e])
-        .map((e: string) => {
-          const exercise = sourceData.exercises[e];
-          return {
-            exercise,
-            targetWeight: exercise.targetWeight || 0,
-          };
-        });
-
-      if (exercises.length < 2) {
-        exercises.push({});
-      }
-
-      if (superset.targetRep) {
-        targetRep = superset.targetRep;
-      }
-      if (superset.targetSet) {
-        targetSet = superset.targetSet;
-      }
-
-      supersets = {
-        ...supersets,
-        [superset.name]: {
-          ...superset,
-          exercises,
-          targetRep,
-          targetSet,
-          annotation,
-          rest,
-        },
-      };
+    const { targetRep, targetSet, annotation } = sessionData;
+    const supersets = resolveSessionSupersets(sourceData, session, {
+      targetRep,
+      targetSet,
+      annotation,
     });
 
     setSessionData((prev: any) => ({ ...prev, session, supersets }));

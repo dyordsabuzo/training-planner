@@ -34,6 +34,8 @@ export const SummaryPage = ({
     updateUserData,
     initialiseSession,
     setIsRunning,
+    exitPath,
+    useSessionUrl,
   } = useContext(SessionContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,12 +50,14 @@ export const SummaryPage = ({
   const handleButtonClick = () => {
     if (sessionComplete) {
       wrapSession();
-      navigate("/training-planner/train");
+      navigate(exitPath);
     } else if (nextSuperset) {
       nextPageHandler();
     } else {
       setIsRunning(true);
-      navigate(`/training-planner/train/${crypto.randomUUID()}`);
+      if (useSessionUrl) {
+        navigate(`/training-planner/train/${crypto.randomUUID()}`);
+      }
     }
   };
 

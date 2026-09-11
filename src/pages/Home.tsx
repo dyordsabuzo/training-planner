@@ -188,7 +188,7 @@ export const Home = () => {
     const adminCount = users.filter((u) => u.role === "admin").length;
 
     return (
-      <WrapperPage className="max-w-[25rem] sm:max-w-3xl">
+      <WrapperPage className="max-w-[32rem] sm:max-w-3xl">
         <div className="flex flex-col gap-6 pt-6 w-full text-text-light dark:text-text-dark">
           <h1 className="text-2xl font-bold">
             {`Welcome back, ${getDisplayName(

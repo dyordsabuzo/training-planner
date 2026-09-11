@@ -1,6 +1,7 @@
 
 
 import React, { useContext, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
@@ -10,7 +11,7 @@ import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
-import { Input, ReorderableSelect, TagInput, Modal } from "@dyordsabuzo/ui-components";
+import { Button, Input, ReorderableSelect, TagInput, Modal } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,
@@ -32,6 +33,7 @@ type Props = {
 
 export const SessionForm = ({ data, type, closeForm }: Props) => {
   const formData = data;
+  const navigate = useNavigate();
 
   const id = formData?.id;
   const [name, setName] = useState(formData?.name ?? "");
@@ -64,6 +66,11 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     type === "edit" && name
       ? getDirectReferencers(nodeId("session", name), graph.edges).length
       : 0;
+
+  const handleSimulate = () => {
+    closeForm();
+    navigate(`/training-planner/manage/simulate/${encodeURIComponent(name)}`);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -106,7 +113,8 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           <DetailField label="Session name" value={name} />
           <DetailField label="Tags" tags={tags} />
           <DetailField label="Supersets" tags={supersets} />
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <Button label="Simulate session" className="text-xs" onClick={handleSimulate} />
             <ConfirmDeleteButton
               onDelete={handleDelete}
               impactMessage={

@@ -1159,9 +1159,9 @@
     kuler "^2.0.0"
 
 "@dyordsabuzo/ui-components@^0.1.0":
-  version "0.1.0"
-  resolved "https://npm.pkg.github.com/download/@dyordsabuzo/ui-components/0.1.0/94d628f5e197e64f6f7b36011b19566f2b77a5b1#94d628f5e197e64f6f7b36011b19566f2b77a5b1"
-  integrity sha512-h9XcKLkZLIQgcplmta/jEcKV+AJNNV31RMj8Msd3ildh36+29fcB1A9TeW3uuVoNf47XjilFl4jjbz++yM7DDw==
+  version "0.1.13"
+  resolved "https://npm.pkg.github.com/download/@dyordsabuzo/ui-components/0.1.13/9f4caa82520d10b88ba1c3e71be30c9fb7a7aa90#9f4caa82520d10b88ba1c3e71be30c9fb7a7aa90"
+  integrity sha512-N36wkpgN1rQgcmPJU4mFjUOKd2kqFto9qb9j6/8m8UjkWPsouwV4Rm4diLEpQlnSyYF4MzRCXHhLDmIXvm/M4w==
   dependencies:
     dayjs "^1.11.13"
 

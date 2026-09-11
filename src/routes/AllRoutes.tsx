@@ -5,6 +5,7 @@ import ListingPage from "../pages/ListingPage";
 import AdminPage from "../pages/AdminPage";
 import ProfilePage from "../pages/ProfilePage";
 import SessionPage from "../pages/SessionPage";
+import SimulateSessionPage from "../pages/SimulateSessionPage";
 import { Login } from "../pages/auth/Login";
 import { ForgotPassword } from "../pages/auth/ForgotPassword";
 import { PasswordReset } from "../pages/auth/PasswordReset";
@@ -63,6 +64,19 @@ const AppShell = () => {
                 <Navigate to="/login" />
               ) : userPermission?.role === "admin" ? (
                 <ListingPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/manage/simulate/:sessionName"}
+            element={
+              !user ? (
+                <Navigate to="/login" />
+              ) : userPermission?.role === "admin" ? (
+                <SimulateSessionPage />
               ) : (
                 <Navigate to="/" />
               )

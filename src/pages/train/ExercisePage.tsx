@@ -85,7 +85,7 @@ const reducer = (state: State, action: Action) => {
 
 export const ExercisePage = () => {
   const sessionContext = useContext(SessionContext);
-  const { sessionData, updateUserData } = sessionContext as any;
+  const { sessionData, updateUserData, exitPath } = sessionContext as any;
   const navigate = useNavigate();
 
   const [exerciseState, dispatch] = useReducer(reducer, initialState);
@@ -321,7 +321,7 @@ export const ExercisePage = () => {
               useModal
               onDelete={() => {
                 sessionContext.wrapSession();
-                navigate("/training-planner/train");
+                navigate(exitPath);
               }}
             />
           </div>
