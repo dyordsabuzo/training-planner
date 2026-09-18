@@ -43,10 +43,10 @@ export const resolveSessionSupersets = (
       [superset.name]: {
         ...superset,
         exercises,
-        targetRep,
-        targetSet,
-        annotation,
-        rest,
+        ...(targetRep !== undefined && { targetRep }),
+        ...(targetSet !== undefined && { targetSet }),
+        ...(annotation !== undefined && { annotation }),
+        ...(rest !== undefined && { rest }),
       },
     };
   });
