@@ -14,7 +14,7 @@ import { Logout } from "../pages/auth/Logout";
 import { Signup } from "../pages/auth/Signup";
 import { Home } from "../pages/Home";
 import { MainPage } from "../pages/MainPage";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
 import SidebarContext from "../context/SidebarContext";
 import { AUTH_ROUTES } from "./authRoutes";
@@ -25,6 +25,10 @@ const AppShell = () => {
   const { isCollapsed } = useContext(SidebarContext);
   const location = useLocation();
   const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <>
