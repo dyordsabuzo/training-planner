@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { faRightFromBracket, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import {
+  faRightFromBracket,
+  faUserShield,
+  faEye,
+  faEyeSlash,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ProfileIcon } from "./ProfileIcon";
 import { getDisplayName } from "../../common/utils";
@@ -11,6 +16,9 @@ type Props = {
   firstName?: string;
   lastName?: string;
   isAdmin?: boolean;
+  isRealAdmin?: boolean;
+  isPreviewingAsUser?: boolean;
+  onTogglePreview?: () => void;
   showEmail?: boolean;
   menuAlign?: "left" | "right";
 };
@@ -21,6 +29,9 @@ export const ProfileMenu = ({
   firstName,
   lastName,
   isAdmin = false,
+  isRealAdmin = false,
+  isPreviewingAsUser = false,
+  onTogglePreview,
   showEmail = true,
   menuAlign = "left",
 }: Props) => {
@@ -116,6 +127,23 @@ export const ProfileMenu = ({
               <FontAwesomeIcon icon={faUserShield} fixedWidth />
               Admin
             </Link>
+          )}
+
+          {isRealAdmin && onTogglePreview && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onTogglePreview();
+                setIsOpen(false);
+              }}
+              className="min-h-11 w-full flex items-center gap-2 px-3 text-sm text-left text-text-light dark:text-text-dark
+                hover:bg-gray-50 dark:hover:bg-gray-800
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+            >
+              <FontAwesomeIcon icon={isPreviewingAsUser ? faEyeSlash : faEye} fixedWidth />
+              {isPreviewingAsUser ? "Exit user preview" : "Preview as user"}
+            </button>
           )}
 
           <Link

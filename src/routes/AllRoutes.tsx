@@ -20,7 +20,7 @@ import { AUTH_ROUTES } from "./authRoutes";
 
 const AppShell = () => {
   const authContext = useContext(AuthContext);
-  const { user, userPermission } = authContext;
+  const { user, userPermission, isPreviewingAsUser, setPreviewAsUser } = authContext;
   const { isCollapsed } = useContext(SidebarContext);
   const location = useLocation();
   const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
@@ -33,6 +33,18 @@ const AppShell = () => {
           isAuthRoute ? "" : isCollapsed ? "lg:pl-20" : "lg:pl-64"
         }`}
       >
+        {isPreviewingAsUser && !isAuthRoute && (
+          <div className="bg-primary text-white text-sm px-4 py-2 flex flex-wrap items-center justify-center gap-2 text-center">
+            <span>Previewing the app as a normal user.</span>
+            <button
+              type="button"
+              onClick={() => setPreviewAsUser(false)}
+              className="underline font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
+            >
+              Exit preview
+            </button>
+          </div>
+        )}
         <Routes>
           <Route
             path={"/*"}

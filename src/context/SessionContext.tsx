@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useContext, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { saveToDB, SourceDbReferences } from "../common/utils";
 import AuthContext from "./AuthContext";
 
@@ -29,6 +30,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
 
   const authContext = useContext(AuthContext);
   const { user } = authContext;
+  const queryClient = useQueryClient();
 
   const saveSessionUserData = async (
     data: any,
@@ -48,6 +50,12 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
         },
       };
       await saveToDB(SourceDbReferences.USERDATA, userData);
+      // SourceDataContext caches userdata separately (used by SessionPage's
+      // completedWeeks) — invalidate it so a just-finished/logged workout is
+      // reflected immediately instead of waiting for a full page reload.
+      queryClient.invalidateQueries({
+        queryKey: ["sourceData", SourceDbReferences.USERDATA, user.uid],
+      });
     }
   };
 

@@ -19,18 +19,10 @@ const SimulateSessionPage = () => {
   const { sessionName } = useParams();
   const navigate = useNavigate();
   const sourceDataContext = useContext(SourceDataContext);
-  const { sourceData, initialise } = sourceDataContext as any;
+  const { sourceData } = sourceDataContext as any;
 
-  const [isContextInitialised, setIsContextInitialised] = useState(false);
   const [simSessionData, setSimSessionData] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
-
-  useEffect(() => {
-    if (!isContextInitialised) {
-      initialise();
-      setIsContextInitialised(true);
-    }
-  }, [isContextInitialised, initialise]);
 
   const sessionExists = !sessionName || Boolean(sourceData?.sessions?.[sessionName]);
 

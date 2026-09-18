@@ -39,6 +39,9 @@ const AuthContext = createContext({
   data: null as any,
   // isEmailVerified: false as boolean,
   userPermission: null as UserPermission | null,
+  isRealAdmin: false,
+  isPreviewingAsUser: false,
+  setPreviewAsUser: (flag: boolean) => {},
   loginWithGoogle: () => {},
   registerWithEmailAndPassword: (email: string, password: string) => {},
   sendPasswordReset: (email: string) => {},
@@ -61,6 +64,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     null
   );
   const [data, setData] = useState<any>(null);
+  const [isPreviewingAsUser, setIsPreviewingAsUser] = useState(false);
 
   useEffect(() => {
     const app = initializeApp({
@@ -87,6 +91,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         // localStorage.removeItem("isLoggedIn");
         setIsLoggedIn(false);
         setUserPermission(null);
+        setIsPreviewingAsUser(false);
       }
       setIsLoading(false);
     });
@@ -290,6 +295,23 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     setUserPermission((prev) => (prev ? { ...prev, ...data } : prev));
   };
 
+  // A generic non-admin preview, not impersonation of a specific account: it
+  // only ever downgrades what the client believes its own role is, never
+  // upgrades it, and Firestore rules check the real auth token regardless —
+  // so this can't grant access, only hide admin-only UI for the real admin.
+  const isRealAdmin = userPermission?.role === "admin";
+  const effectiveUserPermission =
+    isPreviewingAsUser && userPermission
+      ? { ...userPermission, role: "user" }
+      : userPermission;
+
+  const setPreviewAsUser = (flag: boolean) => {
+    if (flag && !isRealAdmin) {
+      return;
+    }
+    setIsPreviewingAsUser(flag);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -299,7 +321,10 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         user: user,
         data: data,
         // isEmailVerified: user?.emailVerified,
-        userPermission: userPermission,
+        userPermission: effectiveUserPermission,
+        isRealAdmin,
+        isPreviewingAsUser,
+        setPreviewAsUser,
         loginWithGoogle: loginWithGoogle,
         loginWithEmailAndPassword: loginWithEmailAndPassword,
         registerWithEmailAndPassword: registerWithEmailAndPassword,

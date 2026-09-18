@@ -72,10 +72,6 @@ export const UserListing = () => {
   useEffect(() => {
     if (!isInitialised) {
       fetchUsers();
-      // AdminPage is a separate route from /manage, so sourceData.plans
-      // (needed here to resolve a granted plan id to its display name) may
-      // not have been loaded yet — ensure it has been.
-      sourceDataContext.initialise();
       setIsInitialised(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

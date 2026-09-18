@@ -1,5 +1,5 @@
 
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
@@ -11,6 +11,7 @@ import { SessionProgress } from "./others/SessionProgress";
 import { isTrainSessionPath } from "../routes/trainRoutes";
 import { Button } from "@dyordsabuzo/ui-components";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
+import { playApplauseSound, speak } from "../common/utils";
 
 type Props = {
   currentSuperset?: any;
@@ -41,6 +42,16 @@ export const SummaryPage = ({
   const location = useLocation();
   const isSessionRoute = isTrainSessionPath(location.pathname);
   const [moodAfter, setMoodAfter] = useState<MoodValue>({});
+  const hasAnnouncedCompletion = useRef(false);
+
+  useEffect(() => {
+    // Guards against React StrictMode's dev-only double-invoke of mount
+    // effects, which would otherwise announce completion twice.
+    if (sessionComplete && !hasAnnouncedCompletion.current) {
+      hasAnnouncedCompletion.current = true;
+      speak("WORKOUT COMPLETE", playApplauseSound);
+    }
+  }, [sessionComplete]);
 
   const handleMoodAfterChange = (value: MoodValue) => {
     setMoodAfter(value);
@@ -140,7 +151,7 @@ export const SummaryPage = ({
                 : "Start workout"
           }
           onClick={handleButtonClick}
-          className="min-h-11 w-full"
+          className="min-h-11 w-full uppercase py-4 text-xl"
         />
       </div>
     </WrapperPage>

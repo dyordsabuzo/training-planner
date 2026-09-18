@@ -2,7 +2,8 @@
 import { ConfirmDeleteButton } from "../../forms/ConfirmDeleteButton";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import { useNavigate } from "react-router";
-import { faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCircleXmark, faCompress } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SessionContext from "../../context/SessionContext";
 import WrapperPage from "../WrapperPage";
 import { SummaryPage } from "../SummaryPage";
@@ -11,6 +12,12 @@ import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
 import { Button } from "@dyordsabuzo/ui-components";
+import {
+  isMobileViewport,
+  lockPortraitOrientation,
+  resetPageZoom,
+  unlockPortraitOrientation,
+} from "../../common/utils";
 
 type State = {
   exerciseCounter: number;
@@ -140,6 +147,15 @@ export const ExercisePage = () => {
   };
 
   useEffect(() => {
+    if (isMobileViewport()) {
+      lockPortraitOrientation();
+      return () => unlockPortraitOrientation();
+    }
+
+    return () => {};
+  }, []);
+
+  useEffect(() => {
     if (supersetData && Object.keys(supersetData).length) {
       const exerciseLength = supersetData.exercises.length;
       const exercise =
@@ -224,6 +240,17 @@ export const ExercisePage = () => {
       className="max-w-[26rem] sm:max-w-2xl lg:max-w-6xl"
       outerClassName="pb-8 px-2"
     >
+      <button
+        type="button"
+        onClick={resetPageZoom}
+        aria-label="Fit page to screen"
+        title="Fit page to screen"
+        className="lg:hidden fixed bottom-24 right-4 z-30 w-12 h-12 flex items-center justify-center
+          rounded-full bg-primary dark:bg-primary-400 text-white shadow-lg
+          active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <FontAwesomeIcon icon={faCompress} />
+      </button>
       <div className="lg:flex lg:gap-6 lg:items-start">
         <div className="flex-1 flex flex-col gap-2">
           <div
@@ -231,21 +258,21 @@ export const ExercisePage = () => {
               flex flex-col
               gap-4 shadow-md
               rounded-lg mx-2 mt-8 lg:mx-0
-              bg-primary
+              bg-primary dark:bg-primary-400
               relative"
           >
-            <div className="flex flex-col pt-4 pl-4">
-              <span className="text-white/80 text-xs font-semibold uppercase tracking-wide">
+            <div className="flex flex-col gap-[0.2px] pt-6 pl-4 pr-4">
+              <span className="text-white/80 text-sm font-semibold uppercase tracking-wide">
                 {[sessionData.session, sessionData.week]
                   .filter((s: string) => typeof s === "string" && s.trim() !== "")
                   .join(" · ")}
               </span>
-              <span className="text-white text-lg font-bold">
+              <span className="text-white text-2xl font-bold uppercase">
                 {supersetData.name}
               </span>
               {typeof sessionData.annotation === "string" &&
                 sessionData.annotation.trim() !== "" && (
-                  <span className="text-white/80 text-xs">
+                  <span className="text-white/80 text-sm">
                     {sessionData.annotation}
                   </span>
                 )}
@@ -253,7 +280,7 @@ export const ExercisePage = () => {
             <div className="w-full flex-1 flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
               <div
                 className="self-end flex items-center gap-2 text-white text-sm font-semibold
-                  bg-primary rounded-l-full mt-3 py-2 pl-5 pr-4"
+                  bg-primary dark:bg-primary-400 rounded-l-full mt-3 py-2 pl-5 pr-4"
                 aria-live="polite"
               >
                 <span>Set</span>

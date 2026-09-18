@@ -1,5 +1,5 @@
 import WrapperPage from "./WrapperPage";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
@@ -95,16 +95,6 @@ export const Home = () => {
   const { users, fetchUsers } = userManagementContext;
   const { role, plans: grantedPlans = [] } = userPermission || {};
   const navigate = useNavigate();
-
-  const [isDataInitialised, setIsDataInitialised] = useState(false);
-
-  useEffect(() => {
-    if (user && !isDataInitialised) {
-      sourceDataContext.initialise();
-      setIsDataInitialised(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isDataInitialised]);
 
   // `role` resolves asynchronously after `user` (userPermission is a
   // separate Firestore fetch) — keying this on `role`/`users` directly,

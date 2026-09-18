@@ -48,17 +48,12 @@ const SessionPage = () => {
   const { sessionId } = useParams();
 
   const [sessionData, setSessionData] = useState<any>({});
-  const [isContextInitialised, setIsContextInitialised] = useState(false);
   const [moodBefore, setMoodBefore] = useState<MoodValue>({});
 
   useEffect(() => {
-    if (!isContextInitialised) {
-      sessionContext.setIsSessionOn(true);
-      sourceDataContext.initialise();
-      setIsContextInitialised(true);
-    }
-    return () => {};
-  }, [isContextInitialised, sessionContext, sourceDataContext]);
+    sessionContext.setIsSessionOn(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A session URL only makes sense while its workout is active in memory —
   // e.g. after a hard refresh there's nothing to resume, so bounce back to setup.

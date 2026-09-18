@@ -12,7 +12,8 @@ export const WatchVideo = ({ videoLink }: Props) => {
         className="no-underline text-white bg-primary hover:bg-primary-700 font-medium
                     rounded-md text-sm px-5 min-h-11 py-2
                     flex items-center gap-2
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+                    dark:bg-primary-400"
         target="_blank"
         rel="noreferrer"
         href={videoLink}

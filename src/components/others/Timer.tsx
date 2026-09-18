@@ -1,11 +1,21 @@
+import { useEffect } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 
 type RenderProps = {
   label?: string;
   remainingTime: number;
+  onTick?: (remainingTime: number) => void;
 };
 
-const RenderTime = ({ label = "RESTING", remainingTime = 60 }: RenderProps) => {
+const RenderTime = ({
+  label = "RESTING",
+  remainingTime = 60,
+  onTick,
+}: RenderProps) => {
+  useEffect(() => {
+    onTick?.(remainingTime);
+  }, [remainingTime]);
+
   const minutes = Math.floor((remainingTime % 3600) / 60);
   const seconds = remainingTime % 60;
 
@@ -34,6 +44,7 @@ type MainProps = {
   size?: number;
   strokeWidth?: number;
   setCountdownComplete: (flag: boolean) => void;
+  onTick?: (remainingTime: number) => void;
 };
 
 export const Timer = ({
@@ -42,6 +53,7 @@ export const Timer = ({
   label,
   size = 300,
   strokeWidth = 16,
+  onTick,
 }: MainProps) => {
   return (
     <CountdownCircleTimer
@@ -57,7 +69,7 @@ export const Timer = ({
       }}
     >
       {({ remainingTime }) => (
-        <RenderTime remainingTime={remainingTime} label={label} />
+        <RenderTime remainingTime={remainingTime} label={label} onTick={onTick} />
       )}
     </CountdownCircleTimer>
   );

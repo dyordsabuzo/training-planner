@@ -25,3 +25,18 @@ code {
     display: none;
   }
 }
+
+/* iOS Safari has no Screen Orientation Lock API, so on landscape rotation
+   we rotate the whole document back to visually stay portrait instead. */
+@media screen and (orientation: landscape) {
+  html.portrait-lock-fallback {
+    transform: rotate(-90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    overflow-x: hidden;
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}

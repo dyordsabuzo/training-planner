@@ -1,5 +1,5 @@
 import {ExerciseListing} from "../management/ExerciseListing";
-import React, {useContext, useEffect, useState} from "react";
+import React, {useState} from "react";
 import {useNavigate, useParams} from "react-router";
 import {faTableCellsLarge, faTableList} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
@@ -9,7 +9,6 @@ import {PlanListing} from "../management/PlanListing";
 import {RelationshipMap} from "../management/RelationshipMap";
 
 import WrapperPage from "./WrapperPage";
-import SourceDataContext from "../context/SourceDataContext";
 import { Tabs } from "@dyordsabuzo/ui-components";
 
 const categories = ["Exercises", "Supersets", "Sessions", "Plans", "Relationships"];
@@ -27,8 +26,6 @@ const ListingPage: React.FC = () => {
     const navigate = useNavigate();
     const activeTab = slugToCategory(tab);
     const [viewMode, setViewMode] = useState<"card" | "table">("card");
-    const [isSourceInitialised, setIsSourceInitialised] = useState(false)
-    const sourceContext = useContext(SourceDataContext)
 
     // The URL is the source of truth for which tab is active (so links,
     // bookmarks, and browser back/forward all work) — switching tabs pushes
@@ -36,15 +33,6 @@ const ListingPage: React.FC = () => {
     const tabClicked = (value: string) => {
         navigate(`/training-planner/manage/${categoryToSlug(value)}`);
     }
-
-    useEffect(() => {
-        if (!isSourceInitialised) {
-            sourceContext.initialise();
-            setIsSourceInitialised(true)
-        }
-        return () => {
-        }
-    }, [isSourceInitialised, sourceContext])
 
     return (
         <WrapperPage className="max-w-4xl">
