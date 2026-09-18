@@ -9,7 +9,7 @@ import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
-import { Input, MultiSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
+import { Button, Input, MultiSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,
@@ -34,9 +34,10 @@ type Props = {
   data: ExerciseData | null;
   type: string;
   closeForm: () => void;
+  onClone?: (data: any) => void;
 };
 
-export const ExerciseForm = ({ data, type, closeForm }: Props) => {
+export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
   const exerciseData: ExerciseData | null = data;
 
   const id = exerciseData?.id ?? "";
@@ -88,6 +89,21 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
     type === "edit" && name
       ? getDirectReferencers(nodeId("exercise", name), graph.edges).length
       : 0;
+
+  const handleClone = () => {
+    onClone?.({
+      name: `${name} (copy)`,
+      videoLink,
+      tags,
+      targetRep,
+      targetSet,
+      rest,
+      supersets,
+      alternatives,
+      targetWeight: 0,
+      isWeightExercise,
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -152,7 +168,10 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
             <DetailField label="Target set" value={targetSet} />
             <DetailField label="Rest (s)" value={rest} />
           </div>
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+            {onClone && (
+              <Button label="Clone" className="text-xs" onClick={handleClone} />
+            )}
             <ConfirmDeleteButton
               onDelete={handleDelete}
               impactMessage={

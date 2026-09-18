@@ -165,9 +165,14 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
 
       {formType && (
         <SupersetForm
+          key={`${formType}-${formData?.id ?? formData?.name ?? "new"}`}
           data={formData}
           entryType={formType}
           closeForm={() => setFormType("")}
+          onClone={(clonedData) => {
+            setFormData(clonedData);
+            setFormType("add");
+          }}
         />
       )}
     </BaseListing>

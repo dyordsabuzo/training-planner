@@ -157,9 +157,14 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
 
       {formType && (
         <ExerciseForm
+          key={`${formType}-${formData?.id ?? formData?.name ?? "new"}`}
           data={formData}
           type={formType}
           closeForm={() => setFormType("")}
+          onClone={(clonedData) => {
+            setFormData(clonedData);
+            setFormType("add");
+          }}
         />
       )}
     </BaseListing>

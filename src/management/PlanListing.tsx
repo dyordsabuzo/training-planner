@@ -218,9 +218,14 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
 
       {formType && (
         <PlanForm
+          key={`${formType}-${formData?.id ?? formData?.name ?? "new"}`}
           data={formData}
           type={formType}
           closeForm={() => setFormType("")}
+          onClone={(clonedData) => {
+            setFormData(clonedData);
+            setFormType("add");
+          }}
         />
       )}
 

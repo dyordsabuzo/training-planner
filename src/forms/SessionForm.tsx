@@ -29,9 +29,10 @@ type Props = {
   data: FormData | null;
   type: string;
   closeForm: () => void;
+  onClone?: (data: any) => void;
 };
 
-export const SessionForm = ({ data, type, closeForm }: Props) => {
+export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
   const formData = data;
   const navigate = useNavigate();
 
@@ -66,6 +67,14 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     type === "edit" && name
       ? getDirectReferencers(nodeId("session", name), graph.edges).length
       : 0;
+
+  const handleClone = () => {
+    onClone?.({
+      name: `${name} (copy)`,
+      tags,
+      supersets,
+    });
+  };
 
   const handleSimulate = () => {
     closeForm();
@@ -115,14 +124,19 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           <DetailField label="Supersets" tags={supersets} />
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <Button label="Simulate session" className="text-xs" onClick={handleSimulate} />
-            <ConfirmDeleteButton
-              onDelete={handleDelete}
-              impactMessage={
-                usageCount > 0
-                  ? `This session is used by ${usageCount} plan${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
-                  : undefined
-              }
-            />
+            <div className="flex gap-2">
+              {onClone && (
+                <Button label="Clone" className="text-xs" onClick={handleClone} />
+              )}
+              <ConfirmDeleteButton
+                onDelete={handleDelete}
+                impactMessage={
+                  usageCount > 0
+                    ? `This session is used by ${usageCount} plan${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
+                    : undefined
+                }
+              />
+            </div>
           </div>
         </div>
       ) : (

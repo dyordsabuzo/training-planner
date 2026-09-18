@@ -235,6 +235,24 @@ export const ExercisePage = () => {
       ? `Exercise ${(exerciseState.exerciseCounter % exerciseLength) + 1} of ${exerciseLength}`
       : undefined;
 
+  // Swaps the exercise at the current slot for the chosen alternative. It
+  // writes into supersetData.exercises (rather than just local component
+  // state), so the substitution sticks for every remaining set of this
+  // superset, not just the set in progress.
+  const handleSelectAlternative = (altExercise: any) => {
+    const index = exerciseState.exerciseCounter % exerciseLength;
+    const newExercises = supersetData.exercises.map((item: any, i: number) =>
+      i === index
+        ? { exercise: altExercise, targetWeight: altExercise.targetWeight || 0 }
+        : item
+    );
+
+    setSupersetData({
+      ...supersetData,
+      exercises: newExercises,
+    });
+  };
+
   return (
     <WrapperPage
       className="max-w-[26rem] sm:max-w-2xl lg:max-w-6xl"
@@ -324,6 +342,8 @@ export const ExercisePage = () => {
                   exerciseLabel={exerciseLabel}
                   transitionKey={`${exerciseState.supersetCounter}-${exerciseState.exerciseCounter}`}
                   videoLink={exerciseData.exercise?.videoLink}
+                  alternatives={exerciseData.exercise?.alternatives}
+                  onSelectAlternative={handleSelectAlternative}
                   completeExercise={handleCompleteExercise}
                   updateSupersetData={(data: any) => {
                     setSupersetData({

@@ -146,75 +146,46 @@ export const resetPageZoom = () => {
 // short, randomly-timed noise "claps" (dense swell, then a random tail-off)
 // instead of one continuous filtered noise burst, which just sounds like a
 // whoosh/pouring water rather than clapping.
+// Synthesized crowd-applause via the Web Audio API (filtered white noise
+// burst) rather than a bundled audio asset — an approximation, not a
+// recorded clip.
 export const playApplauseSound = () => {
   try {
     const AudioContextClass =
       (window as any).AudioContext || (window as any).webkitAudioContext;
     const audioContext = new AudioContextClass();
-
-    // One shared noise buffer, reused (with per-clap filter/pitch/gain
-    // variation) for every clap, instead of generating fresh random
-    // samples per clap.
-    const noiseBufferDuration = 0.08;
-    const noiseBufferSize = Math.floor(
-      audioContext.sampleRate * noiseBufferDuration
-    );
-    const noiseBuffer = audioContext.createBuffer(
+    const duration = 2.5;
+    const bufferSize = Math.floor(audioContext.sampleRate * duration);
+    const buffer = audioContext.createBuffer(
       1,
-      noiseBufferSize,
+      bufferSize,
       audioContext.sampleRate
     );
-    const noiseData = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < noiseBufferSize; i++) {
-      noiseData[i] = Math.random() * 2 - 1;
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
     }
 
-    const masterGain = audioContext.createGain();
-    masterGain.gain.value = 0.6;
-    masterGain.connect(audioContext.destination);
+    const noise = audioContext.createBufferSource();
+    noise.buffer = buffer;
 
-    const playClap = (time: number, gainValue: number) => {
-      const clapDuration = 0.02 + Math.random() * 0.03;
+    const bandpass = audioContext.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 2500;
+    bandpass.Q.value = 0.5;
 
-      const noise = audioContext.createBufferSource();
-      noise.buffer = noiseBuffer;
-      noise.playbackRate.value = 0.8 + Math.random() * 0.6;
+    const gain = audioContext.createGain();
+    gain.gain.setValueAtTime(0, audioContext.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.3);
+    gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
 
-      const bandpass = audioContext.createBiquadFilter();
-      bandpass.type = "bandpass";
-      bandpass.frequency.value = 1200 + Math.random() * 3000;
-      bandpass.Q.value = 0.7;
+    noise.connect(bandpass);
+    bandpass.connect(gain);
+    gain.connect(audioContext.destination);
+    noise.onended = () => audioContext.close();
 
-      const gain = audioContext.createGain();
-      gain.gain.setValueAtTime(0, time);
-      gain.gain.linearRampToValueAtTime(gainValue, time + 0.003);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + clapDuration);
-
-      noise.connect(bandpass);
-      bandpass.connect(gain);
-      gain.connect(masterGain);
-
-      noise.start(time);
-      noise.stop(time + clapDuration);
-    };
-
-    const duration = 2.8;
-    const startTime = audioContext.currentTime;
-    let t = 0;
-
-    while (t < duration) {
-      const progress = t / duration;
-      const density =
-        progress < 0.15
-          ? progress / 0.15
-          : Math.max(0.08, 1 - (progress - 0.15) / 0.85);
-      const gap = (0.015 + Math.random() * 0.05) / density;
-
-      playClap(startTime + t, 0.25 + Math.random() * 0.35);
-      t += gap;
-    }
-
-    setTimeout(() => audioContext.close(), (duration + 0.5) * 1000);
+    noise.start();
+    noise.stop(audioContext.currentTime + duration);
   } catch {}
 };
 

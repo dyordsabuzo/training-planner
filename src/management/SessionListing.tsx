@@ -154,7 +154,16 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
       )}
 
       {formType && (
-        <SessionForm data={formData} type={formType} closeForm={() => setFormType("")} />
+        <SessionForm
+          key={`${formType}-${formData?.id ?? formData?.name ?? "new"}`}
+          data={formData}
+          type={formType}
+          closeForm={() => setFormType("")}
+          onClone={(clonedData) => {
+            setFormData(clonedData);
+            setFormType("add");
+          }}
+        />
       )}
     </BaseListing>
   );

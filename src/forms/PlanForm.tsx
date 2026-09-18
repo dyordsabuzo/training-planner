@@ -12,7 +12,7 @@ import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toDate } from "../common/planWeek";
 import { toStringArray } from "../common/utils";
-import { Input, ReorderableSelect, IncrementDecrement, DateInput, Modal } from "@dyordsabuzo/ui-components";
+import { Button, Input, ReorderableSelect, IncrementDecrement, DateInput, Modal } from "@dyordsabuzo/ui-components";
 
 type FormData = {
   id?: string;
@@ -29,9 +29,10 @@ type Props = {
   data: FormData | null;
   type: string;
   closeForm: () => void;
+  onClone?: (data: any) => void;
 };
 
-export const PlanForm = ({ data, type, closeForm }: Props) => {
+export const PlanForm = ({ data, type, closeForm, onClone }: Props) => {
   const planData = data;
 
   const id = planData?.id;
@@ -71,6 +72,18 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
       onDelete: () => sourceDataContext.deletePlan(data),
       closeForm,
     });
+
+  const handleClone = () => {
+    onClone?.({
+      name: `${name} (copy)`,
+      numberOfWeeks,
+      startDate: startDate?.toDate(),
+      baselineSet,
+      baselineRep,
+      baselineTime,
+      sessions,
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -128,7 +141,10 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
           <DetailField label="Baseline rep" value={baselineRep} />
           <DetailField label="Baseline time" value={baselineTime} />
           <DetailField label="Selected sessions" tags={sessions} />
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+            {onClone && (
+              <Button label="Clone" className="text-xs" onClick={handleClone} />
+            )}
             <ConfirmDeleteButton onDelete={handleDelete} />
           </div>
         </div>

@@ -132,32 +132,31 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     });
   };
 
+  // Reconciles every superset's `exercises` list against the exercise's own
+  // `supersets` selection (the source of truth users edit) — adding the
+  // exercise where newly selected AND removing it where deselected, unlike
+  // a simple back-link that only ever adds and can never undo a link.
   const linkExerciseWithSupersets = (exercise: any) => {
-    exercise.supersets.forEach(async (s: string) => {
-      if (s) {
-        let superset: any = Object.values(sourceData.supersets ?? {}).find(
-          (sObject: any) => sObject.name === s
-        );
+    const selectedSupersets: string[] = exercise.supersets ?? [];
 
-        // Only back-link an existing superset — never auto-create a new one
-        // for a name that doesn't match anything (e.g. a typo/stray value
-        // typed into the tag field).
-        if (!superset) {
-          return;
-        }
+    Object.values(sourceData.supersets ?? {}).forEach(async (supersetValue: any) => {
+      const exerciseList: string[] = supersetValue?.exercises ?? [];
+      const isSelected = selectedSupersets.includes(supersetValue.name);
+      const isLinked = exerciseList.includes(exercise.name);
 
-        const exerciseList: string[] = superset?.exercises ?? [];
-        if (!exerciseList.includes(exercise.name)) {
-          exerciseList.push(exercise.name);
-        }
-        superset = {
-          ...superset,
-          exercises: exerciseList,
-        };
-
-        const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
-        updateSourceData(SourceDbReferences.SUPERSETS, data);
+      if (isSelected === isLinked) {
+        return;
       }
+
+      const superset = {
+        ...supersetValue,
+        exercises: isSelected
+          ? [...exerciseList, exercise.name]
+          : exerciseList.filter((e: string) => e !== exercise.name),
+      };
+
+      const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+      updateSourceData(SourceDbReferences.SUPERSETS, data);
     });
   };
 

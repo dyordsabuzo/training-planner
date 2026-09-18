@@ -63,10 +63,37 @@ const Navigation = () => {
 
   const [isMobileNavRevealed, setIsMobileNavRevealed] = useState(false);
   const dragStartY = useRef<number | null>(null);
+  const chevronRef = useRef<HTMLButtonElement | null>(null);
+  const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIsMobileNavRevealed(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobileNavRevealed) {
+      return;
+    }
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        chevronRef.current?.contains(target) ||
+        mobileNavRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsMobileNavRevealed(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isMobileNavRevealed]);
 
   const DRAG_THRESHOLD = 15;
 
@@ -185,27 +212,31 @@ const Navigation = () => {
         {isSessionRoute && !isAuthRoute && (
           <div className="flex justify-center">
             <button
+              ref={chevronRef}
               type="button"
               onClick={() => setIsMobileNavRevealed((revealed) => !revealed)}
               onTouchStart={handleHandleTouchStart}
               onTouchEnd={handleHandleTouchEnd}
               aria-label={isMobileNavRevealed ? "Hide menu" : "Show menu"}
               aria-expanded={isMobileNavRevealed}
-              className="w-16 h-8 flex items-center justify-center rounded-t-full
+              className={`w-20 h-10 flex items-center justify-center rounded-t-full
                 border border-b-0 border-gray-200 dark:border-gray-700
                 bg-white dark:bg-surface-dark text-secondary dark:text-secondary-200
                 shadow-sm transition-transform duration-150 active:scale-95
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                ${isMobileNavRevealed ? "" : "animate-pulse"}
+                `}
             >
               <FontAwesomeIcon
                 icon={isMobileNavRevealed ? faChevronDown : faChevronUp}
-                className="text-xs transition-transform duration-300"
+                className="text-xl transition-transform duration-300"
               />
             </button>
           </div>
         )}
 
         <div
+          ref={mobileNavRef}
           className={`transition-[max-height] duration-300 ease-in-out
             ${isAuthRoute || (isSessionRoute && !isMobileNavRevealed) ? "max-h-0 overflow-hidden" : "max-h-24 overflow-visible"}`}
         >
