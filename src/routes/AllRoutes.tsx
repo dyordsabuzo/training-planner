@@ -6,6 +6,7 @@ import AdminPage from "../pages/AdminPage";
 import ProfilePage from "../pages/ProfilePage";
 import SessionPage from "../pages/SessionPage";
 import SimulateSessionPage from "../pages/SimulateSessionPage";
+import SharedSessionPage from "../pages/SharedSessionPage";
 import { Login } from "../pages/auth/Login";
 import { ForgotPassword } from "../pages/auth/ForgotPassword";
 import { PasswordReset } from "../pages/auth/PasswordReset";
@@ -121,6 +122,11 @@ const AppShell = () => {
           <Route
             path={"/training-planner/train/:sessionId"}
             element={user ? <SessionPage /> : <Navigate to="/login" />}
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/share/:sessionId"}
+            element={<SharedSessionPage />}
             errorElement={<ErrorPage />}
           />
           <Route

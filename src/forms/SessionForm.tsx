@@ -11,18 +11,20 @@ import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
-import { Button, Input, ReorderableSelect, TagInput, Modal } from "@dyordsabuzo/ui-components";
+import { Button, ButtonSelection, Input, ReorderableSelect, TagInput, Modal } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,
   nodeId,
 } from "../management/buildRelationshipGraph";
+import { resolveSessionSupersets } from "../pages/resolveSessionSupersets";
 
 type FormData = {
   id?: string;
   name?: string;
   tags?: string[];
   supersets?: string[];
+  isShareable?: boolean;
 };
 
 type Props = {
@@ -43,6 +45,8 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
   const [supersets, setSupersets] = useState<string[]>(
     toStringArray(formData?.supersets)
   );
+  const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -52,6 +56,7 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
     setNameError(undefined);
     setTags(toStringArray(formData?.tags));
     setSupersets(toStringArray(formData?.supersets));
+    setIsShareable(formData?.isShareable ?? false);
   };
 
   const { isEditing, setIsEditing, headerAction, handleCancel, handleDelete } =
@@ -81,6 +86,18 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
     navigate(`/training-planner/manage/simulate/${encodeURIComponent(name)}`);
   };
 
+  const shareUrl = id
+    ? `${window.location.origin}/training-planner/share/${id}`
+    : "";
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {}
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -90,11 +107,21 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
     }
     setNameError(undefined);
 
+    // The shared link reads this snapshot directly (unauthenticated visitors
+    // can't query the supersets/exercises collections), so it's regenerated
+    // from the form's own selections on every save while shareable is on —
+    // not read back from sourceData, which may not reflect this unsaved edit.
+    const sharedSnapshot = isShareable
+      ? resolveSessionSupersets(sourceData, supersets)
+      : null;
+
     if (type === "add") {
       sourceDataContext.addSession({
         name,
         tags,
         supersets,
+        isShareable,
+        sharedSnapshot,
       });
       closeForm();
     }
@@ -105,6 +132,8 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
         name,
         tags,
         supersets,
+        isShareable,
+        sharedSnapshot,
       });
       setIsEditing(false);
     }
@@ -122,6 +151,27 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
           <DetailField label="Session name" value={name} />
           <DetailField label="Tags" tags={tags} />
           <DetailField label="Supersets" tags={supersets} />
+          <DetailField label="Shareable" value={isShareable ? "Yes" : "No"} />
+          {isShareable && shareUrl && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
+                Shareable link
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm text-text-light dark:text-text-dark">
+                  {shareUrl}
+                </span>
+                <Button
+                  label={linkCopied ? "Copied!" : "Copy"}
+                  className="text-xs shrink-0"
+                  onClick={handleCopyLink}
+                />
+              </div>
+              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                Anyone with this link can simulate this session without signing in.
+              </span>
+            </div>
+          )}
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <Button label="Simulate session" className="text-xs" onClick={handleSimulate} />
             <div className="flex gap-2">
@@ -162,6 +212,14 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
             onChange={setSupersets}
             placeholder="Select a superset to add"
             emptyMessage="No supersets added yet"
+          />
+          <ButtonSelection
+            label="Shareable? (anyone with the link can simulate it without signing in)"
+            options={["Yes", "No"]}
+            selection={isShareable ? "Yes" : "No"}
+            onSelect={(value: string) => {
+              setIsShareable(value === "Yes");
+            }}
           />
 
           <FormButtons onCancel={handleCancel} onDelete={type === "edit" ? handleDelete : undefined} />

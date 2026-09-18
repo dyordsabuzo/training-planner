@@ -28,7 +28,7 @@ const SimulateSessionPage = () => {
 
   useEffect(() => {
     if (sourceData?.sessions && sessionName && sourceData.sessions[sessionName] && !simSessionData) {
-      const supersets = resolveSessionSupersets(sourceData, sessionName, {
+      const supersets = resolveSessionSupersets(sourceData, sourceData.sessions[sessionName].supersets, {
         targetSet: 3,
       });
       setSimSessionData({

@@ -112,7 +112,7 @@ const SessionPage = () => {
 
   const selectSession = (session: string) => {
     const { targetRep, targetSet, annotation } = sessionData;
-    const supersets = resolveSessionSupersets(sourceData, session, {
+    const supersets = resolveSessionSupersets(sourceData, sourceData.sessions[session].supersets, {
       targetRep,
       targetSet,
       annotation,

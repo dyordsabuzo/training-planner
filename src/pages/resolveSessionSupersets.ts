@@ -1,17 +1,20 @@
 // Resolves a session's superset names (and each superset's exercise names)
 // against sourceData into the enriched, runnable shape ExercisePage expects.
-// Shared by the real training flow (SessionPage.selectSession) and the
-// Manage > Sessions "simulate" flow (SimulateSessionPage), which has no
-// plan/week seed values to carry over.
+// Shared by the real training flow (SessionPage.selectSession), the
+// Manage > Sessions "simulate" flow (SimulateSessionPage, no plan/week seed
+// values to carry over), and shareable-link snapshot generation (SessionForm,
+// where the session being saved may not exist in sourceData yet/as-is).
+// Takes the superset name list directly rather than looking it up via
+// sourceData.sessions[session], since the caller may be resolving against
+// in-progress form state that hasn't been persisted yet.
 export const resolveSessionSupersets = (
   sourceData: any,
-  session: string,
+  supersetNames: string[],
   seed: { targetRep?: any; targetSet?: any; annotation?: any } = {}
 ) => {
   let supersets = {};
-  const sessionSupersets = sourceData.sessions[session].supersets;
 
-  sessionSupersets.forEach((s: string) => {
+  supersetNames.forEach((s: string) => {
     let { targetRep, targetSet, annotation } = seed;
     let { sessions, rest, tags, ...superset } = sourceData.supersets[s];
     let exercises = superset.exercises
