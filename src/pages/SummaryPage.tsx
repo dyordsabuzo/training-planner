@@ -37,7 +37,8 @@ export const SummaryPage = ({
     setIsRunning,
     exitPath,
     useSessionUrl,
-  } = useContext(SessionContext);
+    showBackButton = true,
+  } = useContext(SessionContext) as any;
   const navigate = useNavigate();
   const location = useLocation();
   const isSessionRoute = isTrainSessionPath(location.pathname);
@@ -87,7 +88,7 @@ export const SummaryPage = ({
       outerClassName={isSessionRoute ? "pb-8 px-2" : "pb-20 px-2"}
     >
       <div className="w-full flex flex-col gap-4 pt-8 text-text-light dark:text-text-dark">
-        {!currentSuperset && (
+        {!currentSuperset && showBackButton && (
           <button
             type="button"
             className="min-h-11 self-start flex items-center gap-2 text-sm text-primary hover:text-primary-700 font-bold

@@ -42,7 +42,21 @@ const SharedSessionPage = () => {
         ? {
             session: session.name,
             annotation: "Shared workout — nothing is saved",
-            supersets: session.sharedSnapshot,
+            // Firestore doesn't guarantee map-field key order is preserved
+            // across a write/read round trip, so `sharedSnapshot` can come
+            // back with its supersets reordered. `supersets` is saved
+            // alongside it as an array field (order-preserving) holding the
+            // same names in the order set up on the session, so rebuild the
+            // snapshot in that order.
+            supersets: (session.supersets ?? []).reduce(
+              (ordered: any, name: string) => {
+                if (session.sharedSnapshot[name]) {
+                  ordered[name] = session.sharedSnapshot[name];
+                }
+                return ordered;
+              },
+              {}
+            ),
           }
         : null,
     [isShareable, session]
@@ -55,6 +69,7 @@ const SharedSessionPage = () => {
       isSessionOn: false,
       exitPath: HOME_PATH,
       useSessionUrl: false,
+      showBackButton: false,
       setIsSessionOn: () => {},
       setIsRunning,
       initialiseSession: () => setIsRunning(false),
