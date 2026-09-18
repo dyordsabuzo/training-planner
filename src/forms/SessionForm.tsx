@@ -11,7 +11,7 @@ import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
 import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
-import { Button, ButtonSelection, Input, ReorderableSelect, TagInput, Modal } from "@dyordsabuzo/ui-components";
+import { Button, Input, ReorderableSelect, TagInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
 import {
   buildRelationshipGraph,
   getDirectReferencers,
@@ -213,14 +213,17 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
             placeholder="Select a superset to add"
             emptyMessage="No supersets added yet"
           />
-          <ButtonSelection
-            label="Shareable? (anyone with the link can simulate it without signing in)"
-            options={["Yes", "No"]}
-            selection={isShareable ? "Yes" : "No"}
-            onSelect={(value: string) => {
-              setIsShareable(value === "Yes");
-            }}
-          />
+          <div className="flex flex-col gap-1">
+            <Toggle
+              label="Shareable?"
+              labelDirection="row"
+              value={isShareable}
+              toggle={setIsShareable}
+            />
+            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+              Anyone with the link can simulate it without signing in.
+            </span>
+          </div>
 
           <FormButtons onCancel={handleCancel} onDelete={type === "edit" ? handleDelete : undefined} />
         </form>
