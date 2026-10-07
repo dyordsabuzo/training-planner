@@ -46,7 +46,7 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
           setCountdownComplete={setCountdownComplete}
           size={260}
           onTick={(remainingTime) => {
-            if (remainingTime > 0 && remainingTime <= WARNING_SECONDS_REMAINING) {
+            if (remainingTime === WARNING_SECONDS_REMAINING) {
               playCountdownWarningSound();
             }
           }}

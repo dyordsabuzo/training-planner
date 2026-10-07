@@ -3,6 +3,7 @@ import { deleteDoc } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDocumentReference } from "../common/firebase";
 import { saveToDB, getFromDB, SourceDbReferences } from "../common/utils";
+import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
 import { getEntitiesNeedingRenameUpdate } from "./renameCascade";
 
@@ -333,13 +334,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         (week) => {
           weeks = {
             ...weeks,
-            [`Week ${week + 1}`]: {
-              weekNumber: week,
-              targetRep: plan.baselineRep,
-              targetSet: plan.baselineSet,
-              targetTime: plan.baselineTime,
-              annotation: "",
-            },
+            [`Week ${week + 1}`]: buildWeek(plan, week),
           };
         }
       );
@@ -361,20 +356,17 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         ).forEach((week) => {
           currentWeeks = {
             ...currentWeeks,
-            [`Week ${week + 1 + currentWeeksLength}`]: {
-              weekNumber: week + currentWeeksLength,
-              targetRep: plan.baselineRep,
-              targetSet: plan.baselineSet,
-              targetTime: plan.baselineTime,
-              annotation: "",
-            },
+            [`Week ${week + 1 + currentWeeksLength}`]: buildWeek(
+              plan,
+              week + currentWeeksLength
+            ),
           };
         });
       }
 
       const data = await saveToDB(SourceDbReferences.PLANS, {
         ...plan,
-        weeks: currentWeeks,
+        weeks: plan.open ? {} : currentWeeks,
       });
       await saveRenamedEntity(SourceDbReferences.PLANS, previous, data);
     },

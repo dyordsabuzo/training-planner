@@ -56,5 +56,26 @@ export const getEntitiesNeedingRenameUpdate = (
     });
   });
 
+  // Session groups hold exercise names inside an object array, so they need
+  // their own pass; the plain field rules above can't reach them.
+  if (type === SourceDbReferences.EXERCISES) {
+    Object.values(sourceData?.[SourceDbReferences.SESSIONS] ?? {}).forEach((session: any) => {
+      const groups: any[] = session?.groups ?? [];
+      if (!groups.some((g) => (g.exercises ?? []).includes(oldName))) {
+        return;
+      }
+      updates.push({
+        collection: SourceDbReferences.SESSIONS,
+        entity: {
+          ...session,
+          groups: groups.map((g) => ({
+            ...g,
+            exercises: (g.exercises ?? []).map((n: string) => (n === oldName ? newName : n)),
+          })),
+        },
+      });
+    });
+  }
+
   return updates;
 };

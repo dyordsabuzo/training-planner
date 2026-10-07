@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { ExerciseSuperset } from "../../types/Exercise";
+import { unitId } from "../resolveSessionSupersets";
 
 type Props = {
   supersets: any[];
@@ -23,7 +24,7 @@ export const SessionProgress = ({
         );
 
         return (
-          <div key={superset.name} className="flex gap-3">
+          <div key={unitId(superset)} className="flex gap-3">
             <div className="flex flex-col items-center">
               <div
                 className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center

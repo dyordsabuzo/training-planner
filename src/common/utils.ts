@@ -66,13 +66,37 @@ export const unlockPortraitOrientation = () => {
   document.documentElement.classList.remove(PORTRAIT_LOCK_FALLBACK_CLASS);
 };
 
+// Countdown beep and applause both reuse a single AudioContext instead of
+// creating (and closing) a fresh one per call. Mobile browsers (notably iOS
+// Safari) start a new AudioContext "suspended" unless it's created/resumed
+// synchronously inside a user-gesture handler, so a context created later
+// from a timer tick plays silently — call unlockAudioContext() from a tap
+// handler (see App.tsx) to resume it while a gesture is still on the stack.
+let sharedAudioContext: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext => {
+  const AudioContextClass =
+    (window as any).AudioContext || (window as any).webkitAudioContext;
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AudioContextClass();
+  }
+  return sharedAudioContext as AudioContext;
+};
+
+export const unlockAudioContext = () => {
+  try {
+    const audioContext = getAudioContext();
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+  } catch {}
+};
+
 // Short beep via Web Audio API rather than a bundled audio asset. Silently
 // no-ops if AudioContext is unavailable or blocked (e.g. no user gesture yet).
 export const playCountdownWarningSound = () => {
   try {
-    const AudioContextClass =
-      (window as any).AudioContext || (window as any).webkitAudioContext;
-    const audioContext = new AudioContextClass();
+    const audioContext = getAudioContext();
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
@@ -82,7 +106,6 @@ export const playCountdownWarningSound = () => {
 
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
-    oscillator.onended = () => audioContext.close();
 
     oscillator.start();
     oscillator.stop(audioContext.currentTime + 0.2);
@@ -151,9 +174,7 @@ export const resetPageZoom = () => {
 // recorded clip.
 export const playApplauseSound = () => {
   try {
-    const AudioContextClass =
-      (window as any).AudioContext || (window as any).webkitAudioContext;
-    const audioContext = new AudioContextClass();
+    const audioContext = getAudioContext();
     const duration = 2.5;
     const bufferSize = Math.floor(audioContext.sampleRate * duration);
     const buffer = audioContext.createBuffer(
@@ -182,7 +203,6 @@ export const playApplauseSound = () => {
     noise.connect(bandpass);
     bandpass.connect(gain);
     gain.connect(audioContext.destination);
-    noise.onended = () => audioContext.close();
 
     noise.start();
     noise.stop(audioContext.currentTime + duration);

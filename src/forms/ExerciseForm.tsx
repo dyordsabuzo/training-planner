@@ -1,20 +1,12 @@
-import React, { useContext, useMemo, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
 
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
 
-import { DetailField } from "./DetailField";
-import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
-import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
-import { Button, Input, MultiSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
-import {
-  buildRelationshipGraph,
-  getDirectReferencers,
-  nodeId,
-} from "../management/buildRelationshipGraph";
+import { Input, MultiSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
 
 type ExerciseData = {
   id?: string;
@@ -34,10 +26,9 @@ type Props = {
   data: ExerciseData | null;
   type: string;
   closeForm: () => void;
-  onClone?: (data: any) => void;
 };
 
-export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
+export const ExerciseForm = ({ data, type, closeForm }: Props) => {
   const exerciseData: ExerciseData | null = data;
 
   const id = exerciseData?.id ?? "";
@@ -62,48 +53,7 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
-
-  const resetFields = () => {
-    setName(exerciseData?.name ?? "");
-    setNameError(undefined);
-    setVideoLink(exerciseData?.videoLink ?? "");
-    setIsWeightExercise(exerciseData?.isWeightExercise ?? true);
-    setTags(toStringArray(exerciseData?.tags));
-    setTargetRep(exerciseData?.targetRep ?? "");
-    setTargetSet(exerciseData?.targetSet ?? "");
-    setRest(exerciseData?.rest ?? "");
-    setSupersets(toStringArray(exerciseData?.supersets));
-    setAlternatives(toStringArray(exerciseData?.alternatives));
-  };
-
-  const { isEditing, setIsEditing, headerAction, handleCancel, handleDelete } =
-    useEntityForm({
-      type,
-      resetFields,
-      onDelete: () => sourceDataContext.deleteExercise(data),
-      closeForm,
-    });
-
-  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
-  const usageCount =
-    type === "edit" && name
-      ? getDirectReferencers(nodeId("exercise", name), graph.edges).length
-      : 0;
-
-  const handleClone = () => {
-    onClone?.({
-      name: `${name} (copy)`,
-      videoLink,
-      tags,
-      targetRep,
-      targetSet,
-      rest,
-      supersets,
-      alternatives,
-      targetWeight: 0,
-      isWeightExercise,
-    });
-  };
+  const tagFieldRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -114,11 +64,16 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
     }
     setNameError(undefined);
 
+    // TagInput only commits a tag on Enter/Tab/comma, so text still typed in
+    // its box would be lost on Save. Pick it up here.
+    const pendingTag = tagFieldRef.current?.querySelector("input")?.value.trim() ?? "";
+    const finalTags = pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags;
+
     if (type === "add") {
       sourceDataContext.addExercise({
         name,
         videoLink,
-        tags,
+        tags: finalTags,
         targetRep,
         targetSet,
         rest,
@@ -135,7 +90,7 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
         id,
         name,
         videoLink,
-        tags,
+        tags: finalTags,
         targetRep,
         targetSet,
         rest,
@@ -144,7 +99,7 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
         targetWeight: 0,
         isWeightExercise,
       });
-      setIsEditing(false);
+      closeForm();
     }
   };
 
@@ -153,36 +108,7 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
       title={type === "add" ? "Add exercise" : "Exercise"}
       isOpen={true}
       onClose={closeForm}
-      headerAction={headerAction}
     >
-      {!isEditing ? (
-        <div className="flex flex-col gap-4">
-          <DetailField label="Exercise name" value={name} />
-          <DetailField label="Video link" value={videoLink} isLink />
-          <DetailField label="Weight exercise" value={isWeightExercise ? "Yes" : "No"} />
-          <DetailField label="Supersets" tags={supersets} />
-          <DetailField label="Tags" tags={tags} />
-          <DetailField label="Alternatives" tags={alternatives} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <DetailField label="Target rep" value={targetRep} />
-            <DetailField label="Target set" value={targetSet} />
-            <DetailField label="Rest (s)" value={rest} />
-          </div>
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
-            {onClone && (
-              <Button label="Clone" className="text-xs" onClick={handleClone} />
-            )}
-            <ConfirmDeleteButton
-              onDelete={handleDelete}
-              impactMessage={
-                usageCount > 0
-                  ? `This exercise is used by ${usageCount} superset${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-      ) : (
         <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
           <Input
             label={"Exercise Name"}
@@ -206,6 +132,29 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
               setIsWeightExercise(value === "Yes");
             }}
           />
+          <IncrementDecrement
+            label={"Target Rep"}
+            value={Number(targetRep) || 0}
+            nonZero
+            fullWidth
+            updateValue={(v) => setTargetRep(String(v))}
+          />
+          <IncrementDecrement
+            label={"Target Set"}
+            value={Number(targetSet) || 0}
+            nonZero
+            fullWidth
+            updateValue={(v) => setTargetSet(String(v))}
+          />
+          <IncrementDecrement
+            label={"Rest"}
+            value={Number(rest) || 0}
+            unit={"s"}
+            nonZero
+            fullWidth
+            updateValue={(v) => setRest(String(v))}
+          />
+
           <CollapsibleSection label="Advanced settings">
             <MultiSelect
               label={"Supersets"}
@@ -214,7 +163,9 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
               onChange={setSupersets}
               placeholder="Select supersets"
             />
-            <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
+            <div ref={tagFieldRef}>
+              <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
+            </div>
             <MultiSelect
               label={"Alternatives"}
               selected={alternatives}
@@ -224,33 +175,10 @@ export const ExerciseForm = ({ data, type, closeForm, onClone }: Props) => {
               onChange={setAlternatives}
               placeholder="Select alternative exercises"
             />
-            <IncrementDecrement
-              label={"Target Rep"}
-              value={Number(targetRep) || 0}
-              nonZero
-              fullWidth
-              updateValue={(v) => setTargetRep(String(v))}
-            />
-            <IncrementDecrement
-              label={"Target Set"}
-              value={Number(targetSet) || 0}
-              nonZero
-              fullWidth
-              updateValue={(v) => setTargetSet(String(v))}
-            />
-            <IncrementDecrement
-              label={"Rest"}
-              value={Number(rest) || 0}
-              unit={"s"}
-              nonZero
-              fullWidth
-              updateValue={(v) => setRest(String(v))}
-            />
           </CollapsibleSection>
 
-          <FormButtons onCancel={handleCancel} onDelete={type === "edit" ? handleDelete : undefined} />
+          <FormButtons onCancel={closeForm} />
         </form>
-      )}
     </Modal>
   );
 };

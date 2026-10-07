@@ -48,7 +48,7 @@ const SharedSessionPage = () => {
             // alongside it as an array field (order-preserving) holding the
             // same names in the order set up on the session, so rebuild the
             // snapshot in that order.
-            supersets: (session.supersets ?? []).reduce(
+            supersets: (session.sharedOrder ?? session.supersets ?? []).reduce(
               (ordered: any, name: string) => {
                 if (session.sharedSnapshot[name]) {
                   ordered[name] = session.sharedSnapshot[name];
@@ -75,6 +75,9 @@ const SharedSessionPage = () => {
       initialiseSession: () => setIsRunning(false),
       setSessionData: () => {},
       updateUserData: async () => {},
+      saveProgress: async () => {},
+      saveRun: async () => {},
+      deleteRuns: async () => {},
       wrapSession: () => setIsRunning(false),
     }),
     [sharedSessionData, isRunning]

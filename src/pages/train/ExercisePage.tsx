@@ -12,6 +12,7 @@ import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
 import { Button } from "@dyordsabuzo/ui-components";
+import { unitId } from "../resolveSessionSupersets";
 import {
   isMobileViewport,
   lockPortraitOrientation,
@@ -92,7 +93,7 @@ const reducer = (state: State, action: Action) => {
 
 export const ExercisePage = () => {
   const sessionContext = useContext(SessionContext);
-  const { sessionData, updateUserData, exitPath } = sessionContext as any;
+  const { sessionData, saveProgress, exitPath } = sessionContext as any;
   const navigate = useNavigate();
 
   const [exerciseState, dispatch] = useReducer(reducer, initialState);
@@ -104,6 +105,7 @@ export const ExercisePage = () => {
   const [targetWeight, setTargetWeight] = useState<string>("0");
 
   const [targetRep, setTargetRep] = useState<string>("0");
+  const [targetDistance, setTargetDistance] = useState<string>("0");
 
   const completeExercise = () => {
     const targetSet = parseInt(supersetData.targetSet);
@@ -123,11 +125,11 @@ export const ExercisePage = () => {
     completeExercise();
 
     const exercise = exerciseData.exercise.name;
-    const superset = supersetData.name;
+    const superset = unitId(supersetData);
     const actualSuperset = actualSupersetData?.[superset] || {};
     const actualExercise = actualSuperset[exercise] || {};
 
-    setActualSupersetData({
+    const nextActual = {
       ...actualSupersetData,
       [superset]: {
         ...actualSuperset,
@@ -138,12 +140,16 @@ export const ExercisePage = () => {
             // actualWeight,
             // actualTime
             targetRep,
+            ...(supersetData.targetDistance && { targetDistance }),
             targetWeight,
             // targetTime,
           },
         },
       },
-    });
+    };
+    setActualSupersetData(nextActual);
+    // Saved per set so a run interrupted partway keeps what was logged.
+    saveProgress?.(nextActual);
   };
 
   useEffect(() => {
@@ -175,6 +181,7 @@ export const ExercisePage = () => {
     if (superset) {
       superset.exercises = superset.exercises.filter((e: any) => e.exercise);
       setTargetRep(superset.targetRep);
+      setTargetDistance(String(superset.targetDistance ?? "0"));
       setSupersetData(superset);
     }
 
@@ -190,13 +197,13 @@ export const ExercisePage = () => {
 
   const supersetLength = Object.keys(sessionData.supersets).length;
   if (supersetLength > 0 && exerciseState.supersetCounter >= supersetLength) {
+    // The finished run is saved by SummaryPage; this only resets local state.
     if (actualSupersetData) {
-      updateUserData(actualSupersetData);
       setActualSupersetData({});
     }
 
-    const supersetIndex = Object.values(sessionData.supersets).indexOf(
-      supersetData
+    const supersetIndex = Object.values(sessionData.supersets).findIndex(
+      (unit: any) => unitId(unit) === unitId(supersetData)
     );
 
     return (
@@ -205,8 +212,8 @@ export const ExercisePage = () => {
   }
 
   if (exerciseState.supersetComplete) {
-    const supersetIndex = Object.values(sessionData.supersets).indexOf(
-      supersetData
+    const supersetIndex = Object.values(sessionData.supersets).findIndex(
+      (unit: any) => unitId(unit) === unitId(supersetData)
     );
 
     return (
@@ -285,9 +292,10 @@ export const ExercisePage = () => {
                   .filter((s: string) => typeof s === "string" && s.trim() !== "")
                   .join(" · ")}
               </span>
-              <span className="text-white text-2xl font-bold uppercase">
+              <span className="text-white text-xl sm:text-2xl font-bold uppercase line-clamp-2 break-words" title={supersetData.name}>
                 {supersetData.name}
               </span>
+
               {typeof sessionData.annotation === "string" &&
                 sessionData.annotation.trim() !== "" && (
                   <span className="text-white/80 text-sm">
@@ -336,6 +344,8 @@ export const ExercisePage = () => {
                   type={supersetData.type}
                   targetWeight={targetWeight}
                   targetRep={targetRep}
+                  targetDistance={supersetData.targetDistance ? targetDistance : undefined}
+                  leftRight={!!supersetData.leftRight}
                   targetTime={
                     exerciseData.targetTime || supersetData.targetTime || "0"
                   }
@@ -354,6 +364,8 @@ export const ExercisePage = () => {
                       setTargetWeight(String(data.targetWeight));
                     } else if ("targetRep" in data) {
                       setTargetRep(String(data.targetRep));
+                    } else if ("targetDistance" in data) {
+                      setTargetDistance(String(data.targetDistance));
                     }
                   }}
                 />

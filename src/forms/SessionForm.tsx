@@ -1,102 +1,38 @@
-
-
-import React, { useContext, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import React, { useContext, useRef, useState } from "react";
+import { Dayjs } from "dayjs";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
+import { SessionGroupEditor } from "./SessionGroupEditor";
 
-import { DetailField } from "./DetailField";
-import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
-import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
+import { toDate } from "../common/planWeek";
 import { toStringArray } from "../common/utils";
-import { Button, Input, ReorderableSelect, TagInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
-import {
-  buildRelationshipGraph,
-  getDirectReferencers,
-  nodeId,
-} from "../management/buildRelationshipGraph";
-import { resolveSessionSupersets } from "../pages/resolveSessionSupersets";
-
-type FormData = {
-  id?: string;
-  name?: string;
-  tags?: string[];
-  supersets?: string[];
-  isShareable?: boolean;
-};
+import { Button, DateInput, Input, ReorderableSelect, TagInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
+import { SessionGroup, groupKeys, resolveSession } from "../pages/resolveSessionSupersets";
 
 type Props = {
-  data: FormData | null;
+  data: any;
   type: string;
   closeForm: () => void;
-  onClone?: (data: any) => void;
 };
 
-export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
+export const SessionForm = ({ data, type, closeForm }: Props) => {
   const formData = data;
-  const navigate = useNavigate();
 
   const id = formData?.id;
-  const [name, setName] = useState(formData?.name ?? "");
-  const [nameError, setNameError] = useState<string>();
-  const [tags, setTags] = useState(toStringArray(formData?.tags));
-  const [supersets, setSupersets] = useState<string[]>(
-    toStringArray(formData?.supersets)
-  );
-  const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
-  const [linkCopied, setLinkCopied] = useState(false);
-
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
 
-  const resetFields = () => {
-    setName(formData?.name ?? "");
-    setNameError(undefined);
-    setTags(toStringArray(formData?.tags));
-    setSupersets(toStringArray(formData?.supersets));
-    setIsShareable(formData?.isShareable ?? false);
-  };
-
-  const { isEditing, setIsEditing, headerAction, handleCancel, handleDelete } =
-    useEntityForm({
-      type,
-      resetFields,
-      onDelete: () => sourceDataContext.deleteSession(data),
-      closeForm,
-    });
-
-  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
-  const usageCount =
-    type === "edit" && name
-      ? getDirectReferencers(nodeId("session", name), graph.edges).length
-      : 0;
-
-  const handleClone = () => {
-    onClone?.({
-      name: `${name} (copy)`,
-      tags,
-      supersets,
-    });
-  };
-
-  const handleSimulate = () => {
-    closeForm();
-    navigate(`/training-planner/manage/simulate/${encodeURIComponent(name)}`);
-  };
-
-  const shareUrl = id
-    ? `${window.location.origin}/training-planner/share/${id}`
-    : "";
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2000);
-    } catch {}
-  };
+  const [name, setName] = useState(formData?.name ?? "");
+  const [nameError, setNameError] = useState<string>();
+  const [tags, setTags] = useState(toStringArray(formData?.tags));
+  const [date, setDate] = useState<Dayjs | null>(toDate(formData?.date));
+  const [supersets, setSupersets] = useState<string[]>(toStringArray(formData?.supersets));
+  const [groups, setGroups] = useState<SessionGroup[]>(formData?.groups ?? []);
+  const [groupsError, setGroupsError] = useState<string>();
+  const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
+  const tagFieldRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -107,35 +43,51 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
     }
     setNameError(undefined);
 
+    const cleanGroups = groups.map((g) => ({ ...g, name: g.name.trim() }));
+    // Groups may share a name; their identity is made unique by groupKeys.
+    const names = [...supersets, ...groupKeys(supersets, cleanGroups)];
+    if (names.length === 0) {
+      setGroupsError("Add at least one superset or exercise group.");
+      return;
+    }
+    if (cleanGroups.some((g) => !g.name || g.exercises.length === 0)) {
+      setGroupsError("Each group needs a name and at least one exercise.");
+      return;
+    }
+    setGroupsError(undefined);
+
+    // TagInput only commits a tag on Enter/Tab/comma, so text still typed in
+    // its box would be lost on Save. Pick it up here.
+    const pendingTag = tagFieldRef.current?.querySelector("input")?.value.trim() ?? "";
+    const finalTags = pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags;
+
     // The shared link reads this snapshot directly (unauthenticated visitors
     // can't query the supersets/exercises collections), so it's regenerated
-    // from the form's own selections on every save while shareable is on —
-    // not read back from sourceData, which may not reflect this unsaved edit.
+    // from the form's own selections on every save while shareable is on.
     const sharedSnapshot = isShareable
-      ? resolveSessionSupersets(sourceData, supersets)
+      ? resolveSession(sourceData, { supersets, groups: cleanGroups })
       : null;
 
+    const session = {
+      name,
+      tags: finalTags,
+      date: date ? date.format("YYYY-MM-DD") : null,
+      supersets,
+      groups: cleanGroups,
+      // Order for the shared link (Firestore doesn't keep map key order).
+      sharedOrder: names,
+      isShareable,
+      sharedSnapshot,
+    };
+
     if (type === "add") {
-      sourceDataContext.addSession({
-        name,
-        tags,
-        supersets,
-        isShareable,
-        sharedSnapshot,
-      });
+      sourceDataContext.addSession(session);
       closeForm();
     }
 
     if (type === "edit") {
-      sourceDataContext.editSession({
-        id,
-        name,
-        tags,
-        supersets,
-        isShareable,
-        sharedSnapshot,
-      });
-      setIsEditing(false);
+      sourceDataContext.editSession({ id, ...session });
+      closeForm();
     }
   };
 
@@ -144,90 +96,61 @@ export const SessionForm = ({ data, type, closeForm, onClone }: Props) => {
       title={type === "add" ? "Add session" : "Session"}
       isOpen={true}
       onClose={closeForm}
-      headerAction={headerAction}
+      size="lg"
     >
-      {!isEditing ? (
-        <div className="flex flex-col gap-4">
-          <DetailField label="Session name" value={name} />
-          <DetailField label="Tags" tags={tags} />
-          <DetailField label="Supersets" tags={supersets} />
-          <DetailField label="Shareable" value={isShareable ? "Yes" : "No"} />
-          {isShareable && shareUrl && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
-                Shareable link
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-sm text-text-light dark:text-text-dark">
-                  {shareUrl}
-                </span>
-                <Button
-                  label={linkCopied ? "Copied!" : "Copy"}
-                  className="text-xs shrink-0"
-                  onClick={handleCopyLink}
-                />
-              </div>
-              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                Anyone with this link can simulate this session without signing in.
-              </span>
-            </div>
-          )}
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <Button label="Simulate session" className="text-xs" onClick={handleSimulate} />
-            <div className="flex gap-2">
-              {onClone && (
-                <Button label="Clone" className="text-xs" onClick={handleClone} />
-              )}
-              <ConfirmDeleteButton
-                onDelete={handleDelete}
-                impactMessage={
-                  usageCount > 0
-                    ? `This session is used by ${usageCount} plan${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
-                    : undefined
-                }
-              />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
-          <Input
-            label={"Session Name"}
-            required
-            value={name}
-            placeholder={"Exercise name"}
-            error={nameError}
-            changeValue={setName}
-          />
-          <TagInput
-            label={"Tags"}
-            list={tags}
-            options={[]}
-            updateList={setTags}
-          />
-          <ReorderableSelect
-            label={"Supersets"}
-            selected={supersets}
-            options={Object.keys(sourceData.supersets ?? {})}
-            onChange={setSupersets}
-            placeholder="Select a superset to add"
-            emptyMessage="No supersets added yet"
-          />
-          <div className="flex flex-col gap-1">
-            <Toggle
-              label="Shareable?"
-              labelDirection="row"
-              value={isShareable}
-              toggle={setIsShareable}
-            />
-            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-              Anyone with the link can simulate it without signing in.
-            </span>
-          </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Input
+          label={"Session name"}
+          required
+          value={name}
+          placeholder={"Session name"}
+          error={nameError}
+          changeValue={setName}
+        />
 
-          <FormButtons onCancel={handleCancel} onDelete={type === "edit" ? handleDelete : undefined} />
-        </form>
-      )}
+        <div className="flex items-end gap-2">
+          <div className="grow">
+            <DateInput
+              label={"Date (optional)"}
+              value={date}
+              placeholder={"Planned date"}
+              changeValue={setDate}
+            />
+          </div>
+          {date && (
+            <Button label="Clear date" decoration="cancel" className="text-xs" onClick={() => setDate(null)} />
+          )}
+        </div>
+
+        <div ref={tagFieldRef}>
+          <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
+        </div>
+
+        <ReorderableSelect
+          label={"Supersets"}
+          selected={supersets}
+          options={Object.keys(sourceData.supersets ?? {})}
+          onChange={setSupersets}
+          placeholder="Select a superset to add"
+          emptyMessage="No supersets added yet"
+        />
+
+        <SessionGroupEditor
+          value={groups}
+          onChange={setGroups}
+          exerciseOptions={Object.keys(sourceData.exercises ?? {})}
+        />
+        {groupsError && <span className="text-sm text-danger">{groupsError}</span>}
+
+        <div className="flex flex-col gap-1">
+          <Toggle label="Shareable?" labelDirection="row" value={isShareable} toggle={setIsShareable} />
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+            Anyone with the link can simulate it without signing in.
+          </span>
+        </div>
+
+        <FormButtons onCancel={closeForm} />
+      </form>
     </Modal>
   );
 };

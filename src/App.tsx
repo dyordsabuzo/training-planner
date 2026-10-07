@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -9,6 +9,7 @@ import { AuthContextProvider } from "./context/AuthContext";
 import { ThemeContextProvider } from "./context/ThemeContext";
 import { SidebarContextProvider } from "./context/SidebarContext";
 import { AllRoutes } from "./routes/AllRoutes";
+import { unlockAudioContext } from "./common/utils";
 
 // Firestore reads aren't free and mutations already write straight into the
 // query cache, so a background refetch-on-focus buys no extra correctness —
@@ -24,6 +25,15 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  useEffect(() => {
+    // Mobile browsers (notably iOS Safari) start a new AudioContext
+    // suspended until it's resumed inside a user-gesture handler — resume it
+    // on the first tap anywhere in the app so later timer-triggered sounds
+    // (rest-timer beep, workout-complete applause) are actually audible.
+    document.addEventListener("pointerdown", unlockAudioContext, { once: true });
+    return () => document.removeEventListener("pointerdown", unlockAudioContext);
+  }, []);
+
   return (
     <div className={`w-full bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen`}>
       <QueryClientProvider client={queryClient}>

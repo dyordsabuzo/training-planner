@@ -8,6 +8,8 @@ import { ManageListHeader } from "./ManageListHeader";
 import BaseListing from "./BaseListing";
 import { Loading } from "../pages/helpers/Loading";
 import { getDisplayName } from "../common/utils";
+import { useLoadMore } from "../common/useLoadMore";
+import { LoadMore } from "./LoadMore";
 import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
 
 const buildColumns = (planNameById: Record<string, string>): DataTableColumn<AppUser>[] => [
@@ -60,6 +62,8 @@ const buildColumns = (planNameById: Record<string, string>): DataTableColumn<App
 // doc, auto-created on first login — see AuthContext.tsx). There's no "add"
 // action: a user must sign up themselves first, since creating a Firebase
 // Auth account from here would require the Admin SDK this app doesn't have.
+const PAGE_SIZE = 20;
+
 export const UserListing = () => {
   const { users, fetchUsers, saveUser, createUser } = useContext(UserManagementContext);
   const sourceDataContext = useContext(SourceDataContext);
@@ -68,6 +72,7 @@ export const UserListing = () => {
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
 
   useEffect(() => {
     if (!isInitialised) {
@@ -112,11 +117,13 @@ export const UserListing = () => {
 
       <DataTable
         columns={columns}
-        rows={entries}
+        rows={entries.slice(0, limit)}
         getRowKey={(u) => u.id}
         onRowClick={setEditingUser}
         emptyMessage={search ? "No users match your search." : "No registered users yet."}
       />
+
+      <LoadMore shown={limit} total={entries.length} onLoadMore={loadMore} onShowAll={showAll} />
 
       {editingUser && (
         <UserForm

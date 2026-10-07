@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsLeftRight, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IncrementDecrement, Button } from "@dyordsabuzo/ui-components";
 import { WatchVideo } from "../../components/others/WatchVideo";
@@ -17,6 +17,10 @@ type Props = {
   type: string;
   targetWeight: string;
   targetRep: string;
+  // Shows a badge above the weight/reps fields.
+  leftRight?: boolean;
+  // Set for distance groups; replaces the reps box with a metres box.
+  targetDistance?: string;
   targetTime?: string;
   exerciseLabel?: string;
   transitionKey?: string | number;
@@ -32,6 +36,8 @@ export const ExerciseDetails = ({
   type,
   targetWeight,
   targetRep,
+  targetDistance,
+  leftRight,
   targetTime = "0",
   exerciseLabel,
   transitionKey,
@@ -210,6 +216,17 @@ export const ExerciseDetails = ({
           )}
         </div>
 
+        {type !== "Time-based" && leftRight && (
+          <div className="flex justify-center px-3 py-3 mx-3 sm:mx-6 border-y border-primary-200 dark:border-primary-700">
+            <span
+              role="note"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-primary bg-primary-50 dark:bg-primary-800/40 text-primary dark:text-primary-200 px-4 py-1.5 text-sm font-bold uppercase tracking-wide"
+            >
+              <FontAwesomeIcon icon={faArrowsLeftRight} />
+              Left &amp; right · each side
+            </span>
+          </div>
+        )}
         {type !== "Time-based" && (
           <div className="grid grid-cols-2 gap-2 px-3 sm:gap-6 sm:px-6">
             <IncrementDecrement
@@ -223,17 +240,31 @@ export const ExerciseDetails = ({
                 updateSupersetData({ targetWeight: v });
               }}
             />
-            <IncrementDecrement
-              label="Reps"
-              labelDirection="col"
-              unit="reps"
-              nonZero
-              fullWidth
-              value={Number(targetRep) || 0}
-              updateValue={(v: number) => {
-                updateSupersetData({ targetRep: v });
-              }}
-            />
+            {targetDistance !== undefined ? (
+              <IncrementDecrement
+                label="Distance"
+                labelDirection="col"
+                unit="m"
+                nonZero
+                fullWidth
+                value={Number(targetDistance) || 0}
+                updateValue={(v: number) => {
+                  updateSupersetData({ targetDistance: v });
+                }}
+              />
+            ) : (
+              <IncrementDecrement
+                label="Reps"
+                labelDirection="col"
+                unit="reps"
+                nonZero
+                fullWidth
+                value={Number(targetRep) || 0}
+                updateValue={(v: number) => {
+                  updateSupersetData({ targetRep: v });
+                }}
+              />
+            )}
           </div>
         )}
         {type === "Time-based" && (

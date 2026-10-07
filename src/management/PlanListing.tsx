@@ -2,13 +2,24 @@ import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { WeekForm } from "../forms/WeekForm";
 import { PlanForm } from "../forms/PlanForm";
-import { sortObject } from "../common/utils";
+import { sortObject, toStringArray } from "../common/utils";
 import { toDate, getCurrentWeekNumber } from "../common/planWeek";
 import { Loading } from "../pages/helpers/Loading";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
+import { SessionStatusIcon } from "../components/others/SessionStatusIcon";
+import { LoadMore } from "./LoadMore";
+import { useLoadMore } from "../common/useLoadMore";
+import { EntityActions, ActionsVariant } from "./EntityActions";
+import { clonePlan } from "./cloneEntity";
 import BaseListing from "./BaseListing";
-import { DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
+import { Badge, DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
+import {
+  formatSessionDate,
+  openPlanDoneSessions,
+  sessionDueStatus,
+  sortSessionsByDate,
+} from "../common/planSessions";
 
 type SelectedWeekData = {
   weekKey: string;
@@ -34,7 +45,7 @@ type PlanRow = {
 
 const columns: DataTableColumn<PlanRow>[] = [
   { key: "name", header: "Plan name", render: (row) => <span className="font-bold">{row.planName}</span> },
-  { key: "weeks", header: "Weeks", render: (row) => row.weekCount },
+  { key: "weeks", header: "Weeks", render: (row) => (row.plan.open ? "—" : row.weekCount) },
   { key: "sessions", header: "Sessions", render: (row) => row.sessionCount },
   {
     key: "startDate",
@@ -43,10 +54,13 @@ const columns: DataTableColumn<PlanRow>[] = [
   },
 ];
 
+const PAGE_SIZE = 6;
+
 export const PlanListing = ({ viewMode = "card" }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
+  const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -59,6 +73,21 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
   }
 
   const plans = sourceData.plans ?? {};
+
+  const renderActions = (plan: any, variant?: ActionsVariant) => (
+    <EntityActions
+      variant={variant}
+      onEdit={() => {
+        setFormData(plan);
+        setFormType("edit");
+      }}
+      onClone={() => {
+        setFormData(clonePlan(plan));
+        setFormType("add");
+      }}
+      onDelete={() => sourceDataContext.deletePlan(plan)}
+    />
+  );
   const entries = Object.entries(plans).filter(([planName]) =>
     planName.toLowerCase().includes(search.toLowerCase())
   );
@@ -80,8 +109,11 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
 
       {viewMode === "table" ? (
         <DataTable
-          columns={columns}
-          rows={entries.map(([planName, value]) => {
+          columns={[
+            ...columns,
+            { key: "actions", header: "Actions", render: (row) => renderActions(row.plan, "menu") },
+          ]}
+          rows={entries.slice(0, limit).map(([planName, value]) => {
             const plan: any = value;
             return {
               planName,
@@ -92,10 +124,6 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
             };
           })}
           getRowKey={(row) => row.planName}
-          onRowClick={(row) => {
-            setFormData(row.plan);
-            setFormType("edit");
-          }}
           emptyMessage={
             search
               ? "No plans match your search."
@@ -115,7 +143,7 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
       )}
 
       <div className="flex flex-col gap-3">
-        {entries.map(([planName, value]) => {
+        {entries.slice(0, limit).map(([planName, value]) => {
           const plan: any = value;
           const weekEntries = Object.entries(sortObject(plan.weeks ?? {}));
           const startDate = toDate(plan.startDate);
@@ -130,27 +158,28 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
           return (
             <div
               key={planName}
-              role="button"
-              tabIndex={0}
               onClick={openPlan}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  openPlan();
-                }
-              }}
               className="flex flex-col gap-4 border border-primary-200 dark:border-primary-700
                 bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
-                p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+                p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow"
             >
+              <div className="flex items-start justify-between gap-2">
               <div className="flex flex-col gap-1 min-w-0">
-                <span className="font-bold text-base break-words">{planName}</span>
+                <button
+                  type="button"
+                  onClick={openPlan}
+                  className="font-bold text-base text-left break-words rounded
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {planName}
+                </button>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                  <span>
-                    {weekEntries.length}{" "}
-                    {weekEntries.length === 1 ? "week" : "weeks"}
-                  </span>
+                  {!plan.open && (
+                    <span>
+                      {weekEntries.length}{" "}
+                      {weekEntries.length === 1 ? "week" : "weeks"}
+                    </span>
+                  )}
                   <span>
                     {sessionCount} {sessionCount === 1 ? "session" : "sessions"}
                   </span>
@@ -159,8 +188,41 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                   )}
                 </div>
               </div>
+              {renderActions(plan)}
+              </div>
 
-              {weekEntries.length === 0 ? (
+              {plan.open ? (
+                <div className="flex flex-col gap-1">
+                  {sortSessionsByDate(toStringArray(plan.sessions), sourceData.sessions).map(
+                    (sessionName) => {
+                      const date: string | undefined = sourceData.sessions?.[sessionName]?.date;
+                      const done = openPlanDoneSessions(
+                        Object.values(sourceData.userdata ?? {})[0],
+                        planName
+                      ).includes(sessionName);
+                      const status = sessionDueStatus(date, done);
+                      return (
+                        <div key={sessionName} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <SessionStatusIcon date={date} done={done} />
+                            <span className="font-medium break-words min-w-0">{sessionName}</span>
+                          </span>
+                          <span className="flex items-center gap-2 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {date && formatSessionDate(date)}
+                            {status === "done" && <Badge variant="success">Done</Badge>}
+                            {status === "overdue" && <Badge variant="danger">Overdue</Badge>}
+                          </span>
+                        </div>
+                      );
+                    }
+                  )}
+                  {(plan.sessions ?? []).length === 0 && (
+                    <span className="text-xs italic text-text-muted-light dark:text-text-muted-dark">
+                      No sessions added yet.
+                    </span>
+                  )}
+                </div>
+              ) : weekEntries.length === 0 ? (
                 <span className="text-xs italic text-text-muted-light dark:text-text-muted-dark">
                   No weeks configured yet.
                 </span>
@@ -216,16 +278,14 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
         </>
       )}
 
+      <LoadMore shown={limit} total={entries.length} onLoadMore={loadMore} onShowAll={showAll} />
+
       {formType && (
         <PlanForm
           key={`${formType}-${formData?.id ?? formData?.name ?? "new"}`}
           data={formData}
           type={formType}
           closeForm={() => setFormType("")}
-          onClone={(clonedData) => {
-            setFormData(clonedData);
-            setFormType("add");
-          }}
         />
       )}
 

@@ -12,6 +12,7 @@ import { isTrainSessionPath } from "../routes/trainRoutes";
 import { Button } from "@dyordsabuzo/ui-components";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { playApplauseSound, speak } from "../common/utils";
+import { pluralUnit, unitName, unitTitle, UnitKind } from "./resolveSessionSupersets";
 
 type Props = {
   currentSuperset?: any;
@@ -19,6 +20,18 @@ type Props = {
   actualSupersetData?: any;
   supersetIndex?: number;
   nextPageHandler?: () => void;
+};
+
+// "2 supersets · 1 exercise group", counting each kind of unit separately.
+const summaryCounts = (units: any[]) => {
+  const groups = units.filter((u) => u.kind === "group").length;
+  const supersets = units.length - groups;
+  return [
+    supersets > 0 && pluralUnit("superset", supersets),
+    groups > 0 && pluralUnit("group", groups),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 };
 
 export const SummaryPage = ({
@@ -33,6 +46,7 @@ export const SummaryPage = ({
     sessionData,
     wrapSession,
     updateUserData,
+    saveRun,
     initialiseSession,
     setIsRunning,
     exitPath,
@@ -44,6 +58,8 @@ export const SummaryPage = ({
   const isSessionRoute = isTrainSessionPath(location.pathname);
   const [moodAfter, setMoodAfter] = useState<MoodValue>({});
   const hasAnnouncedCompletion = useRef(false);
+  const announcedUnit = useRef<string | null>(null);
+  const runSaved = useRef(false);
 
   useEffect(() => {
     // Guards against React StrictMode's dev-only double-invoke of mount
@@ -53,6 +69,17 @@ export const SummaryPage = ({
       speak("WORKOUT COMPLETE", playApplauseSound);
     }
   }, [sessionComplete]);
+
+  useEffect(() => {
+    // Announces each finished unit by name. The last unit is skipped because
+    // "WORKOUT COMPLETE" is already spoken for it.
+    const name = currentSuperset?.name;
+    if (!name || sessionComplete || announcedUnit.current === name) {
+      return;
+    }
+    announcedUnit.current = name;
+    speak(`${unitTitle(currentSuperset.kind as UnitKind)} ${name} complete`);
+  }, [currentSuperset?.name, sessionComplete]);
 
   const handleMoodAfterChange = (value: MoodValue) => {
     setMoodAfter(value);
@@ -78,9 +105,13 @@ export const SummaryPage = ({
     .filter((s: string) => typeof s === "string" && s.trim() !== "")
     .join(" · ");
 
-  if (sessionComplete) {
-    updateUserData(actualSupersetData);
-  }
+  // Saves the finished run once, outside render.
+  useEffect(() => {
+    if (sessionComplete && actualSupersetData && !runSaved.current) {
+      runSaved.current = true;
+      saveRun?.(actualSupersetData);
+    }
+  }, [sessionComplete, actualSupersetData]);
 
   return (
     <WrapperPage
@@ -118,7 +149,7 @@ export const SummaryPage = ({
             bg-white dark:bg-surface-dark shadow-sm flex flex-col"
         >
           <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-3">
-            {supersets.length} {supersets.length === 1 ? "superset" : "supersets"}
+            {summaryCounts(supersets)}
           </span>
           <SessionProgress
             supersets={supersets}
@@ -146,7 +177,7 @@ export const SummaryPage = ({
         <Button
           label={
             nextSuperset
-              ? "Next superset"
+              ? `Next ${unitName(nextSuperset.kind as UnitKind)}`
               : currentSuperset
                 ? "Finish workout"
                 : "Start workout"

@@ -13,6 +13,7 @@ import { PasswordReset } from "../pages/auth/PasswordReset";
 import { Logout } from "../pages/auth/Logout";
 import { Signup } from "../pages/auth/Signup";
 import { Home } from "../pages/Home";
+import { HistoryPage } from "../pages/HistoryPage";
 import { MainPage } from "../pages/MainPage";
 import { useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
@@ -121,6 +122,11 @@ const AppShell = () => {
           <Route
             path={"/training-planner/train"}
             element={user ? <SessionPage /> : <Navigate to="/login" />}
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/history"}
+            element={user ? <HistoryPage /> : <Navigate to="/login" />}
             errorElement={<ErrorPage />}
           />
           <Route

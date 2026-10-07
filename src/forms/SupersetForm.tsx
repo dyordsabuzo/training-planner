@@ -1,21 +1,13 @@
 
 
-import React, { useContext, useMemo, useState } from "react";
+import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
 
-import { DetailField } from "./DetailField";
-import { ConfirmDeleteButton } from "./ConfirmDeleteButton";
-import { useEntityForm } from "./useEntityForm";
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
-import { Button, Input, MultiSelect, ReorderableSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
-import {
-  buildRelationshipGraph,
-  getDirectReferencers,
-  nodeId,
-} from "../management/buildRelationshipGraph";
+import { Input, MultiSelect, ReorderableSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
 
 type FormData = {
   id?: string;
@@ -34,10 +26,9 @@ type Props = {
   data: FormData | null;
   entryType: string;
   closeForm: () => void;
-  onClone?: (data: any) => void;
 };
 
-export const SupersetForm = ({ data, entryType, closeForm, onClone }: Props) => {
+export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const formData = data;
 
   const id = formData?.id ?? "";
@@ -63,45 +54,9 @@ export const SupersetForm = ({ data, entryType, closeForm, onClone }: Props) => 
   const exerciseOptions = Object.keys(sourceData.exercises ?? {});
   const sessionOptions = Object.keys(sourceData.sessions ?? {});
 
-  const resetFields = () => {
-    setName(formData?.name ?? "");
-    setNameError(undefined);
-    setSessions(toStringArray(formData?.sessions));
-    setExercises(toStringArray(formData?.exercises));
-    setRest(formData?.rest ?? "");
-    setTags(toStringArray(formData?.tags));
-    setType(formData?.type ?? "Rep-based");
-    setTargetRep(formData?.targetRep ?? "");
-    setTargetSet(formData?.targetSet ?? "");
-    setTargetTime(formData?.targetTime ?? "");
-  };
-
-  const { isEditing, setIsEditing, headerAction, handleCancel, handleDelete } =
-    useEntityForm({
-      type: entryType,
-      resetFields,
-      onDelete: () => sourceDataContext.deleteSuperset(data),
-      closeForm,
-    });
-
-  const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
-  const usageCount =
-    entryType === "edit" && name
-      ? getDirectReferencers(nodeId("superset", name), graph.edges).length
-      : 0;
-
-  const handleClone = () => {
-    onClone?.({
-      name: `${name} (copy)`,
-      sessions,
-      exercises,
-      tags,
-      rest,
-      type,
-      targetRep,
-      targetSet,
-      targetTime,
-    });
+  const handleDelete = () => {
+    sourceDataContext.deleteSuperset(data);
+    closeForm();
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -141,7 +96,7 @@ export const SupersetForm = ({ data, entryType, closeForm, onClone }: Props) => 
         targetSet,
         targetTime,
       });
-      setIsEditing(false);
+      closeForm();
     }
   };
 
@@ -151,36 +106,7 @@ export const SupersetForm = ({ data, entryType, closeForm, onClone }: Props) => 
       isOpen={true}
       onClose={closeForm}
       size="lg"
-      headerAction={headerAction}
     >
-      {!isEditing ? (
-        <div className="flex flex-col gap-4">
-          <DetailField label="Superset name" value={name} />
-          <DetailField label="Exercises" tags={exercises} />
-          <DetailField label="Superset type" value={type} />
-          <DetailField label="Linked sessions" tags={sessions} />
-          <DetailField label="Tags" tags={tags} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {type === "Rep-based" && <DetailField label="Target rep" value={targetRep} />}
-            {type === "Time-based" && <DetailField label="Target time (s)" value={targetTime} />}
-            <DetailField label="Target set" value={targetSet} />
-            <DetailField label="Rest (s)" value={rest} />
-          </div>
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
-            {onClone && (
-              <Button label="Clone" className="text-xs" onClick={handleClone} />
-            )}
-            <ConfirmDeleteButton
-              onDelete={handleDelete}
-              impactMessage={
-                usageCount > 0
-                  ? `This superset is used by ${usageCount} session${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-      ) : (
         <form onSubmit={handleSubmit} className={`flex flex-col gap-4`}>
           <Input
             label={"Superset Name"}
@@ -258,9 +184,8 @@ export const SupersetForm = ({ data, entryType, closeForm, onClone }: Props) => 
             />
           </CollapsibleSection>
 
-          <FormButtons onCancel={handleCancel} onDelete={entryType === "edit" ? handleDelete : undefined} />
+          <FormButtons onCancel={closeForm} onDelete={entryType === "edit" ? handleDelete : undefined} />
         </form>
-      )}
     </Modal>
   );
 };

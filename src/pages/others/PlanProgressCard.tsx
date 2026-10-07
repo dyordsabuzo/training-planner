@@ -8,6 +8,8 @@ type Props = {
   completedWeeks: number;
   currentWeekIndex: number | null;
   sessionsLogged: number;
+  // What completedWeeks/totalWeeks count: "weeks", or "sessions" for open plans.
+  unitLabel?: string;
   onContinue: () => void;
 };
 
@@ -17,6 +19,7 @@ export const PlanProgressCard = ({
   completedWeeks,
   currentWeekIndex,
   sessionsLogged,
+  unitLabel = "weeks",
   onContinue,
 }: Props) => {
   const percent =
@@ -37,7 +40,7 @@ export const PlanProgressCard = ({
         <div className="flex justify-between text-xs text-text-muted-light dark:text-text-muted-dark">
           <span>
             <FontAwesomeIcon icon={faCalendarWeek} className="mr-1" />
-            {completedWeeks} of {totalWeeks} weeks done
+            {completedWeeks} of {totalWeeks} {unitLabel} done
           </span>
           <span>{percent}%</span>
         </div>

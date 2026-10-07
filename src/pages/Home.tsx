@@ -10,6 +10,9 @@ import { getCurrentWeekNumber } from "../common/planWeek";
 import { PlanProgressCard } from "./others/PlanProgressCard";
 
 import { EmptyState } from "../management/EmptyState";
+import { LoadMore } from "../management/LoadMore";
+import { openPlanDoneSessions } from "../common/planSessions";
+import { useLoadMore } from "../common/useLoadMore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDumbbell,
@@ -29,6 +32,7 @@ const linkClassName =
 
 type PlanStats = {
   planName: string;
+  isOpen?: boolean;
   totalWeeks: number;
   completedWeeks: number;
   currentWeekIndex: number | null;
@@ -86,6 +90,8 @@ const AdminActionCard = ({
   </Card>
 );
 
+const PLAN_PAGE_SIZE = 6;
+
 export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
@@ -119,6 +125,22 @@ export const Home = () => {
   const planStats: PlanStats[] = useMemo(() => {
     const plans = sourceData?.plans ?? {};
     return Object.entries(plans).map(([planName, plan]: [string, any]) => {
+      if (plan.open) {
+        // Open plans count sessions instead of weeks.
+        const sessionNames: string[] = plan.sessions ?? [];
+        const done = openPlanDoneSessions(userdata, planName).filter((s) =>
+          sessionNames.includes(s)
+        ).length;
+        return {
+          planName,
+          isOpen: true,
+          totalWeeks: sessionNames.length,
+          completedWeeks: done,
+          currentWeekIndex: null,
+          sessionsLogged: done,
+        };
+      }
+
       const planWeeks = userdata[planName] ?? {};
       // A week counts as done as soon as it has any logged session data —
       // the same rule SessionPage already uses to hide completed weeks from
@@ -139,6 +161,7 @@ export const Home = () => {
     });
   }, [sourceData?.plans, userdata]);
 
+  const { limit: planLimit, loadMore: loadMorePlans, showAll: showAllPlans } = useLoadMore(PLAN_PAGE_SIZE);
   const totalSessionsLogged = planStats.reduce((sum, p) => sum + p.sessionsLogged, 0);
   const totalWeeksCompleted = planStats.reduce((sum, p) => sum + p.completedWeeks, 0);
 
@@ -336,10 +359,11 @@ export const Home = () => {
                 Your training plans
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {planStats.map((stats) => (
+                {planStats.slice(0, planLimit).map((stats) => (
                   <PlanProgressCard
                     key={stats.planName}
                     planName={stats.planName}
+                    unitLabel={stats.isOpen ? "sessions" : "weeks"}
                     totalWeeks={stats.totalWeeks}
                     completedWeeks={stats.completedWeeks}
                     currentWeekIndex={stats.currentWeekIndex}
@@ -348,6 +372,7 @@ export const Home = () => {
                   />
                 ))}
               </div>
+              <LoadMore shown={planLimit} total={planStats.length} onLoadMore={loadMorePlans} onShowAll={showAllPlans} />
             </div>
 
             {totalSessionsLogged === 0 && (

@@ -7,7 +7,7 @@ import { SummaryPage } from "./SummaryPage";
 import { Loading } from "./helpers/Loading";
 import { EmptyState } from "../management/EmptyState";
 import WrapperPage from "./WrapperPage";
-import { resolveSessionSupersets } from "./resolveSessionSupersets";
+import { resolveSession } from "./resolveSessionSupersets";
 
 const MANAGE_SESSIONS_PATH = "/training-planner/manage/sessions";
 
@@ -28,7 +28,7 @@ const SimulateSessionPage = () => {
 
   useEffect(() => {
     if (sourceData?.sessions && sessionName && sourceData.sessions[sessionName] && !simSessionData) {
-      const supersets = resolveSessionSupersets(sourceData, sourceData.sessions[sessionName].supersets, {
+      const supersets = resolveSession(sourceData, sourceData.sessions[sessionName], {
         targetSet: 3,
       });
       setSimSessionData({
@@ -56,6 +56,9 @@ const SimulateSessionPage = () => {
       initialiseSession: exitSimulation,
       setSessionData: setSimSessionData,
       updateUserData: async () => {},
+      saveProgress: async () => {},
+      saveRun: async () => {},
+      deleteRuns: async () => {},
       // Cancel/finish handlers in ExercisePage/SummaryPage already navigate
       // to exitPath right after calling wrapSession, so this only needs to
       // clear local state — navigating here too would double-push history.

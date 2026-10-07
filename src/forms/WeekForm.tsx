@@ -5,6 +5,7 @@ import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
 import { IncrementDecrement, Input, Modal } from "@dyordsabuzo/ui-components";
+import { describeCycleStep } from "../common/planCycle";
 
 type Props = {
   weekData: any;
@@ -47,6 +48,11 @@ export const WeekForm = ({ weekData, clear }: Props) => {
       onClose={clear}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {weekData.cycleStep && (
+          <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+            Cycle step: {describeCycleStep(weekData.cycleStep)}
+          </span>
+        )}
         <Input
           label="Week goal"
           value={annotation}

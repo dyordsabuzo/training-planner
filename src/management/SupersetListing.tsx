@@ -6,6 +6,10 @@ import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
 import { EntityCard } from "./EntityCard";
+import { LoadMore } from "./LoadMore";
+import { useLoadMore } from "../common/useLoadMore";
+import { EntityActions, ActionsVariant } from "./EntityActions";
+import { cloneSuperset } from "./cloneEntity";
 
 import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
 import {
@@ -73,10 +77,13 @@ const columns: DataTableColumn<SupersetRow>[] = [
   },
 ];
 
+const PAGE_SIZE = 12;
+
 export const SupersetListing = ({ viewMode = "card" }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
+  const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
 
@@ -107,6 +114,23 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
     setFormType("edit");
   };
 
+  const renderActions = ({ superset, sessions, usageCount }: SupersetRow, variant?: ActionsVariant) => (
+    <EntityActions
+      variant={variant}
+      onEdit={() => openSuperset(superset, sessions)}
+      onClone={() => {
+        setFormData(cloneSuperset(superset, sessions));
+        setFormType("add");
+      }}
+      onDelete={() => sourceDataContext.deleteSuperset(superset)}
+      deleteImpactMessage={
+        usageCount > 0
+          ? `This superset is used by ${usageCount} session${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
+          : undefined
+      }
+    />
+  );
+
   return (
     <BaseListing>
       <ManageListHeader
@@ -124,10 +148,12 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
 
       {viewMode === "table" ? (
         <DataTable
-          columns={columns}
-          rows={rows}
+          columns={[
+            ...columns,
+            { key: "actions", header: "Actions", render: (row) => renderActions(row, "menu") },
+          ]}
+          rows={rows.slice(0, limit)}
           getRowKey={(row) => row.key}
-          onRowClick={(row) => openSuperset(row.superset, row.sessions)}
           emptyMessage={
             search
               ? "No supersets match your search."
@@ -147,7 +173,9 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {rows.map(({ key, superset, sessions, usageCount }) => (
+            {rows.slice(0, limit).map((row) => {
+              const { key, superset, sessions, usageCount } = row;
+              return (
               <EntityCard
                 key={key}
                 title={superset.name ?? key}
@@ -156,12 +184,16 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
                 tags={superset.tags}
                 usageCount={usageCount}
                 usageLabel="session"
-                onClick={() => openSuperset(superset, sessions)}
+                onOpen={() => openSuperset(superset, sessions)}
+                actions={renderActions(row)}
               />
-            ))}
+              );
+            })}
           </div>
         </>
       )}
+
+      <LoadMore shown={limit} total={rows.length} onLoadMore={loadMore} onShowAll={showAll} />
 
       {formType && (
         <SupersetForm
@@ -169,10 +201,6 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
           data={formData}
           entryType={formType}
           closeForm={() => setFormType("")}
-          onClone={(clonedData) => {
-            setFormData(clonedData);
-            setFormType("add");
-          }}
         />
       )}
     </BaseListing>
