@@ -5,7 +5,7 @@ import SourceDataContext from "../context/SourceDataContext";
 import { FormButtons } from "./FormButtons";
 
 import { findDuplicateName } from "../common/nameValidation";
-import { toStringArray } from "../common/utils";
+import { toSentenceCase, toStringArray } from "../common/utils";
 import { Input, MultiSelect, IncrementDecrement, CollapsibleSection, TagInput, ButtonSelection, Modal } from "@dyordsabuzo/ui-components";
 
 type ExerciseData = {
@@ -64,6 +64,10 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
     }
     setNameError(undefined);
 
+    // Sentence case, not each-word capitalised — "bench PRESS" and "Bench
+    // Press" both save as "Bench press".
+    const savedName = toSentenceCase(name);
+
     // TagInput only commits a tag on Enter/Tab/comma, so text still typed in
     // its box would be lost on Save. Pick it up here.
     const pendingTag = tagFieldRef.current?.querySelector("input")?.value.trim() ?? "";
@@ -71,7 +75,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
 
     if (type === "add") {
       sourceDataContext.addExercise({
-        name,
+        name: savedName,
         videoLink,
         tags: finalTags,
         targetRep,
@@ -88,7 +92,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
     if (type === "edit") {
       sourceDataContext.updateExercise({
         id,
-        name,
+        name: savedName,
         videoLink,
         tags: finalTags,
         targetRep,

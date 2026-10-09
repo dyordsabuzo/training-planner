@@ -24,6 +24,19 @@ export enum SourceDbReferences {
 export const toStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value : typeof value === "string" && value ? value.split(",") : [];
 
+// Sentence case: only the first letter is capitalised, everything after it
+// is lowercase — regardless of how it was typed ("BENCH Press", "bench
+// PRESS") — so saved names stay consistent and never end up camelCased
+// ("BenchPress") or with a capital mid-string ("Bench Press").
+export const toSentenceCase = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  const lower = trimmed.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+};
+
 // Full name only when both parts are set — otherwise falls back to the
 // portion of the email before "@", since a partial name ("Sam" with no
 // last name) is treated the same as no name at all.
