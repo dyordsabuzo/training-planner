@@ -23,3 +23,16 @@ export const sessionDueStatus = (date: string | undefined, done: boolean) => {
   if (date && dayjs(date).isBefore(dayjs(), "day")) return "overdue";
   return null;
 };
+
+// Plans newest first by creation date. Plans created before dates were recorded
+// have none, so they go last, by name.
+export const sortPlansByCreated = (plans: any): [string, any][] =>
+  (Object.entries(plans ?? {}) as [string, any][]).sort(([nameA, a], [nameB, b]) => {
+    const createdA: string = a?.createdAt ?? "";
+    const createdB: string = b?.createdAt ?? "";
+    if (createdA && createdB) {
+      return createdB.localeCompare(createdA) || nameA.localeCompare(nameB);
+    }
+    if (createdA || createdB) return createdA ? -1 : 1;
+    return nameA.localeCompare(nameB);
+  });

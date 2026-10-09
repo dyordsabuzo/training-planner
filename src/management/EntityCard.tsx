@@ -100,8 +100,8 @@ export const EntityCard = ({
             </div>
           )}
           <div className="flex flex-wrap gap-1">
-            {normalizedRelatedItems.map((item) => (
-              <Badge key={item} variant="neutral">
+            {normalizedRelatedItems.map((item, index) => (
+              <Badge key={`${item}-${index}`} variant="neutral">
                 {item}
               </Badge>
             ))}
@@ -111,9 +111,9 @@ export const EntityCard = ({
 
       {normalizedTags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {normalizedTags.map((tag) => (
+          {normalizedTags.map((tag, index) => (
             <span
-              key={tag}
+              key={`${tag}-${index}`}
               className={`px-2 py-0.5 rounded-full text-xs font-medium ${tagStyle(tag).chip}`}
             >
               {tag}

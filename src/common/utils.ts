@@ -41,8 +41,14 @@ export const getDisplayName = (
   return email?.split("@")[0] || "User";
 };
 
+// Width alone isn't enough: a desktop browser window narrower than 768px
+// (e.g. snapped to half the screen) would otherwise match too, incorrectly
+// triggering the mobile-only portrait-lock rotation hack below for mouse/
+// trackpad users. Requiring a coarse (touch) pointer excludes those, since
+// desktop input devices report "fine" even when the window is narrow.
 export const isMobileViewport = (): boolean =>
-  window.matchMedia("(max-width: 767px)").matches;
+  window.matchMedia("(max-width: 767px)").matches &&
+  window.matchMedia("(pointer: coarse)").matches;
 
 // Class toggled on <html> that applies the CSS rotation fallback in
 // index.css — needed because Safari/iOS never implements the Screen

@@ -20,6 +20,7 @@ import { SessionStats } from "./others/SessionStats";
 import { SessionStatusIcon } from "../components/others/SessionStatusIcon";
 import {
   formatSessionDate,
+  sortPlansByCreated,
   openPlanDoneSessions,
   sessionDueStatus,
   sortSessionsByDate,
@@ -77,7 +78,7 @@ const SessionPage = () => {
   }, [sessionId, sessionContext.sessionData]);
 
   const plans = sourceData?.plans ?? {};
-  const planNames = Object.keys(plans);
+  const planNames = sortPlansByCreated(plans).map(([name]) => name);
   const selectedPlanData: any = sessionData.plan ? plans[sessionData.plan] : null;
 
   const completedWeeks: string[] = useMemo(() => {
@@ -293,7 +294,7 @@ const SessionPage = () => {
   }
 
   return (
-    <WrapperPage className="max-w-[25rem] sm:max-w-xl">
+    <WrapperPage className="max-w-[32rem] sm:max-w-xl lg:max-w-4xl">
       <div className="flex flex-col gap-6 pt-4 sm:pt-8">
         <div>
           <h1 className="flex items-start gap-3 text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
@@ -397,30 +398,6 @@ const SessionPage = () => {
           )}
         </div>
 
-        {sessionData.plan && completedList.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className={stepLabelClassName}>Finished</span>
-            <div className="flex flex-wrap gap-2">
-              {completedList.slice(0, 3).map((run) => (
-                <button
-                  key={`${run.week}-${run.session}`}
-                  type="button"
-                  onClick={() => setViewingRun(run)}
-                  className={chipClassName(false)}
-                >
-                  {isOpenPlan ? run.session : `${run.week} · ${run.session}`}
-                </button>
-              ))}
-            </div>
-            <Button
-              label="See all in History"
-              decoration="cancel"
-              className="text-xs self-start"
-              onClick={() => navigate("/training-planner/history")}
-            />
-          </div>
-        )}
-
         {sessionData.plan && !isOpenPlan && (
           <div className="flex flex-col gap-2">
             <span className={stepLabelClassName}>Week</span>
@@ -470,7 +447,7 @@ const SessionPage = () => {
                 {sessionOptions[0]}
               </span>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 {sessionOptions.map((session) => (
                   <button
                     key={session}
@@ -517,16 +494,16 @@ const SessionPage = () => {
         {sessionData.session && (
         <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95 backdrop-blur">
         {selectedRun ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
             <Button
               type="button"
-              className="min-h-11 py-3 text-base"
+              className="min-h-11 py-3 text-base grow-[3]"
               label="View results"
               onClick={() => setViewingRun(selectedRun)}
             />
             <Button
               type="button"
-              className="text-xs self-center"
+              className="min-h-11 py-3 text-base grow"
               label="Run again"
               decoration="cancel"
               onClick={() =>

@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { WeekForm } from "../forms/WeekForm";
@@ -16,6 +17,7 @@ import BaseListing from "./BaseListing";
 import { Badge, DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
 import {
   formatSessionDate,
+  sortPlansByCreated,
   openPlanDoneSessions,
   sessionDueStatus,
   sortSessionsByDate,
@@ -88,7 +90,7 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
       onDelete={() => sourceDataContext.deletePlan(plan)}
     />
   );
-  const entries = Object.entries(plans).filter(([planName]) =>
+  const entries = sortPlansByCreated(plans).filter(([planName]) =>
     planName.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -173,7 +175,26 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                 >
                   {planName}
                 </button>
+                {plan.status && (
+                  <Badge
+                    variant={
+                      plan.status === "Completed"
+                        ? "success"
+                        : plan.status === "Active"
+                          ? "primary"
+                          : plan.status === "Archived"
+                            ? "warning"
+                            : "neutral"
+                    }
+                    className="w-fit"
+                  >
+                    {plan.status}
+                  </Badge>
+                )}
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                  {plan.createdAt && (
+                    <span>Created {dayjs(plan.createdAt).format("ddd, MMM D YYYY")}</span>
+                  )}
                   {!plan.open && (
                     <span>
                       {weekEntries.length}{" "}

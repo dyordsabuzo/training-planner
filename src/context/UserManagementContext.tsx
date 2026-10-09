@@ -10,6 +10,12 @@ export type AppUser = {
   lastName?: string;
   role: string;
   plans: string[];
+  // Set when the user asked for access from the Home page while they had
+  // no granted plans. Cleared in UserForm once an admin grants a plan or
+  // explicitly dismisses it.
+  accessRequested?: boolean;
+  accessRequestedAt?: string;
+  accessRequestNote?: string;
 };
 
 const UserManagementContext = createContext({
@@ -44,6 +50,9 @@ export const UserManagementContextProvider: React.FC<Props> = ({ children }) => 
         lastName: docData.lastName ?? "",
         role: docData.role ?? "user",
         plans: docData.plans ?? [],
+        accessRequested: docData.accessRequested ?? false,
+        accessRequestedAt: docData.accessRequestedAt ?? "",
+        accessRequestNote: docData.accessRequestNote ?? "",
       };
     });
     setUsers(data);
@@ -56,6 +65,7 @@ export const UserManagementContextProvider: React.FC<Props> = ({ children }) => 
       lastName: user.lastName ?? "",
       role: user.role,
       plans: user.plans,
+      accessRequested: user.accessRequested ?? false,
     });
     setUsers((prev) => (prev ?? []).map((u) => (u.id === user.id ? user : u)));
   };

@@ -39,6 +39,65 @@ describe("resolveSession with groups", () => {
   });
 });
 
+describe("resolveSession with a time-measured group", () => {
+  const session = {
+    groups: [
+      {
+        name: "Plank",
+        exercises: ["Squat"],
+        sets: 3,
+        reps: 0,
+        measure: "time" as const,
+        time: 45,
+        percent: 0,
+        rpe: 0,
+      },
+    ],
+  };
+
+  it("resolves to a Time-based unit with targetTime and no targetRep", () => {
+    const units = resolveSession(sourceData, session);
+    expect(units.Plank.type).toBe("Time-based");
+    expect(units.Plank.targetTime).toBe(45);
+    expect(units.Plank.targetRep).toBeUndefined();
+    expect(units.Plank.targetDistance).toBeUndefined();
+  });
+
+  it("marks reps/distance groups as Rep-based", () => {
+    const repsUnits = resolveSession(sourceData, {
+      groups: [{ name: "Reps", exercises: ["Squat"], sets: 3, reps: 10, percent: 0, rpe: 0 }],
+    });
+    expect(repsUnits.Reps.type).toBe("Rep-based");
+  });
+});
+
+describe("rest between sides", () => {
+  it("passes sideRest through regardless of leftRight", () => {
+    const withBoth = resolveSession(sourceData, {
+      groups: [
+        {
+          name: "Rows",
+          exercises: ["Squat"],
+          sets: 3,
+          reps: 10,
+          percent: 0,
+          rpe: 0,
+          leftRight: true,
+          sideRest: 15,
+        },
+      ],
+    });
+    expect(withBoth.Rows.leftRight).toBe(true);
+    expect(withBoth.Rows.sideRest).toBe(15);
+
+    const withoutLeftRight = resolveSession(sourceData, {
+      groups: [{ name: "Deadlift", exercises: ["Squat"], sets: 3, reps: 10, percent: 0, rpe: 0 }],
+    });
+    expect(withoutLeftRight.Deadlift.leftRight).toBe(false);
+    expect(withoutLeftRight.Deadlift.sideRest).toBe(0);
+  });
+});
+
 describe("supersets and groups together", () => {
   it("runs supersets then groups", () => {
     const mixed = { supersets: ["Legs"], groups: [{ name: "Core", exercises: ["Lunge"], sets: 2, reps: 10, percent: 0, rpe: 0 }] };

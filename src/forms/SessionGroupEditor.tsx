@@ -11,16 +11,19 @@ type Props = {
 };
 
 const newGroup = (index: number): SessionGroup => ({
+  id: crypto.randomUUID(),
   name: `Group ${index + 1}`,
   exercises: [],
   sets: 3,
   reps: 10,
   measure: "reps",
   distance: 100,
+  time: 30,
   percent: 0,
   rpe: 0,
   rest: 60,
   leftRight: false,
+  sideRest: 15,
 });
 
 const iconButtonClass = `min-h-11 min-w-11 flex items-center justify-center rounded-full
@@ -33,13 +36,19 @@ const summarise = (group: SessionGroup) =>
     group.exercises.join(", "),
     group.measure === "distance"
       ? `${group.sets} × ${group.distance} m`
-      : `${group.sets} × ${group.reps}`,
+      : group.measure === "time"
+        ? `${group.sets} × ${group.time} s`
+        : `${group.sets} × ${group.reps}`,
     group.percent ? `${group.percent}%` : null,
     group.rpe ? `RPE ${group.rpe}` : null,
     group.rest ? `${group.rest} s rest` : null,
   ]
     .filter(Boolean)
     .join(" · ");
+
+// Appended to the Left & right note when a between-sides rest is set.
+const sideRestNote = (group: SessionGroup) =>
+  group.leftRight && group.sideRest ? ` · ${group.sideRest}s between sides` : "";
 
 // Ordered exercise groups for a session. Each group is edited in full until
 // it's marked Done, then collapses to a summary. Drag the grip to reorder;
@@ -96,6 +105,10 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
     }
     if (group.measure === "distance" && !group.distance) {
       setErrors({ ...errors, [index]: "Set a distance for this group." });
+      return;
+    }
+    if (group.measure === "time" && !group.time) {
+      setErrors({ ...errors, [index]: "Set a time for this group." });
       return;
     }
     const cleared = { ...errors };
@@ -167,7 +180,7 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
         if (collapsed[index]) {
           return (
             <div
-              key={index}
+              key={group.id ?? index}
               {...cardProps(index)}
               className={`${cardProps(index).className} flex items-center gap-2 px-2 py-2 bg-primary-50/40 dark:bg-primary-800/20`}
             >
@@ -180,7 +193,7 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
                 {group.leftRight && (
                   <span className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-text-muted-light dark:text-text-muted-dark px-2 py-0.5 text-xs font-medium">
                     <FontAwesomeIcon icon={faArrowsLeftRight} />
-                    Left &amp; right · each side
+                    Left &amp; right · each side{sideRestNote(group)}
                   </span>
                 )}
               </div>
@@ -207,7 +220,7 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
         }
 
         return (
-          <div key={index} {...cardProps(index)} className={`${cardProps(index).className} flex flex-col gap-3 p-3`}>
+          <div key={group.id ?? index} {...cardProps(index)} className={`${cardProps(index).className} flex flex-col gap-3 p-3`}>
             <div className="flex items-center gap-2">
               {grip}
               <div className="grow">
@@ -260,10 +273,15 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
 
             <ButtonSelection
               label="Measure"
-              options={["Reps", "Distance (m)"]}
-              selection={group.measure === "distance" ? "Distance (m)" : "Reps"}
+              options={["Reps", "Distance (m)", "Time"]}
+              selection={
+                group.measure === "distance" ? "Distance (m)" : group.measure === "time" ? "Time" : "Reps"
+              }
               onSelect={(value: string) =>
-                updateGroup(index, { ...group, measure: value === "Reps" ? "reps" : "distance" })
+                updateGroup(index, {
+                  ...group,
+                  measure: value === "Distance (m)" ? "distance" : value === "Time" ? "time" : "reps",
+                })
               }
             />
 
@@ -283,6 +301,15 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
                   value={group.distance ?? 0}
                   nonZero
                   updateValue={(distance) => updateGroup(index, { ...group, distance })}
+                />
+              ) : group.measure === "time" ? (
+                <IncrementDecrement
+                  label="Time"
+                  labelDirection="col"
+                  unit="s"
+                  value={group.time ?? 30}
+                  nonZero
+                  updateValue={(time) => updateGroup(index, { ...group, time })}
                 />
               ) : (
                 <IncrementDecrement
@@ -307,12 +334,21 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
                 updateValue={(rpe) => updateGroup(index, { ...group, rpe })}
               />
               <IncrementDecrement
-                label="Rest"
+                label="Rest between sets"
                 labelDirection="col"
                 unit="s"
                 value={group.rest ?? 0}
                 updateValue={(rest) => updateGroup(index, { ...group, rest })}
               />
+              {group.leftRight && (
+                <IncrementDecrement
+                  label="Rest between sides"
+                  labelDirection="col"
+                  unit="s"
+                  value={group.sideRest ?? 15}
+                  updateValue={(sideRest) => updateGroup(index, { ...group, sideRest })}
+                />
+              )}
             </div>
 
             {errors[index] && <span className="text-sm text-danger">{errors[index]}</span>}

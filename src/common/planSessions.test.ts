@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import dayjs from "dayjs";
-import { sessionDueStatus, sortSessionsByDate } from "./planSessions";
+import { sessionDueStatus, sortPlansByCreated, sortSessionsByDate } from "./planSessions";
 
 const sessions = {
   Late: { date: "2030-05-02" },
@@ -30,5 +30,22 @@ describe("sessionDueStatus", () => {
   it("is not flagged when the date is today or later", () => {
     expect(sessionDueStatus(dayjs().format("YYYY-MM-DD"), false)).toBeNull();
     expect(sessionDueStatus(undefined, false)).toBeNull();
+  });
+});
+
+describe("sortPlansByCreated", () => {
+  it("lists the newest creation date first and undated plans last", () => {
+    const plans = {
+      Old: { createdAt: "2026-01-01T00:00:00.000Z" },
+      Newest: { createdAt: "2027-03-01T00:00:00.000Z" },
+      Undated: {},
+      Middle: { createdAt: "2026-09-01T00:00:00.000Z" },
+    };
+    expect(sortPlansByCreated(plans).map(([name]) => name)).toEqual([
+      "Newest",
+      "Middle",
+      "Old",
+      "Undated",
+    ]);
   });
 });

@@ -237,6 +237,16 @@ export const ExercisePage = () => {
 
   const allSupersets = Object.values(sessionData.supersets);
   const exerciseLength = supersetData.exercises.length;
+
+  // How far through the whole session this is, as a percentage: units fully
+  // finished, plus how far into the current unit's sets.
+  const totalUnits = allSupersets.length;
+  const unitsDone = exerciseState.supersetCounter;
+  const unitTargetSets = parseInt(supersetData.targetSet) || 0;
+  const unitFraction = unitTargetSets > 0 ? Math.min(1, exerciseState.exerciseSet / unitTargetSets) : 0;
+  const overallPercent =
+    totalUnits > 0 ? Math.round((Math.min(totalUnits, unitsDone + unitFraction) / totalUnits) * 100) : 0;
+
   const exerciseLabel =
     exerciseLength > 1
       ? `Exercise ${(exerciseState.exerciseCounter % exerciseLength) + 1} of ${exerciseLength}`
@@ -279,7 +289,7 @@ export const ExercisePage = () => {
       <div className="lg:flex lg:gap-6 lg:items-start">
         <div className="flex-1 flex flex-col gap-2">
           <div
-            className="min-h-[70vh] sm:min-h-[32rem] lg:min-h-[36rem]
+            className="min-h-[70dvh] sm:min-h-[32rem] lg:min-h-[36rem]
               flex flex-col
               gap-4 shadow-md
               rounded-lg mx-2 mt-8 lg:mx-0
@@ -302,6 +312,25 @@ export const ExercisePage = () => {
                     {sessionData.annotation}
                   </span>
                 )}
+
+              <div className="mt-3 flex items-center gap-2">
+                <div
+                  role="progressbar"
+                  aria-label="Session progress"
+                  aria-valuenow={overallPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="flex-1 h-1.5 rounded-full bg-white/25 overflow-hidden"
+                >
+                  <div
+                    className="h-full rounded-full bg-white transition-all duration-300"
+                    style={{ width: `${overallPercent}%` }}
+                  />
+                </div>
+                <span className="text-white/80 text-xs font-semibold shrink-0">
+                  {unitsDone + 1} of {totalUnits} · {overallPercent}%
+                </span>
+              </div>
             </div>
             <div className="w-full flex-1 flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
               <div
@@ -346,6 +375,7 @@ export const ExercisePage = () => {
                   targetRep={targetRep}
                   targetDistance={supersetData.targetDistance ? targetDistance : undefined}
                   leftRight={!!supersetData.leftRight}
+                  sideRest={supersetData.sideRest}
                   targetTime={
                     exerciseData.targetTime || supersetData.targetTime || "0"
                   }

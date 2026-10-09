@@ -115,7 +115,7 @@ export const SummaryPage = ({
 
   return (
     <WrapperPage
-      className="max-w-[25rem] sm:max-w-xl lg:max-w-2xl"
+      className="max-w-[32rem] sm:max-w-xl lg:max-w-2xl"
       outerClassName={isSessionRoute ? "pb-8 px-2" : "pb-20 px-2"}
     >
       <div className="w-full flex flex-col gap-4 pt-8 text-text-light dark:text-text-dark">

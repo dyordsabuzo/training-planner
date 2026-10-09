@@ -1,4 +1,5 @@
 import { UserListing } from "../management/UserListing";
+import { AppSettingsForm } from "../management/AppSettingsForm";
 import WrapperPage from "./WrapperPage";
 
 const AdminPage = () => {
@@ -8,6 +9,10 @@ const AdminPage = () => {
         <h1 className="px-2 text-2xl font-bold text-text-light dark:text-text-dark">
           Administration
         </h1>
+
+        <div className="w-full px-2">
+          <AppSettingsForm />
+        </div>
 
         <div className="w-full px-2">
           <UserListing />

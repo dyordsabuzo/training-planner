@@ -29,6 +29,11 @@ export type UserPermission = {
   lastName?: string;
   email?: string;
   displayName?: string;
+  // Set when a user with no granted plans asks an administrator for access.
+  // Cleared by an admin (granting a plan, or dismissing it) in UserForm.
+  accessRequested?: boolean;
+  accessRequestedAt?: string;
+  accessRequestNote?: string;
 };
 
 const AuthContext = createContext({
@@ -52,6 +57,7 @@ const AuthContext = createContext({
   getUserProfileImage: () => {},
   getUid: () => {},
   updateProfile: (data: { firstName?: string; lastName?: string }) => {},
+  requestAccess: (note?: string) => {},
 });
 
 export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
@@ -295,6 +301,23 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     setUserPermission((prev) => (prev ? { ...prev, ...data } : prev));
   };
 
+  // Self-service: a user with no granted plans asks an admin for access.
+  // Written to the user's own doc, same as updateProfile above — an admin
+  // sees and clears it from the Users admin screen (see UserForm.tsx).
+  const requestAccess = async (note?: string) => {
+    if (!user) {
+      return;
+    }
+    const patch = {
+      accessRequested: true,
+      accessRequestedAt: new Date().toISOString(),
+      ...(note?.trim() && { accessRequestNote: note.trim() }),
+    };
+    const docRef = getDocumentReference("users", user.uid);
+    await setDoc(docRef, patch, { merge: true });
+    setUserPermission((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
   // A generic non-admin preview, not impersonation of a specific account: it
   // only ever downgrades what the client believes its own role is, never
   // upgrades it, and Firestore rules check the real auth token regardless —
@@ -334,6 +357,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         getUserProfileImage: getUserProfileImage,
         getUid: getUid,
         updateProfile,
+        requestAccess,
         confirmReset,
       }}
     >

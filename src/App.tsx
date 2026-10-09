@@ -6,6 +6,7 @@ import { SessionContextProvider } from "./context/SessionContext";
 import { SourceDataContextProvider } from "./context/SourceDataContext";
 import { UserManagementContextProvider } from "./context/UserManagementContext";
 import { AuthContextProvider } from "./context/AuthContext";
+import { AppSettingsContextProvider } from "./context/AppSettingsContext";
 import { ThemeContextProvider } from "./context/ThemeContext";
 import { SidebarContextProvider } from "./context/SidebarContext";
 import { AllRoutes } from "./routes/AllRoutes";
@@ -40,13 +41,15 @@ function App() {
         <ThemeContextProvider>
           <SidebarContextProvider>
             <AuthContextProvider>
-              <SessionContextProvider>
-                <SourceDataContextProvider>
-                  <UserManagementContextProvider>
-                    <AllRoutes />
-                  </UserManagementContextProvider>
-                </SourceDataContextProvider>
-              </SessionContextProvider>
+              <AppSettingsContextProvider>
+                <SessionContextProvider>
+                  <SourceDataContextProvider>
+                    <UserManagementContextProvider>
+                      <AllRoutes />
+                    </UserManagementContextProvider>
+                  </SourceDataContextProvider>
+                </SessionContextProvider>
+              </AppSettingsContextProvider>
             </AuthContextProvider>
           </SidebarContextProvider>
         </ThemeContextProvider>

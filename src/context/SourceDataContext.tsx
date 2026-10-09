@@ -339,7 +339,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         }
       );
 
-      const data = await saveToDB(SourceDbReferences.PLANS, { ...plan, weeks });
+      // Recorded so plan lists can be sorted by when each plan was created.
+      const data = await saveToDB(SourceDbReferences.PLANS, {
+        ...plan,
+        weeks,
+        createdAt: plan.createdAt ?? new Date().toISOString(),
+      });
       updateSourceData(SourceDbReferences.PLANS, data);
     },
   });

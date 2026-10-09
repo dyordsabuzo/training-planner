@@ -32,8 +32,12 @@ code {
   html.portrait-lock-fallback {
     transform: rotate(-90deg);
     transform-origin: left top;
-    width: 100vh;
-    height: 100vw;
+    /* Dynamic units track the visible area as the browser's toolbar shows
+       or hides; the static 100vh/100vw this used to use don't, so the
+       rotated page could end up taller than what's actually on screen —
+       leaving a sliver of empty space to scroll into at the bottom. */
+    width: 100dvh;
+    height: 100dvw;
     overflow-x: hidden;
     position: absolute;
     top: 100%;

@@ -9,6 +9,9 @@ import { toDate } from "../common/planWeek";
 import { toStringArray } from "../common/utils";
 import { CycleStep } from "../common/planCycle";
 import { CycleEditor } from "./CycleEditor";
+import { ButtonSelection } from "@dyordsabuzo/ui-components";
+
+export const PLAN_STATUSES = ["Planned", "Active", "Completed", "Archived"];
 import { IncrementDecrement, Input, ReorderableSelect, DateInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
 
 type Props = {
@@ -42,6 +45,13 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
   const [cycle, setCycle] = useState<CycleStep[]>(planData?.cycle ?? []);
   const [isCycleBased, setIsCycleBased] = useState((planData?.cycle?.length ?? 0) > 0);
   const [cycleError, setCycleError] = useState<string>();
+  // Shown and sorted by: creation date is editable; status is a label for the plan.
+  // Older plans have no creation date. Leave it empty so saving doesn't stamp
+  // today's date, which would wrongly move the plan to the top of the list.
+  const [createdOn, setCreatedOn] = useState<Dayjs | null>(
+    toDate(planData?.createdAt) ?? (type === "add" ? dayjs() : null)
+  );
+  const [status, setStatus] = useState<string>(planData?.status ?? "Active");
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -85,7 +95,13 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
           baselineTime,
           cycle: isCycleBased ? cycle : [],
         };
-    const plan = { name, ...timing, sessions };
+    const plan = {
+      name,
+      ...timing,
+      sessions,
+      status,
+      ...(createdOn && { createdAt: createdOn.toDate().toISOString() }),
+    };
 
     if (type === "add") {
       sourceDataContext.addPlan(plan);
@@ -112,6 +128,20 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
             placeholder={"Plan name"}
             error={nameError}
             changeValue={setName}
+          />
+
+          <DateInput
+            label={"Created on"}
+            value={createdOn}
+            placeholder={"Creation date"}
+            changeValue={setCreatedOn}
+          />
+
+          <ButtonSelection
+            label="Status"
+            options={PLAN_STATUSES}
+            selection={status}
+            onSelect={setStatus}
           />
 
           <div className="flex flex-col gap-1">

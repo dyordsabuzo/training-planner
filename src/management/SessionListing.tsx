@@ -41,8 +41,8 @@ const columns: DataTableColumn<SessionRow>[] = [
       const supersets = sessionUnitNames(row.session);
       return supersets.length > 0 ? (
         <div className="flex flex-wrap gap-1">
-          {supersets.map((s) => (
-            <Badge key={s} variant="neutral">{s}</Badge>
+          {supersets.map((s, i) => (
+            <Badge key={`${s}-${i}`} variant="neutral">{s}</Badge>
           ))}
         </div>
       ) : (

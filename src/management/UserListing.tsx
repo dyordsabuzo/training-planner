@@ -18,8 +18,15 @@ const buildColumns = (planNameById: Record<string, string>): DataTableColumn<App
     header: "User",
     render: (u) => (
       <div className="min-w-0">
-        <div className="font-bold truncate">
-          {getDisplayName(u.firstName, u.lastName, u.email)}
+        <div className="flex items-center gap-2">
+          <span className="font-bold truncate">
+            {getDisplayName(u.firstName, u.lastName, u.email)}
+          </span>
+          {u.accessRequested && (
+            <Badge variant="warning" className="shrink-0">
+              Requested access
+            </Badge>
+          )}
         </div>
         <div
           className={`text-xs text-text-muted-light dark:text-text-muted-dark truncate ${
@@ -89,19 +96,25 @@ export const UserListing = () => {
 
   const columns = useMemo(() => buildColumns(planNameById), [planNameById]);
 
+  // Users waiting on a request float to the top, so an admin sees them first
+  // without having to search or sort.
   const entries = useMemo(
     () =>
-      (users ?? []).filter((u) =>
-        `${u.email} ${u.displayName} ${u.firstName} ${u.lastName}`
-          .toLowerCase()
-          .includes(search.toLowerCase())
-      ),
+      (users ?? [])
+        .filter((u) =>
+          `${u.email} ${u.displayName} ${u.firstName} ${u.lastName}`
+            .toLowerCase()
+            .includes(search.toLowerCase())
+        )
+        .sort((a, b) => Number(!!b.accessRequested) - Number(!!a.accessRequested)),
     [users, search]
   );
 
   if (users === null) {
     return <Loading />;
   }
+
+  const pendingCount = users.filter((u) => u.accessRequested).length;
 
   return (
     <BaseListing>
@@ -114,6 +127,12 @@ export const UserListing = () => {
         onSearchChange={setSearch}
         onAdd={() => setIsAdding(true)}
       />
+
+      {pendingCount > 0 && (
+        <Badge variant="warning" className="w-fit">
+          {pendingCount} {pendingCount === 1 ? "user" : "users"} waiting for plan access
+        </Badge>
+      )}
 
       <DataTable
         columns={columns}

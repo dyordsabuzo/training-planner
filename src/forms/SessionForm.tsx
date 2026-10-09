@@ -29,7 +29,13 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const [tags, setTags] = useState(toStringArray(formData?.tags));
   const [date, setDate] = useState<Dayjs | null>(toDate(formData?.date));
   const [supersets, setSupersets] = useState<string[]>(toStringArray(formData?.supersets));
-  const [groups, setGroups] = useState<SessionGroup[]>(formData?.groups ?? []);
+  // Every group gets an id so rows keep their identity when reordered.
+  const [groups, setGroups] = useState<SessionGroup[]>(() =>
+    (formData?.groups ?? []).map((group: SessionGroup) => ({
+      ...group,
+      id: group.id ?? crypto.randomUUID(),
+    }))
+  );
   const [groupsError, setGroupsError] = useState<string>();
   const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
   const tagFieldRef = useRef<HTMLDivElement>(null);

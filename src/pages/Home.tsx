@@ -1,5 +1,5 @@
 import WrapperPage from "./WrapperPage";
-import { useContext, useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
@@ -11,7 +11,7 @@ import { PlanProgressCard } from "./others/PlanProgressCard";
 
 import { EmptyState } from "../management/EmptyState";
 import { LoadMore } from "../management/LoadMore";
-import { openPlanDoneSessions } from "../common/planSessions";
+import { openPlanDoneSessions, sortPlansByCreated } from "../common/planSessions";
 import { useLoadMore } from "../common/useLoadMore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -22,13 +22,12 @@ import {
   faUserShield,
   faLayerGroup,
   faClipboardList,
+  faClockRotateLeft,
+  faCircleCheck,
   IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
-import { Card, Button } from "@dyordsabuzo/ui-components";
+import { Card, Button, Input } from "@dyordsabuzo/ui-components";
 import { RATINGS } from "../components/others/MoodCheckIn";
-
-const linkClassName =
-  "font-bold text-primary hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
 type PlanStats = {
   planName: string;
@@ -61,7 +60,9 @@ const StatCard = ({
   </Card>
 );
 
-const AdminActionCard = ({
+// Used for both the admin dashboard's management shortcuts and the regular
+// user's "Quick actions" (Train/History) — nothing here is admin-specific.
+const ActionCard = ({
   icon,
   title,
   description,
@@ -96,11 +97,13 @@ export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
   const userManagementContext = useContext(UserManagementContext);
-  const { user, userPermission, isLoading } = authContext;
+  const { user, userPermission, isLoading, requestAccess } = authContext;
   const { sourceData } = sourceDataContext;
   const { users, fetchUsers } = userManagementContext;
   const { role, plans: grantedPlans = [] } = userPermission || {};
   const navigate = useNavigate();
+  const [requestNote, setRequestNote] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
 
   // `role` resolves asynchronously after `user` (userPermission is a
   // separate Firestore fetch) — keying this on `role`/`users` directly,
@@ -124,7 +127,7 @@ export const Home = () => {
 
   const planStats: PlanStats[] = useMemo(() => {
     const plans = sourceData?.plans ?? {};
-    return Object.entries(plans).map(([planName, plan]: [string, any]) => {
+    return sortPlansByCreated(plans).map(([planName, plan]: [string, any]) => {
       if (plan.open) {
         // Open plans count sessions instead of weeks.
         const sessionNames: string[] = plan.sessions ?? [];
@@ -239,35 +242,35 @@ export const Home = () => {
               Quick actions
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <AdminActionCard
+              <ActionCard
                 icon={faDumbbell}
                 title="Manage training plans"
                 description="Create and edit exercises, supersets, sessions, and training plans."
                 buttonLabel="Go to training setup"
                 onClick={() => navigate("/training-planner/manage/plans")}
               />
-              <AdminActionCard
+              <ActionCard
                 icon={faListCheck}
                 title="Manage exercises"
                 description="Create and edit the exercise library used across every plan."
                 buttonLabel="Go to exercises"
                 onClick={() => navigate("/training-planner/manage/exercises")}
               />
-              <AdminActionCard
+              <ActionCard
                 icon={faLayerGroup}
                 title="Manage supersets"
                 description="Group exercises into supersets to reuse across sessions."
                 buttonLabel="Go to supersets"
                 onClick={() => navigate("/training-planner/manage/supersets")}
               />
-              <AdminActionCard
+              <ActionCard
                 icon={faClipboardList}
                 title="Manage sessions"
                 description="Build workout sessions from your supersets."
                 buttonLabel="Go to sessions"
                 onClick={() => navigate("/training-planner/manage/sessions")}
               />
-              <AdminActionCard
+              <ActionCard
                 icon={faUsers}
                 title="Manage users"
                 description="Review registered users, grant plan access, and update roles."
@@ -299,20 +302,52 @@ export const Home = () => {
         </h1>
 
         {user && grantedPlans.length === 0 && (
-          <>
+          <Card className="flex flex-col gap-3">
             <p>Thank you for signing up for Training Planner.</p>
             <p>
               In order to start training, you need to be assigned at least one
               training program.
             </p>
-            <p>
-              Please contact the administrator at{" "}
-              <a href="mailto:trainingplanner6@gmail.com" className={linkClassName}>
-                trainingplanner6@gmail.com
-              </a>{" "}
-              to get access to specific training program(s).
-            </p>
-          </>
+
+            {userPermission?.accessRequested ? (
+              <div className="flex items-start gap-3 rounded-md bg-success-50 dark:bg-success-700/20 p-3">
+                <span className="text-success-700 dark:text-success-500 mt-0.5">
+                  <FontAwesomeIcon icon={faCircleCheck} />
+                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold text-text-light dark:text-text-dark">
+                    Request sent
+                  </span>
+                  <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    An administrator will review it and grant you access to a
+                    training program.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Input
+                  label="Note for the administrator (optional)"
+                  value={requestNote}
+                  placeholder="e.g. which program you're after"
+                  changeValue={setRequestNote}
+                />
+                <Button
+                  label={isRequesting ? "Sending…" : "Request access"}
+                  className="min-h-11 self-start"
+                  disabled={isRequesting}
+                  onClick={async () => {
+                    setIsRequesting(true);
+                    try {
+                      await requestAccess(requestNote);
+                    } finally {
+                      setIsRequesting(false);
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </Card>
         )}
 
         {user && grantedPlans.length > 0 && (
@@ -352,6 +387,28 @@ export const Home = () => {
                   Average mood
                 </span>
               </Card>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+                Quick actions
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ActionCard
+                  icon={faDumbbell}
+                  title="Start training"
+                  description="Pick up where you left off, or start a new session."
+                  buttonLabel="Go to Train"
+                  onClick={() => navigate("/training-planner/train")}
+                />
+                <ActionCard
+                  icon={faClockRotateLeft}
+                  title="Training history"
+                  description="See what you've done, and what was used for each exercise."
+                  buttonLabel="View history"
+                  onClick={() => navigate("/training-planner/history")}
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-3">

@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { faArrowsLeftRight, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IncrementDecrement, Button } from "@dyordsabuzo/ui-components";
+import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
 import { WatchVideo } from "../../components/others/WatchVideo";
 import { Widget } from "../../components/others/Widget";
 import { Timer } from "../../components/others/Timer";
@@ -19,6 +20,8 @@ type Props = {
   targetRep: string;
   // Shows a badge above the weight/reps fields.
   leftRight?: boolean;
+  // Seconds to rest between sides, shown as a note only (not a timer).
+  sideRest?: number;
   // Set for distance groups; replaces the reps box with a metres box.
   targetDistance?: string;
   targetTime?: string;
@@ -38,6 +41,7 @@ export const ExerciseDetails = ({
   targetRep,
   targetDistance,
   leftRight,
+  sideRest,
   targetTime = "0",
   exerciseLabel,
   transitionKey,
@@ -223,15 +227,14 @@ export const ExerciseDetails = ({
               className="inline-flex items-center gap-2 rounded-full border-2 border-primary bg-primary-50 dark:bg-primary-800/40 text-primary dark:text-primary-200 px-4 py-1.5 text-sm font-bold uppercase tracking-wide"
             >
               <FontAwesomeIcon icon={faArrowsLeftRight} />
-              Left &amp; right · each side
+              Left &amp; right · each side{sideRest ? ` · ${sideRest}s between sides` : ""}
             </span>
           </div>
         )}
         {type !== "Time-based" && (
           <div className="grid grid-cols-2 gap-2 px-3 sm:gap-6 sm:px-6">
-            <IncrementDecrement
+            <DecimalIncrementDecrement
               label="Weight"
-              labelDirection="col"
               unit="kg"
               nonZero
               fullWidth

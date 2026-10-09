@@ -8,7 +8,7 @@ import SourceDataContext from "../context/SourceDataContext";
 import AuthContext from "../context/AuthContext";
 import { AppUser } from "../context/UserManagementContext";
 import { getDisplayName } from "../common/utils";
-import { Modal, Input, Toggle, MultiSelect } from "@dyordsabuzo/ui-components";
+import { Modal, Input, Toggle, MultiSelect, Button, Badge } from "@dyordsabuzo/ui-components";
 
 type Props = {
   data: AppUser;
@@ -64,9 +64,22 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const planIds = planNames.map((name) => planIdByName[name]).filter(Boolean);
-    onSave({ ...data, email, firstName, lastName, role, plans: planIds });
+    onSave({
+      ...data,
+      email,
+      firstName,
+      lastName,
+      role,
+      plans: planIds,
+      // Granting a plan is treated as resolving the request; otherwise leave
+      // it as it was (the Dismiss button below is the explicit way to clear
+      // it without granting anything).
+      accessRequested: planIds.length > 0 ? false : data.accessRequested,
+    });
     setIsEditing(false);
   };
+
+  const dismissRequest = () => onSave({ ...data, accessRequested: false });
 
   const roleLabel = role === "admin" ? "Admin" : "User";
 
@@ -77,6 +90,20 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
       onClose={closeForm}
       headerAction={headerAction}
     >
+      {data.accessRequested && (
+        <div className="mb-4 flex flex-col gap-2 rounded-md border border-warning-200 dark:border-warning-700 bg-warning-50 dark:bg-warning-800/20 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Badge variant="warning">Access requested</Badge>
+            <Button label="Dismiss" decoration="cancel" className="text-xs" onClick={dismissRequest} />
+          </div>
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+            {data.accessRequestedAt
+              ? `Asked on ${new Date(data.accessRequestedAt).toLocaleDateString()}`
+              : "Asked for access"}
+            {data.accessRequestNote && ` — "${data.accessRequestNote}"`}
+          </span>
+        </div>
+      )}
       {!isEditing ? (
         <div className="flex flex-col gap-4">
           <DetailField label="Email" value={data.email} />

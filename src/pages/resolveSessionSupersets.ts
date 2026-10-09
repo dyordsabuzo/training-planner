@@ -15,12 +15,16 @@ import { toStringArray } from "../common/utils";
 // it count as reps). percent is % of each exercise's reference weight
 // (0 = unset); rpe is informational (0 = unset).
 export type SessionGroup = {
+  // Stable identity for rendering; not used for saved data.
+  id?: string;
   name: string;
   exercises: string[];
   sets: number;
   reps: number;
-  measure?: "reps" | "distance";
+  measure?: "reps" | "distance" | "time";
   distance?: number;
+  // Seconds held/performed for, when measure is "time" (e.g. a plank).
+  time?: number;
   percent: number;
   rpe: number;
   // Rest between sets, in seconds (0 = not set).
@@ -28,6 +32,9 @@ export type SessionGroup = {
   // Done on left and right separately (e.g. single-arm rows); off for
   // exercises done together, such as lunges or deadlifts.
   leftRight?: boolean;
+  // Rest between the left and right sides, in seconds. Informational only —
+  // shown as a note during training, not a running timer (see leftRight).
+  sideRest?: number;
 };
 
 export const sideLabel = (leftRight?: boolean) => (leftRight ? "Left & right" : null);
@@ -157,11 +164,15 @@ export const resolveSessionGroups = (
         key: keys[index],
         kind: "group",
         exercises,
-        ...(group.measure === "distance"
-          ? { targetDistance: group.distance || 0 }
-          : { targetRep: group.reps || seed.targetRep }),
+        type: group.measure === "time" ? "Time-based" : "Rep-based",
+        ...(group.measure === "time"
+          ? { targetTime: group.time || 0 }
+          : group.measure === "distance"
+            ? { targetDistance: group.distance || 0 }
+            : { targetRep: group.reps || seed.targetRep }),
         targetSet: group.sets || seed.targetSet,
         leftRight: !!group.leftRight,
+        sideRest: group.sideRest || 0,
         annotation: group.rpe ? `RPE ${group.rpe}` : seed.annotation,
         ...(group.rest ? { rest: group.rest } : {}),
       },
