@@ -14,7 +14,12 @@ import { getCurrentWeekNumber } from "../common/planWeek";
 import { Button } from "@dyordsabuzo/ui-components";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { resolveSession, sessionOrder } from "./resolveSessionSupersets";
-import { OPEN_WEEK, getLastLoggedWeight, getWeightForRule } from "../common/planCycle";
+import {
+  OPEN_WEEK,
+  getLastLoggedWeight,
+  getLastSessionWeight,
+  getWeightForRule,
+} from "../common/planCycle";
 import { completedRuns, CompletedRun } from "../common/sessionStats";
 import { SessionStats } from "./others/SessionStats";
 import { SessionStatusIcon } from "../components/others/SessionStatusIcon";
@@ -25,6 +30,20 @@ import {
   sessionDueStatus,
   sortSessionsByDate,
 } from "../common/planSessions";
+
+// Weights start from the last session of the plan that included the exercise.
+// "increase" weeks build on prior weeks only, so a second session in the same
+// week doesn't add the increment twice.
+const weightSeed = (userdata: any, plan: string, week: string, weightRule: any) => ({
+  weightFor: (exerciseName: string, currentWeight: number) =>
+    weightRule?.mode === "increase"
+      ? getWeightForRule(
+          weightRule,
+          getLastLoggedWeight(userdata, plan, week, exerciseName),
+          currentWeight
+        )
+      : getLastSessionWeight(userdata, plan, exerciseName) ?? currentWeight,
+});
 
 const sortWeekKeys = (keys: string[]) =>
   [...keys].sort((a, b) => {
@@ -127,14 +146,7 @@ const SessionPage = () => {
       annotation,
       referenceWeight: (exerciseName: string) =>
         getLastLoggedWeight(userdata, planName, week, exerciseName) ?? undefined,
-      ...(weightRule && {
-        weightFor: (exerciseName: string, currentWeight: number) =>
-          getWeightForRule(
-            weightRule,
-            getLastLoggedWeight(userdata, planName, week, exerciseName),
-            currentWeight
-          ),
-      }),
+      ...weightSeed(userdata, planName, week, weightRule),
     });
     setSessionData({
       plan: planName,
@@ -227,15 +239,7 @@ const SessionPage = () => {
       // Group % targets are taken from the last weight logged for the exercise.
       referenceWeight: (exerciseName: string) =>
         getLastLoggedWeight(userdata, plan, week, exerciseName) ?? undefined,
-      // Only cycle-driven weeks carry a weightRule; others keep stored weights.
-      ...(weightRule && {
-        weightFor: (exerciseName: string, currentWeight: number) =>
-          getWeightForRule(
-            weightRule,
-            getLastLoggedWeight(userdata, plan, week, exerciseName),
-            currentWeight
-          ),
-      }),
+      ...weightSeed(userdata, plan, week, weightRule),
     });
 
     setSessionData((prev: any) => ({ ...prev, session, supersets }));

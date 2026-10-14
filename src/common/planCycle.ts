@@ -1,3 +1,5 @@
+import { historyRuns } from "./sessionStats";
+
 // A plan's "cycle" is an ordered list of steps describing how each week's
 // targets change relative to the previous week, e.g. baseline -> heavier ->
 // more reps -> more sets -> deload. It repeats to fill the plan's weeks.
@@ -147,6 +149,32 @@ export const getLastLoggedWeight = (
           });
       });
     });
+    if (found !== null) return found;
+  }
+  return null;
+};
+
+// Last positive weight logged for an exercise in the plan's most recently
+// completed session that included it, regardless of week.
+export const getLastSessionWeight = (
+  userdata: any,
+  planName: string,
+  exerciseName: string
+): number | null => {
+  for (const run of historyRuns({ [planName]: userdata?.[planName] })) {
+    let found: number | null = null;
+    Object.entries<any>(run.logged ?? {})
+      .filter(([unit]) => !["mood", "meta"].includes(unit))
+      .forEach(([, unit]) => {
+        const sets = unit?.[exerciseName];
+        if (!sets) return;
+        Object.keys(sets)
+          .sort((a, b) => Number(a) - Number(b))
+          .forEach((setKey) => {
+            const weight = Number(sets[setKey]?.targetWeight);
+            if (weight > 0) found = weight;
+          });
+      });
     if (found !== null) return found;
   }
   return null;

@@ -93,10 +93,23 @@ export const unlockPortraitOrientation = () => {
 // handler (see App.tsx) to resume it while a gesture is still on the stack.
 let sharedAudioContext: AudioContext | null = null;
 
+// "ambient" makes the page's audio mix with other apps' audio (e.g. music
+// playing in the background) instead of interrupting it. Audio Session API,
+// iOS Safari 16.4+; no-op elsewhere. Must be set before audio starts.
+const setAmbientAudioSession = () => {
+  try {
+    const audioSession = (navigator as any).audioSession;
+    if (audioSession && audioSession.type !== "ambient") {
+      audioSession.type = "ambient";
+    }
+  } catch {}
+};
+
 const getAudioContext = (): AudioContext => {
   const AudioContextClass =
     (window as any).AudioContext || (window as any).webkitAudioContext;
   if (!sharedAudioContext) {
+    setAmbientAudioSession();
     sharedAudioContext = new AudioContextClass();
   }
   return sharedAudioContext as AudioContext;
@@ -144,6 +157,7 @@ export const speak = (text: string, onEnd?: () => void) => {
       onEnd?.();
       return;
     }
+    setAmbientAudioSession();
     const utterance = new SpeechSynthesisUtterance(text);
     activeUtterance = utterance;
 

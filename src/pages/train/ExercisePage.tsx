@@ -2,7 +2,7 @@
 import { ConfirmDeleteButton } from "../../forms/ConfirmDeleteButton";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import { useNavigate } from "react-router";
-import { faCircleXmark, faCompress } from "@fortawesome/free-solid-svg-icons";
+import { faCircleXmark, faCompress, faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SessionContext from "../../context/SessionContext";
 import WrapperPage from "../WrapperPage";
@@ -11,7 +11,8 @@ import { Loading } from "../helpers/Loading";
 import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
-import { Button } from "@dyordsabuzo/ui-components";
+import { TargetWeightPrompt } from "./TargetWeightPrompt";
+import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { unitId } from "../resolveSessionSupersets";
 import {
   isMobileViewport,
@@ -103,6 +104,10 @@ export const ExercisePage = () => {
   const [exerciseData, setExerciseData] = useState<any>({});
 
   const [targetWeight, setTargetWeight] = useState<string>("0");
+  // "<supersetCounter>-<exercise name>" keys already asked for a target weight.
+  const [weightPrompted, setWeightPrompted] = useState<Set<string>>(new Set());
+
+  const [showGroups, setShowGroups] = useState(false);
 
   const [targetRep, setTargetRep] = useState<string>("0");
   const [targetDistance, setTargetDistance] = useState<string>("0");
@@ -270,6 +275,19 @@ export const ExercisePage = () => {
     });
   };
 
+  const weightPromptKey = `${exerciseState.supersetCounter}-${exerciseData.exercise?.name}`;
+  const showWeightPrompt =
+    exerciseState.exerciseSet === 0 &&
+    !exerciseState.supersetRest &&
+    supersetData.type !== "Time-based" &&
+    // Group names are free text: matches "Warmup", "Warm-up", "warm up", etc.
+    !/warm[\s-]?up/i.test(supersetData.name || "") &&
+    !!exerciseData.exercise?.name &&
+    !weightPrompted.has(weightPromptKey);
+
+  const markWeightPrompted = () =>
+    setWeightPrompted((prev) => new Set(prev).add(weightPromptKey));
+
   return (
     <WrapperPage
       className="max-w-[26rem] sm:max-w-2xl lg:max-w-6xl"
@@ -286,6 +304,28 @@ export const ExercisePage = () => {
       >
         <FontAwesomeIcon icon={faCompress} />
       </button>
+      <Modal
+        title="Session progress"
+        isOpen={showGroups}
+        onClose={() => setShowGroups(false)}
+      >
+        <SessionProgress
+          supersets={allSupersets}
+          doneUpToIndex={exerciseState.supersetCounter - 1}
+          activeIndex={exerciseState.supersetCounter}
+        />
+      </Modal>
+      <TargetWeightPrompt
+        isOpen={showWeightPrompt}
+        exerciseName={exerciseData.exercise?.name || ""}
+        targetWeight={targetWeight}
+        onConfirm={(weight: number) => {
+          setSupersetData({ ...supersetData, targetWeight: weight });
+          setTargetWeight(String(weight));
+          markWeightPrompted();
+        }}
+        onClose={markWeightPrompted}
+      />
       <div className="lg:flex lg:gap-6 lg:items-start">
         <div className="flex-1 flex flex-col gap-2">
           <div
@@ -331,6 +371,16 @@ export const ExercisePage = () => {
                   {unitsDone + 1} of {totalUnits} · {overallPercent}%
                 </span>
               </div>
+              {/* Large screens already show the group list in the sidebar. */}
+              <button
+                type="button"
+                onClick={() => setShowGroups(true)}
+                className="lg:hidden self-start mt-2 flex items-center gap-2 min-h-11 text-white text-sm font-semibold
+                  underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
+              >
+                <FontAwesomeIcon icon={faListCheck} />
+                View groups
+              </button>
             </div>
             <div className="w-full flex-1 flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
               <div

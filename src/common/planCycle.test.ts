@@ -4,6 +4,7 @@ import {
   buildWeek,
   computeCycleWeek,
   getLastLoggedWeight,
+  getLastSessionWeight,
   getWeightForRule,
 } from "./planCycle";
 
@@ -58,5 +59,43 @@ describe("weights", () => {
     expect(getWeightForRule({ mode: "hold" }, 44, 0)).toBe(44);
     expect(getWeightForRule({ mode: "define" }, 44, 30)).toBe(30);
     expect(getWeightForRule({ mode: "hold" }, null, 30)).toBe(30);
+  });
+});
+
+describe("getLastSessionWeight", () => {
+  const dl = (weight: string) => ({ Deadlift: { 1: { targetWeight: "60" }, 2: { targetWeight: weight } } });
+  const userdata = {
+    id: "uid",
+    P: {
+      "Week 1": {
+        "Session 2": { SS: dl("100"), meta: { completedAt: "2026-01-02T00:00:00Z" } },
+        "Session 3": {
+          SS: { Squat: { 1: { targetWeight: "80" } } },
+          mood: { before: 3 },
+          meta: { completedAt: "2026-01-03T00:00:00Z" },
+        },
+      },
+    },
+    Other: { "Week 9": { S: { SS: dl("200"), meta: { completedAt: "2026-02-01T00:00:00Z" } } } },
+  };
+
+  it("uses the last session of the plan that included the exercise", () => {
+    expect(getLastSessionWeight(userdata, "P", "Deadlift")).toBe(100);
+  });
+
+  it("picks the most recently completed run", () => {
+    const newer = {
+      ...userdata,
+      P: {
+        ...userdata.P,
+        "Week 0": { S: { SS: dl("110"), meta: { completedAt: "2026-01-05T00:00:00Z" } } },
+      },
+    };
+    expect(getLastSessionWeight(newer, "P", "Deadlift")).toBe(110);
+  });
+
+  it("returns null when the exercise or plan has no logs", () => {
+    expect(getLastSessionWeight(userdata, "P", "Bench")).toBeNull();
+    expect(getLastSessionWeight(userdata, "Missing", "Deadlift")).toBeNull();
   });
 });
