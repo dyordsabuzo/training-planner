@@ -291,7 +291,7 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
               }
             />
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 justify-items-center">
               <IncrementDecrement
                 label="Sets"
                 labelDirection="col"

@@ -127,10 +127,14 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
     return hasGroups ? "Exercise groups" : "Supersets";
   };
   const sectionTitles = ["Supersets", "Exercise groups", "Supersets & exercise groups"];
-  const grouped = sectionTitles.map((title) => ({
-    title,
-    rows: allRows.filter((row) => unitKind(row) === title),
-  }));
+  // Exercise-group sessions run newest date first; undated ones keep name
+  // order at the end (dates are YYYY-MM-DD, so string compare works).
+  const byDateDesc = (a: SessionRow, b: SessionRow) =>
+    (b.session.date ?? "").localeCompare(a.session.date ?? "");
+  const grouped = sectionTitles.map((title) => {
+    const rows = allRows.filter((row) => unitKind(row) === title);
+    return { title, rows: title === "Exercise groups" ? rows.sort(byDateDesc) : rows };
+  });
   const rows = grouped.flatMap((section) => section.rows);
   const openTotal = grouped
     .filter((section) => expanded.has(section.title))
