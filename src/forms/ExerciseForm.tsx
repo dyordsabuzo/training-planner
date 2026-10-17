@@ -26,9 +26,11 @@ type Props = {
   data: ExerciseData | null;
   type: string;
   closeForm: () => void;
+  // Called with the saved name after an exercise is added.
+  onCreated?: (name: string) => void;
 };
 
-export const ExerciseForm = ({ data, type, closeForm }: Props) => {
+export const ExerciseForm = ({ data, type, closeForm, onCreated }: Props) => {
   const exerciseData: ExerciseData | null = data;
 
   const id = exerciseData?.id ?? "";
@@ -86,6 +88,7 @@ export const ExerciseForm = ({ data, type, closeForm }: Props) => {
         targetWeight: 0,
         isWeightExercise,
       });
+      onCreated?.(savedName);
       closeForm();
     }
 

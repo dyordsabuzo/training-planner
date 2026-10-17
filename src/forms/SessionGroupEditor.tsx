@@ -8,6 +8,7 @@ type Props = {
   value: SessionGroup[];
   onChange: (groups: SessionGroup[]) => void;
   exerciseOptions: string[];
+  onCreateExercise?: (groupId: string) => void;
 };
 
 const newGroup = (index: number): SessionGroup => ({
@@ -53,7 +54,7 @@ const sideRestNote = (group: SessionGroup) =>
 // Ordered exercise groups for a session. Each group is edited in full until
 // it's marked Done, then collapses to a summary. Drag the grip to reorder;
 // groups run in the order shown. Percent and RPE are optional (0 = not set).
-export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) => {
+export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateExercise }: Props) => {
   // Parallel to `value`: true = collapsed. Groups already in the session start
   // collapsed; groups added in this session start open.
   const [collapsed, setCollapsed] = useState<boolean[]>(() => value.map(() => true));
@@ -251,6 +252,11 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions }: Props) 
                 }
                 placeholder="Select an exercise to add"
               />
+              {onCreateExercise && group.id && (
+                <div className="flex justify-end">
+                  <Button label="New exercise" className="text-xs" onClick={() => onCreateExercise(group.id!)} />
+                </div>
+              )}
               <ReorderableList
                 items={group.exercises}
                 onReorder={(exercises) => updateGroup(index, { ...group, exercises })}

@@ -1,7 +1,8 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Dayjs } from "dayjs";
 import SourceDataContext from "../context/SourceDataContext";
 
+import { ExerciseForm } from "./ExerciseForm";
 import { FormButtons } from "./FormButtons";
 import { SessionGroupEditor } from "./SessionGroupEditor";
 
@@ -39,6 +40,51 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const [groupsError, setGroupsError] = useState<string>();
   const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
   const tagFieldRef = useRef<HTMLDivElement>(null);
+  // Group waiting for an exercise created from the nested exercise modal.
+  const [exerciseGroupId, setExerciseGroupId] = useState<string | null>(null);
+
+  // Group edits on an existing session save on their own (debounced, and
+  // flushed on close) so they aren't lost without Save. Only the groups are
+  // written; the other fields keep their stored values until Save.
+  const initialGroups = useRef(groups);
+  const pendingGroups = useRef<SessionGroup[] | null>(null);
+  const persistGroups = () => {
+    const pending = pendingGroups.current;
+    pendingGroups.current = null;
+    if (!pending) return;
+
+    const cleanGroups = pending.map((g) => ({ ...g, name: g.name.trim() }));
+    // Wait until every group is complete, as Save would require.
+    if (cleanGroups.some((g) => !g.name || g.exercises.length === 0)) return;
+
+    const stored: any =
+      Object.values(sourceData.sessions ?? {}).find((s: any) => s.id === id) ?? formData;
+    const storedSupersets = toStringArray(stored.supersets);
+    const names = [...storedSupersets, ...groupKeys(storedSupersets, cleanGroups)];
+    if (names.length === 0) return;
+
+    sourceDataContext.editSession({
+      ...stored,
+      id,
+      groups: cleanGroups,
+      sharedOrder: names,
+      sharedSnapshot: stored.isShareable
+        ? resolveSession(sourceData, { supersets: storedSupersets, groups: cleanGroups })
+        : null,
+    });
+  };
+  // Timers and the unmount flush must see the latest sourceData.
+  const persistRef = useRef(persistGroups);
+  persistRef.current = persistGroups;
+
+  useEffect(() => {
+    if (type !== "edit" || groups === initialGroups.current) return;
+    pendingGroups.current = groups;
+    const timer = setTimeout(() => persistRef.current(), 800);
+    return () => clearTimeout(timer);
+  }, [groups, type]);
+
+  useEffect(() => () => persistRef.current(), []);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -92,16 +138,22 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     }
 
     if (type === "edit") {
+      // Save writes everything; drop any pending group autosave so it can't
+      // overwrite this with stale stored fields on close.
+      pendingGroups.current = null;
       sourceDataContext.editSession({ id, ...session });
       closeForm();
     }
   };
 
   return (
+    <>
     <Modal
       title={type === "add" ? "Add session" : "Session"}
       isOpen={true}
-      onClose={closeForm}
+      // Modal listens for Escape on document, so ignore it while the exercise
+      // modal is open on top.
+      onClose={exerciseGroupId ? () => {} : closeForm}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -145,6 +197,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           value={groups}
           onChange={setGroups}
           exerciseOptions={Object.keys(sourceData.exercises ?? {})}
+          onCreateExercise={setExerciseGroupId}
         />
         {groupsError && <span className="text-sm text-danger">{groupsError}</span>}
 
@@ -158,5 +211,24 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
         <FormButtons onCancel={closeForm} />
       </form>
     </Modal>
+
+    {/* Outside the session <form> so its submit doesn't bubble to handleSubmit. */}
+    {exerciseGroupId && (
+      <ExerciseForm
+        data={null}
+        type="add"
+        closeForm={() => setExerciseGroupId(null)}
+        onCreated={(exercise) =>
+          setGroups((current) =>
+            current.map((g) =>
+              g.id === exerciseGroupId && !g.exercises.includes(exercise)
+                ? { ...g, exercises: [...g.exercises, exercise] }
+                : g
+            )
+          )
+        }
+      />
+    )}
+    </>
   );
 };
