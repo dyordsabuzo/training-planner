@@ -59,8 +59,10 @@ export const getDisplayName = (
 // triggering the mobile-only portrait-lock rotation hack below for mouse/
 // trackpad users. Requiring a coarse (touch) pointer excludes those, since
 // desktop input devices report "fine" even when the window is narrow.
+// The screen's short side is used rather than the viewport width, so a phone
+// that's already in landscape (often wider than 767px) still counts.
 export const isMobileViewport = (): boolean =>
-  window.matchMedia("(max-width: 767px)").matches &&
+  Math.min(window.screen.width, window.screen.height) < 768 &&
   window.matchMedia("(pointer: coarse)").matches;
 
 // Class toggled on <html> that applies the CSS rotation fallback in
@@ -69,12 +71,24 @@ export const isMobileViewport = (): boolean =>
 // visually portrait there.
 const PORTRAIT_LOCK_FALLBACK_CLASS = "portrait-lock-fallback";
 
+// Which way the phone is turned, so the fallback rotates the page back the
+// right way (rotating one fixed direction leaves it upside-down the other way).
+const updateLandscapeSide = () => {
+  const angle =
+    (screen as any).orientation?.angle ?? Number((window as any).orientation ?? 0);
+  const side = angle === 270 || angle === -90 ? "right" : "left";
+  document.documentElement.dataset.landscapeSide = side;
+};
+
 // Screen Orientation API isn't in the TS DOM lib (hence the `as any` casts)
 // and isn't supported everywhere (e.g. Safari/iOS) or without fullscreen on
 // some browsers, so failures here are expected and intentionally silent.
 export const lockPortraitOrientation = () => {
   const orientation = (screen as any).orientation;
   orientation?.lock?.("portrait")?.catch?.(() => {});
+  updateLandscapeSide();
+  window.addEventListener("orientationchange", updateLandscapeSide);
+  window.addEventListener("resize", updateLandscapeSide);
   document.documentElement.classList.add(PORTRAIT_LOCK_FALLBACK_CLASS);
 };
 
@@ -82,6 +96,9 @@ export const unlockPortraitOrientation = () => {
   try {
     (screen as any).orientation?.unlock?.();
   } catch {}
+  window.removeEventListener("orientationchange", updateLandscapeSide);
+  window.removeEventListener("resize", updateLandscapeSide);
+  delete document.documentElement.dataset.landscapeSide;
   document.documentElement.classList.remove(PORTRAIT_LOCK_FALLBACK_CLASS);
 };
 

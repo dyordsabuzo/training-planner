@@ -37,6 +37,9 @@ type Action =
 const pluralize = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
 
+// Reps, distance and time targets default to 1 when nothing sensible is set.
+const atLeastOne = (value: any) => (Number(value) >= 1 ? Number(value) : 1);
+
 const initialState = {
   exerciseCounter: 0,
   exerciseSet: 0,
@@ -111,6 +114,7 @@ export const ExercisePage = () => {
 
   const [targetRep, setTargetRep] = useState<string>("0");
   const [targetDistance, setTargetDistance] = useState<string>("0");
+  const [targetTime, setTargetTime] = useState<string>("0");
 
   const completeExercise = () => {
     const targetSet = parseInt(supersetData.targetSet);
@@ -145,9 +149,9 @@ export const ExercisePage = () => {
             // actualWeight,
             // actualTime
             targetRep,
-            ...(supersetData.targetDistance && { targetDistance }),
+            ...("targetDistance" in supersetData && { targetDistance }),
             targetWeight,
-            // targetTime,
+            ...(supersetData.type === "Time-based" && { targetTime }),
           },
         },
       },
@@ -185,19 +189,20 @@ export const ExercisePage = () => {
 
     if (superset) {
       superset.exercises = superset.exercises.filter((e: any) => e.exercise);
-      setTargetRep(superset.targetRep);
-      setTargetDistance(String(superset.targetDistance ?? "0"));
+      // Unit target first, then the week/session target.
+      setTargetRep(String(atLeastOne(superset.targetRep ?? sessionData.targetRep)));
+      setTargetDistance(String(atLeastOne(superset.targetDistance)));
+      setTargetTime(String(atLeastOne(superset.targetTime ?? sessionData.targetTime)));
       setSupersetData(superset);
     }
 
     return () => {};
   }, [exerciseState.supersetCounter, sessionData]);
 
+  // Weight is kept per exercise (see setExerciseWeight), so it follows the
+  // exercise across sets instead of carrying over from the previous one.
   useEffect(() => {
-    if (exerciseData.targetWeight) {
-      setTargetWeight(exerciseData.targetWeight);
-      setTargetRep(exerciseData.exercise?.targetRep || exerciseData.targetRep);
-    }
+    setTargetWeight(String(exerciseData.targetWeight ?? 0));
   }, [exerciseData]);
 
   const supersetLength = Object.keys(sessionData.supersets).length;
@@ -275,6 +280,19 @@ export const ExercisePage = () => {
     });
   };
 
+  // Writes into supersetData.exercises so the weight sticks for the
+  // remaining sets of this exercise.
+  const setExerciseWeight = (weight: number) => {
+    const index = exerciseState.exerciseCounter % exerciseLength;
+    setSupersetData({
+      ...supersetData,
+      exercises: supersetData.exercises.map((item: any, i: number) =>
+        i === index ? { ...item, targetWeight: weight } : item
+      ),
+    });
+    setTargetWeight(String(weight));
+  };
+
   const weightPromptKey = `${exerciseState.supersetCounter}-${exerciseData.exercise?.name}`;
   const showWeightPrompt =
     exerciseState.exerciseSet === 0 &&
@@ -320,8 +338,7 @@ export const ExercisePage = () => {
         exerciseName={exerciseData.exercise?.name || ""}
         targetWeight={targetWeight}
         onConfirm={(weight: number) => {
-          setSupersetData({ ...supersetData, targetWeight: weight });
-          setTargetWeight(String(weight));
+          setExerciseWeight(weight);
           markWeightPrompted();
         }}
         onClose={markWeightPrompted}
@@ -423,12 +440,10 @@ export const ExercisePage = () => {
                   type={supersetData.type}
                   targetWeight={targetWeight}
                   targetRep={targetRep}
-                  targetDistance={supersetData.targetDistance ? targetDistance : undefined}
+                  targetDistance={"targetDistance" in supersetData ? targetDistance : undefined}
                   leftRight={!!supersetData.leftRight}
                   sideRest={supersetData.sideRest}
-                  targetTime={
-                    exerciseData.targetTime || supersetData.targetTime || "0"
-                  }
+                  targetTime={targetTime}
                   exerciseLabel={exerciseLabel}
                   transitionKey={`${exerciseState.supersetCounter}-${exerciseState.exerciseCounter}`}
                   videoLink={exerciseData.exercise?.videoLink}
@@ -436,16 +451,20 @@ export const ExercisePage = () => {
                   onSelectAlternative={handleSelectAlternative}
                   completeExercise={handleCompleteExercise}
                   updateSupersetData={(data: any) => {
+                    if ("targetWeight" in data) {
+                      setExerciseWeight(data.targetWeight);
+                      return;
+                    }
                     setSupersetData({
                       ...supersetData,
                       ...data,
                     });
-                    if ("targetWeight" in data) {
-                      setTargetWeight(String(data.targetWeight));
-                    } else if ("targetRep" in data) {
+                    if ("targetRep" in data) {
                       setTargetRep(String(data.targetRep));
                     } else if ("targetDistance" in data) {
                       setTargetDistance(String(data.targetDistance));
+                    } else if ("targetTime" in data) {
+                      setTargetTime(String(data.targetTime));
                     }
                   }}
                 />

@@ -1,10 +1,9 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { faArrowsLeftRight, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IncrementDecrement, Button } from "@dyordsabuzo/ui-components";
+import { Button } from "@dyordsabuzo/ui-components";
 import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
 import { WatchVideo } from "../../components/others/WatchVideo";
-import { Widget } from "../../components/others/Widget";
 import { Timer } from "../../components/others/Timer";
 import { playCountdownWarningSound, toStringArray } from "../../common/utils";
 import SourceDataContext from "../../context/SourceDataContext";
@@ -244,25 +243,25 @@ export const ExerciseDetails = ({
               }}
             />
             {targetDistance !== undefined ? (
-              <IncrementDecrement
+              <DecimalIncrementDecrement
                 label="Distance"
-                labelDirection="col"
                 unit="m"
-                nonZero
+                step={1}
+                min={1}
                 fullWidth
-                value={Number(targetDistance) || 0}
+                value={Number(targetDistance) || 1}
                 updateValue={(v: number) => {
                   updateSupersetData({ targetDistance: v });
                 }}
               />
             ) : (
-              <IncrementDecrement
+              <DecimalIncrementDecrement
                 label="Reps"
-                labelDirection="col"
                 unit="reps"
-                nonZero
+                step={1}
+                min={1}
                 fullWidth
-                value={Number(targetRep) || 0}
+                value={Number(targetRep) || 1}
                 updateValue={(v: number) => {
                   updateSupersetData({ targetRep: v });
                 }}
@@ -290,11 +289,16 @@ export const ExerciseDetails = ({
                 />
               </div>
             ) : (
-              <Widget
-                label={"Target Time"}
-                value={targetTime}
-                unit={"secs"}
-                editable={false}
+              <DecimalIncrementDecrement
+                label="Target time"
+                unit="secs"
+                step={5}
+                min={1}
+                fullWidth
+                value={Number(targetTime) || 1}
+                updateValue={(v: number) => {
+                  updateSupersetData({ targetTime: v });
+                }}
               />
             )}
           </div>

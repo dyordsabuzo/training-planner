@@ -42,5 +42,15 @@ code {
     position: absolute;
     top: 100%;
     left: 0;
+    /* iOS otherwise enlarges text when the phone turns landscape. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Phone turned the other way: rotate back clockwise instead. */
+  html.portrait-lock-fallback[data-landscape-side="right"] {
+    transform: rotate(90deg);
+    top: 0;
+    left: 100%;
   }
 }

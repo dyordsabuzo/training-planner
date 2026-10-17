@@ -10,6 +10,8 @@ type Props = {
   fullWidth?: boolean;
   // Amount +/- step by, and typed values round to. 0.5 suits most weights.
   step?: number;
+  // Lowest allowed value; overrides nonZero's floor of 0 when set.
+  min?: number;
   updateValue: (value: number) => void;
 };
 
@@ -23,6 +25,7 @@ export const DecimalIncrementDecrement = ({
   nonZero = false,
   fullWidth = false,
   step = 0.5,
+  min,
   updateValue,
 }: Props) => {
   const [text, setText] = useState(String(value));
@@ -31,7 +34,8 @@ export const DecimalIncrementDecrement = ({
     setText(String(value));
   }, [value]);
 
-  const clamp = (n: number) => (nonZero && n < 0 ? 0 : n);
+  const floor = min ?? (nonZero ? 0 : undefined);
+  const clamp = (n: number) => (floor !== undefined && n < floor ? floor : n);
 
   // Rounds off binary floating-point drift (e.g. 72.5 + 0.5 → 72.99999…9).
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -53,7 +57,7 @@ export const DecimalIncrementDecrement = ({
 
   const handleBlur = () => {
     const parsed = parseFloat(text);
-    commit(Number.isNaN(parsed) ? 0 : parsed);
+    commit(Number.isNaN(parsed) ? floor ?? 0 : parsed);
   };
 
   return (
@@ -68,7 +72,7 @@ export const DecimalIncrementDecrement = ({
         <button
           type="button"
           aria-label={`Decrease ${label}`}
-          disabled={nonZero && value <= 0}
+          disabled={floor !== undefined && value <= floor}
           onClick={() => commit(value - step)}
           className="min-w-8 sm:min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
             hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none
