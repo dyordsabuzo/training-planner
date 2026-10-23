@@ -35,6 +35,10 @@ export type SessionGroup = {
   // Done on left and right separately (e.g. single-arm rows); off for
   // exercises done together, such as lunges or deadlifts.
   leftRight?: boolean;
+  // Free-text target tempo/rate (e.g. "3-1-1" or "30 spm"), shown during
+  // training only when tempoRequired is on.
+  tempoRequired?: boolean;
+  tempo?: string;
   // Rest between the left and right sides, in seconds. Runs as a
   // switch-sides countdown during training (see leftRight); 0 skips it.
   sideRest?: number;
@@ -148,6 +152,7 @@ export const resolveSessionGroups = (
 
   groups.forEach((group, index) => {
     const measured = group.measured !== false;
+    const tempo = group.tempoRequired ? group.tempo?.trim() : "";
     const exercises = group.exercises
       .filter((e) => sourceData.exercises?.[e])
       .map((e) => {
@@ -181,6 +186,7 @@ export const resolveSessionGroups = (
         targetSet: group.sets || seed.targetSet,
         leftRight: !!group.leftRight,
         sideRest: group.sideRest || 0,
+        ...(tempo ? { tempo } : {}),
         annotation: group.rpe ? `RPE ${group.rpe}` : seed.annotation,
         ...(group.rest ? { rest: group.rest } : {}),
       },

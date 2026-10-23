@@ -26,6 +26,8 @@ const newGroup = (index: number): SessionGroup => ({
   rest: 60,
   leftRight: false,
   sideRest: 15,
+  tempoRequired: false,
+  tempo: "",
 });
 
 const iconButtonClass = `min-h-11 min-w-11 flex items-center justify-center rounded-full
@@ -46,6 +48,7 @@ const summarise = (group: SessionGroup) =>
     group.percent ? `${group.percent}%` : null,
     group.rpe ? `RPE ${group.rpe}` : null,
     group.rest ? `${group.rest} s rest` : null,
+    group.tempoRequired && group.tempo?.trim() ? `tempo ${group.tempo.trim()}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -105,6 +108,10 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
     const group = value[index];
     if (!group.name.trim() || group.exercises.length === 0) {
       setErrors({ ...errors, [index]: "Give the group a name and add at least one exercise." });
+      return;
+    }
+    if (group.tempoRequired && !group.tempo?.trim()) {
+      setErrors({ ...errors, [index]: "Enter a target tempo/rate, or turn it off." });
       return;
     }
     const measured = group.measured !== false;
@@ -375,6 +382,20 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
                   />
                 )}
               </div>
+            )}
+
+            <Toggle
+              label="Target tempo / rate"
+              labelDirection="row"
+              value={!!group.tempoRequired}
+              toggle={(tempoRequired: boolean) => updateGroup(index, { ...group, tempoRequired })}
+            />
+            {group.tempoRequired && (
+              <Input
+                value={group.tempo ?? ""}
+                placeholder="e.g. 3-1-1, 2 sec down, 30 spm"
+                changeValue={(tempo) => updateGroup(index, { ...group, tempo })}
+              />
             )}
 
             {errors[index] && <span className="text-sm text-danger">{errors[index]}</span>}

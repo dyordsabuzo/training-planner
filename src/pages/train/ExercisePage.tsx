@@ -471,6 +471,7 @@ export const ExercisePage = () => {
                   canAnnounce={!showWeightPrompt}
                   leftRight={!!supersetData.leftRight}
                   sideRest={supersetData.sideRest}
+                  tempo={supersetData.tempo}
                   targetTime={targetTime}
                   exerciseLabel={exerciseLabel}
                   transitionKey={`${exerciseState.supersetCounter}-${exerciseState.exerciseCounter}`}

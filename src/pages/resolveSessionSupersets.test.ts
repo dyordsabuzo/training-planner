@@ -124,6 +124,23 @@ describe("measured", () => {
   });
 });
 
+describe("tempo", () => {
+  const group = { exercises: ["Squat"], sets: 3, reps: 10, percent: 0, rpe: 0 };
+
+  it("passes the trimmed tempo through only when required", () => {
+    const units = resolveSession(sourceData, {
+      groups: [
+        { ...group, name: "Slow", tempoRequired: true, tempo: " 3-1-1 " },
+        { ...group, name: "Off", tempoRequired: false, tempo: "3-1-1" },
+        { ...group, name: "Blank", tempoRequired: true, tempo: "  " },
+      ],
+    });
+    expect(units.Slow.tempo).toBe("3-1-1");
+    expect(units.Off).not.toHaveProperty("tempo");
+    expect(units.Blank).not.toHaveProperty("tempo");
+  });
+});
+
 describe("supersets and groups together", () => {
   it("runs supersets then groups", () => {
     const mixed = { supersets: ["Legs"], groups: [{ name: "Core", exercises: ["Lunge"], sets: 2, reps: 10, percent: 0, rpe: 0 }] };

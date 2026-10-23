@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { faArrowRight, faCheck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCheck, faChevronLeft, faChevronRight, faGaugeHigh } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { AdjustableValue } from "../../components/others/AdjustableValue";
@@ -41,6 +41,8 @@ type Props = {
   targetRep: string;
   // Off: weight/reps (and target time) are hidden — just DONE per set.
   measured?: boolean;
+  // Free-text target tempo/rate; shown under the exercise name when set.
+  tempo?: string;
   // False while a modal (e.g. the Targets prompt) covers the page; the
   // "Left side" cue waits until it's closed.
   canAnnounce?: boolean;
@@ -68,6 +70,7 @@ export const ExerciseDetails = ({
   targetRep,
   targetDistance,
   measured = true,
+  tempo,
   canAnnounce = true,
   leftRight,
   sideRest,
@@ -312,6 +315,16 @@ export const ExerciseDetails = ({
           )}
         </div>
 
+        {tempo && (
+          <div className="flex justify-center px-3">
+            <span className="inline-flex items-center gap-2 rounded-full bg-secondary-100 dark:bg-gray-700 px-4 py-1.5
+              text-base font-bold text-text-light dark:text-text-dark">
+              <FontAwesomeIcon icon={faGaugeHigh} className="text-primary dark:text-primary-300" />
+              <span className="text-xs uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">Tempo</span>
+              {tempo}
+            </span>
+          </div>
+        )}
         {leftRight && !isTimerRunning && (
           <div className="flex flex-col items-center gap-1.5 px-3 mx-3 sm:mx-6">
             <span className="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
