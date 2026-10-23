@@ -1,8 +1,9 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { faArrowRight, faCheck, faChevronLeft, faChevronRight, faGaugeHigh } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCheck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { AdjustableValue } from "../../components/others/AdjustableValue";
+import { TempoBadge } from "../../components/others/TempoBadge";
 import { WatchVideo } from "../../components/others/WatchVideo";
 import { Timer } from "../../components/others/Timer";
 import { playCountdownWarningSound, playVoiceClip, toStringArray } from "../../common/utils";
@@ -317,12 +318,7 @@ export const ExerciseDetails = ({
 
         {tempo && (
           <div className="flex justify-center px-3">
-            <span className="inline-flex items-center gap-2 rounded-full bg-secondary-100 dark:bg-gray-700 px-4 py-1.5
-              text-base font-bold text-text-light dark:text-text-dark">
-              <FontAwesomeIcon icon={faGaugeHigh} className="text-primary dark:text-primary-300" />
-              <span className="text-xs uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">Tempo</span>
-              {tempo}
-            </span>
+            <TempoBadge tempo={tempo} />
           </div>
         )}
         {leftRight && !isTimerRunning && (
