@@ -2,6 +2,7 @@ import { useState } from "react";
 import { IconDefinition } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
+import { useScrollToTopOnClose } from "../common/useScrollToTopOnClose";
 
 type Props = {
   onDelete: () => void;
@@ -10,6 +11,8 @@ type Props = {
   decoration?: string;
   useModal?: boolean;
   impactMessage?: string;
+  // Scroll the page back to the top when the confirm modal closes.
+  scrollToTopOnClose?: boolean;
 };
 
 export const ConfirmDeleteButton = ({
@@ -19,21 +22,25 @@ export const ConfirmDeleteButton = ({
   decoration = "delete",
   useModal = true,
   impactMessage,
+  scrollToTopOnClose = false,
 }: Props) => {
   const [confirming, setConfirming] = useState(false);
+  useScrollToTopOnClose(useModal && scrollToTopOnClose && confirming);
 
   const confirmMessage = impactMessage ?? "Are you sure? This can't be undone.";
 
   const confirmActions = (
-    <div className={useModal ? "flex justify-end gap-2" : "flex gap-2"}>
+    <div className="flex gap-2">
       <Button
         label={"Cancel"}
         decoration="cancel"
+        className={useModal ? "flex-1" : undefined}
         onClick={() => setConfirming(false)}
       />
       <Button
         label={`Yes, ${label.toLowerCase()}`}
         decoration="delete"
+        className={useModal ? "flex-1" : undefined}
         onClick={onDelete}
       />
     </div>

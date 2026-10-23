@@ -11,7 +11,8 @@ import { Loading } from "../helpers/Loading";
 import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
-import { TargetWeightPrompt } from "./TargetWeightPrompt";
+import { TargetWeightPrompt, Targets } from "./TargetWeightPrompt";
+import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { unitId } from "../resolveSessionSupersets";
 import {
@@ -161,6 +162,14 @@ export const ExercisePage = () => {
     saveProgress?.(nextActual);
   };
 
+  // Start at the top whenever the exercise view (re)appears, e.g. coming back
+  // from a group summary or navigating here from another page.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [exerciseState.supersetCounter, exerciseState.supersetComplete]);
+
+  useScrollToTopOnClose(showGroups);
+
   useEffect(() => {
     if (isMobileViewport()) {
       lockPortraitOrientation();
@@ -281,11 +290,13 @@ export const ExercisePage = () => {
   };
 
   // Writes into supersetData.exercises so the weight sticks for the
-  // remaining sets of this exercise.
-  const setExerciseWeight = (weight: number) => {
+  // remaining sets of this exercise. `extra` merges other superset fields
+  // (e.g. targetRep) in the same update so they don't overwrite each other.
+  const setExerciseWeight = (weight: number, extra: object = {}) => {
     const index = exerciseState.exerciseCounter % exerciseLength;
     setSupersetData({
       ...supersetData,
+      ...extra,
       exercises: supersetData.exercises.map((item: any, i: number) =>
         i === index ? { ...item, targetWeight: weight } : item
       ),
@@ -298,6 +309,7 @@ export const ExercisePage = () => {
     exerciseState.exerciseSet === 0 &&
     !exerciseState.supersetRest &&
     supersetData.type !== "Time-based" &&
+    supersetData.measured !== false &&
     // Group names are free text: matches "Warmup", "Warm-up", "warm up", etc.
     !/warm[\s-]?up/i.test(supersetData.name || "") &&
     !!exerciseData.exercise?.name &&
@@ -309,14 +321,14 @@ export const ExercisePage = () => {
   return (
     <WrapperPage
       className="max-w-[26rem] sm:max-w-2xl lg:max-w-6xl"
-      outerClassName="pb-8 px-2"
+      outerClassName="pb-2 sm:pb-8 px-2"
     >
       <button
         type="button"
         onClick={resetPageZoom}
         aria-label="Fit page to screen"
         title="Fit page to screen"
-        className="lg:hidden fixed bottom-24 right-4 z-30 w-12 h-12 flex items-center justify-center
+        className="lg:hidden fixed top-4 left-4 z-30 w-11 h-11 flex items-center justify-center
           rounded-full bg-primary dark:bg-primary-400 text-white shadow-lg
           active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
@@ -324,6 +336,7 @@ export const ExercisePage = () => {
       </button>
       <Modal
         title="Session progress"
+        titleClassName="text-2xl font-bold"
         isOpen={showGroups}
         onClose={() => setShowGroups(false)}
       >
@@ -337,8 +350,15 @@ export const ExercisePage = () => {
         isOpen={showWeightPrompt}
         exerciseName={exerciseData.exercise?.name || ""}
         targetWeight={targetWeight}
-        onConfirm={(weight: number) => {
-          setExerciseWeight(weight);
+        targetRep={targetRep}
+        targetDistance={"targetDistance" in supersetData ? targetDistance : undefined}
+        onConfirm={({ targetWeight: weight, ...rest }: Targets) => {
+          setExerciseWeight(weight, rest);
+          if (rest.targetRep !== undefined) {
+            setTargetRep(String(rest.targetRep));
+          } else if (rest.targetDistance !== undefined) {
+            setTargetDistance(String(rest.targetDistance));
+          }
           markWeightPrompted();
         }}
         onClose={markWeightPrompted}
@@ -346,7 +366,7 @@ export const ExercisePage = () => {
       <div className="lg:flex lg:gap-6 lg:items-start">
         <div className="flex-1 flex flex-col gap-2">
           <div
-            className="min-h-[70dvh] sm:min-h-[32rem] lg:min-h-[36rem]
+            className="min-h-[calc(100dvh-6rem)] sm:min-h-[32rem] lg:min-h-[36rem]
               flex flex-col
               gap-4 shadow-md
               rounded-lg mx-2 mt-8 lg:mx-0
@@ -354,21 +374,37 @@ export const ExercisePage = () => {
               relative"
           >
             <div className="flex flex-col gap-[0.2px] pt-6 pl-4 pr-4">
-              <span className="text-white/80 text-sm font-semibold uppercase tracking-wide">
-                {[sessionData.session, sessionData.week]
-                  .filter((s: string) => typeof s === "string" && s.trim() !== "")
-                  .join(" · ")}
-              </span>
-              <span className="text-white text-xl sm:text-2xl font-bold uppercase line-clamp-2 break-words" title={supersetData.name}>
-                {supersetData.name}
-              </span>
-
-              {typeof sessionData.annotation === "string" &&
-                sessionData.annotation.trim() !== "" && (
-                  <span className="text-white/80 text-sm">
-                    {sessionData.annotation}
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0 flex flex-col gap-[0.2px]">
+                  <span className="text-white/80 text-sm font-semibold uppercase tracking-wide">
+                    {[sessionData.session, sessionData.week]
+                      .filter((s: string) => typeof s === "string" && s.trim() !== "")
+                      .join(" · ")}
                   </span>
-                )}
+                  <span className="text-white text-xl sm:text-2xl font-bold uppercase line-clamp-2 break-words" title={supersetData.name}>
+                    {supersetData.name}
+                  </span>
+
+                  {typeof sessionData.annotation === "string" &&
+                    sessionData.annotation.trim() !== "" && (
+                      <span className="text-white/80 text-sm">
+                        {sessionData.annotation}
+                      </span>
+                    )}
+                </div>
+                {/* Large screens already show the group list in the sidebar. */}
+                <button
+                  type="button"
+                  onClick={() => setShowGroups(true)}
+                  aria-label="View groups"
+                  title="View groups"
+                  className="lg:hidden shrink-0 min-h-11 min-w-11 flex items-center justify-center rounded-full
+                    text-white text-lg hover:bg-white/15
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <FontAwesomeIcon icon={faListCheck} />
+                </button>
+              </div>
 
               <div className="mt-3 flex items-center gap-2">
                 <div
@@ -388,16 +424,6 @@ export const ExercisePage = () => {
                   {unitsDone + 1} of {totalUnits} · {overallPercent}%
                 </span>
               </div>
-              {/* Large screens already show the group list in the sidebar. */}
-              <button
-                type="button"
-                onClick={() => setShowGroups(true)}
-                className="lg:hidden self-start mt-2 flex items-center gap-2 min-h-11 text-white text-sm font-semibold
-                  underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
-              >
-                <FontAwesomeIcon icon={faListCheck} />
-                View groups
-              </button>
             </div>
             <div className="w-full flex-1 flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
               <div
@@ -441,6 +467,8 @@ export const ExercisePage = () => {
                   targetWeight={targetWeight}
                   targetRep={targetRep}
                   targetDistance={"targetDistance" in supersetData ? targetDistance : undefined}
+                  measured={supersetData.measured !== false}
+                  canAnnounce={!showWeightPrompt}
                   leftRight={!!supersetData.leftRight}
                   sideRest={supersetData.sideRest}
                   targetTime={targetTime}
@@ -477,6 +505,7 @@ export const ExercisePage = () => {
               icon={faCircleXmark}
               decoration="text-danger"
               useModal
+              scrollToTopOnClose
               onDelete={() => {
                 sessionContext.wrapSession();
                 navigate(exitPath);

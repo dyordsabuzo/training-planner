@@ -1,15 +1,37 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { faArrowsLeftRight, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { faArrowRight, faCheck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Button } from "@dyordsabuzo/ui-components";
-import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
+import { Button, Modal } from "@dyordsabuzo/ui-components";
+import { AdjustableValue } from "../../components/others/AdjustableValue";
 import { WatchVideo } from "../../components/others/WatchVideo";
 import { Timer } from "../../components/others/Timer";
-import { playCountdownWarningSound, toStringArray } from "../../common/utils";
+import { playCountdownWarningSound, playVoiceClip, toStringArray } from "../../common/utils";
 import SourceDataContext from "../../context/SourceDataContext";
+import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 
 const WARNING_SECONDS_REMAINING = 5;
+const SWITCH_WARNING_SECONDS_REMAINING = 3;
 const SWIPE_THRESHOLD = 40;
+const ANNOUNCE_SETTLE_MS = 150;
+
+// Each-side exercises go left → (switch countdown) → right; others stay "left".
+type Side = "left" | "switch" | "right";
+
+const SidePill = ({ label, active, done }: { label: string; active: boolean; done: boolean }) => (
+  <span
+    className={`inline-flex items-center gap-2 rounded-full border-2 px-5 py-2 text-base font-bold uppercase tracking-wide
+      transition-all duration-300 ${
+        active
+          ? "border-primary bg-primary text-white scale-110 shadow-md dark:bg-primary-400 dark:border-primary-400"
+          : done
+            ? "border-primary bg-primary-50 text-primary dark:bg-primary-800/40 dark:text-primary-200"
+            : "border-gray-300 text-text-muted-light dark:border-gray-600 dark:text-text-muted-dark"
+      }`}
+  >
+    {done && <FontAwesomeIcon icon={faCheck} />}
+    {label}
+  </span>
+);
 
 type Props = {
   name: string;
@@ -17,9 +39,15 @@ type Props = {
   type: string;
   targetWeight: string;
   targetRep: string;
-  // Shows a badge above the weight/reps fields.
+  // Off: weight/reps (and target time) are hidden — just DONE per set.
+  measured?: boolean;
+  // False while a modal (e.g. the Targets prompt) covers the page; the
+  // "Left side" cue waits until it's closed.
+  canAnnounce?: boolean;
+  // Done on each side: adds a left/right tracker and splits DONE (or the
+  // timer, for time-based) into one per side.
   leftRight?: boolean;
-  // Seconds to rest between sides, shown as a note only (not a timer).
+  // Seconds of switch-sides countdown between left and right (0 skips it).
   sideRest?: number;
   // Set for distance groups; replaces the reps box with a metres box.
   targetDistance?: string;
@@ -39,6 +67,8 @@ export const ExerciseDetails = ({
   targetWeight,
   targetRep,
   targetDistance,
+  measured = true,
+  canAnnounce = true,
   leftRight,
   sideRest,
   targetTime = "0",
@@ -50,9 +80,16 @@ export const ExerciseDetails = ({
   onSelectAlternative,
 }: Props) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
+  const [showTimerMenu, setShowTimerMenu] = useState(false);
+  // Stable so Modal doesn't re-run its focus effect on every timer tick.
+  const closeTimerMenu = useCallback(() => setShowTimerMenu(false), []);
+  useScrollToTopOnClose(showTimerMenu);
   const [timerComplete, setTimerComplete] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [side, setSide] = useState<Side>("left");
   const dragStartX = useRef<number | null>(null);
+  const announcedLeftFor = useRef<string | null>(null);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -102,15 +139,71 @@ export const ExerciseDetails = ({
   // CSS animation key changes), so the timer must be reset explicitly.
   useEffect(() => {
     setIsTimerRunning(false);
+    setIsTimerPaused(false);
+    setShowTimerMenu(false);
     setTimerComplete(false);
     setCarouselIndex(0);
+    setSide("left");
   }, [transitionKey, name]);
+
+  // Once per exercise, and only when nothing covers the page. Deferred and
+  // cancelled on change because transitionKey and name don't update in the
+  // same render (name is briefly undefined, or the previous exercise's), which
+  // would otherwise look like two exercises and announce twice. The ref also
+  // guards against StrictMode's dev-only double-invoke.
+  useEffect(() => {
+    const announceKey = `${transitionKey}-${name}`;
+    if (!leftRight || !name || !canAnnounce || announcedLeftFor.current === announceKey) {
+      return;
+    }
+    const timeout = setTimeout(() => {
+      announcedLeftFor.current = announceKey;
+      playVoiceClip("left-side");
+    }, ANNOUNCE_SETTLE_MS);
+    return () => clearTimeout(timeout);
+  }, [transitionKey, name, canAnnounce]);
+
+  const startRightSide = (autoStartTimer: boolean) => {
+    setSide("right");
+    setIsTimerRunning(type === "Time-based" && autoStartTimer);
+    setIsTimerPaused(false);
+    playVoiceClip("right-side");
+  };
+
+  // DONE / timer end: the left side hands over to the right (via the
+  // switch countdown when sideRest is set); otherwise the set is complete.
+  const finishSide = () => {
+    if (leftRight && side === "left") {
+      setIsTimerRunning(false);
+      setIsTimerPaused(false);
+      if (sideRest && sideRest > 0) {
+        setSide("switch");
+        playVoiceClip("switch-sides");
+      } else {
+        startRightSide(false);
+      }
+      return;
+    }
+    completeExercise();
+  };
 
   useEffect(() => {
     if (timerComplete) {
-      completeExercise();
+      setTimerComplete(false);
+      setShowTimerMenu(false);
+      finishSide();
     }
   }, [timerComplete]);
+
+  const sideName = side === "right" ? "RIGHT" : "LEFT";
+
+  // Stops the running exercise timer without completing the side/set, back
+  // to the START button.
+  const cancelTimer = () => {
+    setIsTimerRunning(false);
+    setIsTimerPaused(false);
+    setShowTimerMenu(false);
+  };
 
   return (
     <div className="flex-1 flex flex-col justify-between gap-4">
@@ -164,7 +257,7 @@ export const ExerciseDetails = ({
                     <span className="text-center font-semibold text-3xl w-full break-words text-wrap text-text-light dark:text-text-dark uppercase">
                       {slide.name}
                     </span>
-                    {slide.videoLink && <WatchVideo videoLink={slide.videoLink} />}
+                    {slide.videoLink && !isTimerRunning && <WatchVideo videoLink={slide.videoLink} />}
                     {!slide.isDefault && (
                       <Button
                         label="Select this exercise"
@@ -219,20 +312,40 @@ export const ExerciseDetails = ({
           )}
         </div>
 
-        {type !== "Time-based" && leftRight && (
-          <div className="flex justify-center px-3 py-3 mx-3 sm:mx-6 border-y border-primary-200 dark:border-primary-700">
-            <span
-              role="note"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-primary bg-primary-50 dark:bg-primary-800/40 text-primary dark:text-primary-200 px-4 py-1.5 text-sm font-bold uppercase tracking-wide"
-            >
-              <FontAwesomeIcon icon={faArrowsLeftRight} />
-              Left &amp; right · each side{sideRest ? ` · ${sideRest}s between sides` : ""}
+        {leftRight && !isTimerRunning && (
+          <div className="flex flex-col items-center gap-1.5 px-3 mx-3 sm:mx-6">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
+              Each side{sideRest ? ` · ${sideRest}s to switch` : ""}
             </span>
+            <div className="flex items-center gap-3" role="status" aria-live="polite">
+              <SidePill label="Left" active={side === "left"} done={side !== "left"} />
+              <FontAwesomeIcon
+                icon={faArrowRight}
+                className={`text-primary dark:text-primary-300 ${side === "switch" ? "animate-pulse" : ""}`}
+              />
+              <SidePill label="Right" active={side === "right"} done={false} />
+            </div>
           </div>
         )}
-        {type !== "Time-based" && (
+        {side === "switch" && (
+          <div className="flex flex-col items-center justify-center py-2">
+            <Timer
+              length={sideRest || 0}
+              label="SWITCH SIDES"
+              size={200}
+              halfwayCue={false}
+              setCountdownComplete={(done) => done && startRightSide(true)}
+              onTick={(remainingTime) => {
+                if (remainingTime > 0 && remainingTime <= SWITCH_WARNING_SECONDS_REMAINING) {
+                  playCountdownWarningSound();
+                }
+              }}
+            />
+          </div>
+        )}
+        {measured && type !== "Time-based" && side !== "switch" && (
           <div className="grid grid-cols-2 gap-2 px-3 sm:gap-6 sm:px-6">
-            <DecimalIncrementDecrement
+            <AdjustableValue
               label="Weight"
               unit="kg"
               nonZero
@@ -243,7 +356,7 @@ export const ExerciseDetails = ({
               }}
             />
             {targetDistance !== undefined ? (
-              <DecimalIncrementDecrement
+              <AdjustableValue
                 label="Distance"
                 unit="m"
                 step={1}
@@ -255,7 +368,7 @@ export const ExerciseDetails = ({
                 }}
               />
             ) : (
-              <DecimalIncrementDecrement
+              <AdjustableValue
                 label="Reps"
                 unit="reps"
                 step={1}
@@ -269,14 +382,24 @@ export const ExerciseDetails = ({
             )}
           </div>
         )}
-        {type === "Time-based" && (
+        {type === "Time-based" && side !== "switch" && (
           <div className="grid grid-cols-1 gap-2 px-4 sm:px-6">
             {isTimerRunning ? (
-              <div className="flex flex-col items-center justify-center py-2">
+              <button
+                type="button"
+                onClick={() => setShowTimerMenu(true)}
+                aria-label="Timer options: pause or cancel"
+                className="flex flex-col items-center justify-center gap-1 py-2 rounded-full
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
                 <Timer
+                  // Fresh countdown per side.
+                  key={side}
                   length={parseInt(targetTime) || 0}
-                  label="IN PROGRESS"
-                  size={220}
+                  isPaused={isTimerPaused}
+                  label={isTimerPaused ? "PAUSED" : leftRight ? `${sideName} SIDE` : "IN PROGRESS"}
+                  // As big as fits: the card is the screen width minus its padding.
+                  size={Math.min(320, window.innerWidth - 72)}
                   setCountdownComplete={setTimerComplete}
                   onTick={(remainingTime) => {
                     if (
@@ -287,9 +410,12 @@ export const ExerciseDetails = ({
                     }
                   }}
                 />
-              </div>
+                <span className="text-xs text-primary dark:text-primary-300">
+                  Tap timer to {isTimerPaused ? "resume" : "pause"} or cancel
+                </span>
+              </button>
             ) : (
-              <DecimalIncrementDecrement
+              <AdjustableValue
                 label="Target time"
                 unit="secs"
                 step={5}
@@ -304,19 +430,61 @@ export const ExerciseDetails = ({
           </div>
         )}
       </div>
-      {type === "Time-based" && !isTimerRunning ? (
+      {side === "switch" ? (
         <Button
           className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6 py-6 text-xl dark:bg-primary-400"
-          onClick={() => setIsTimerRunning(true)}
-          label="START"
+          onClick={() => startRightSide(true)}
+          label="SKIP · START RIGHT"
         />
+      ) : type === "Time-based" ? (
+        // Hidden while the timer runs — controls move to the timer's menu.
+        !isTimerRunning && (
+          <Button
+            className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6 py-6 text-xl dark:bg-primary-400"
+            onClick={() => setIsTimerRunning(true)}
+            label={leftRight ? `START ${sideName}` : "START"}
+          />
+        )
       ) : (
         <Button
           className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6 py-6 text-xl dark:bg-primary-400"
-          onClick={completeExercise}
-          label="DONE"
+          onClick={finishSide}
+          label={leftRight ? `${sideName} DONE` : "DONE"}
         />
       )}
+      <Modal
+        title="Timer"
+        titleClassName="text-2xl font-bold"
+        isOpen={showTimerMenu}
+        onClose={closeTimerMenu}
+      >
+        <div className="flex gap-2">
+          <Button
+            label="Cancel timer"
+            decoration="delete"
+            className="flex-1"
+            onClick={cancelTimer}
+          />
+          <Button
+            label={isTimerPaused ? "Resume" : "Pause"}
+            decoration="cancel"
+            className="flex-1"
+            onClick={() => {
+              setIsTimerPaused(!isTimerPaused);
+              closeTimerMenu();
+            }}
+          />
+          {/* Ends this side/set early, as if the timer had run out. */}
+          <Button
+            label="Finish now"
+            className="flex-1"
+            onClick={() => {
+              closeTimerMenu();
+              finishSide();
+            }}
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

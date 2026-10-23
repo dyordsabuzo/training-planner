@@ -8,7 +8,7 @@ type Props = {
   value: SessionGroup[];
   onChange: (groups: SessionGroup[]) => void;
   exerciseOptions: string[];
-  onCreateExercise?: (groupId: string) => void;
+  onCreateExercise?: (groupId: string, name?: string) => void;
 };
 
 const newGroup = (index: number): SessionGroup => ({
@@ -17,6 +17,7 @@ const newGroup = (index: number): SessionGroup => ({
   exercises: [],
   sets: 3,
   reps: 10,
+  measured: true,
   measure: "reps",
   distance: 100,
   time: 30,
@@ -35,7 +36,9 @@ const iconButtonClass = `min-h-11 min-w-11 flex items-center justify-center roun
 const summarise = (group: SessionGroup) =>
   [
     group.exercises.join(", "),
-    group.measure === "distance"
+    group.measured === false
+      ? `${group.sets} sets`
+      : group.measure === "distance"
       ? `${group.sets} × ${group.distance} m`
       : group.measure === "time"
         ? `${group.sets} × ${group.time} s`
@@ -104,11 +107,12 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
       setErrors({ ...errors, [index]: "Give the group a name and add at least one exercise." });
       return;
     }
-    if (group.measure === "distance" && !group.distance) {
+    const measured = group.measured !== false;
+    if (measured && group.measure === "distance" && !group.distance) {
       setErrors({ ...errors, [index]: "Set a distance for this group." });
       return;
     }
-    if (group.measure === "time" && !group.time) {
+    if (measured && group.measure === "time" && !group.time) {
       setErrors({ ...errors, [index]: "Set a time for this group." });
       return;
     }
@@ -251,6 +255,11 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
                   updateGroup(index, { ...group, exercises: [...group.exercises, exercise] })
                 }
                 placeholder="Select an exercise to add"
+                {...(onCreateExercise &&
+                  group.id && {
+                    onCreate: (query: string) => onCreateExercise(group.id!, query),
+                    createLabel: "Create new exercise",
+                  })}
               />
               {onCreateExercise && group.id && (
                 <div className="flex justify-end">
@@ -277,85 +286,96 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
               toggle={(leftRight: boolean) => updateGroup(index, { ...group, leftRight })}
             />
 
-            <ButtonSelection
-              label="Measure"
-              options={["Reps", "Distance (m)", "Time"]}
-              selection={
-                group.measure === "distance" ? "Distance (m)" : group.measure === "time" ? "Time" : "Reps"
-              }
-              onSelect={(value: string) =>
-                updateGroup(index, {
-                  ...group,
-                  measure: value === "Distance (m)" ? "distance" : value === "Time" ? "time" : "reps",
-                })
-              }
+            <Toggle
+              label="Measure (weight, reps, distance or time)"
+              labelDirection="row"
+              value={group.measured !== false}
+              toggle={(measured: boolean) => updateGroup(index, { ...group, measured })}
             />
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 justify-items-center">
-              <IncrementDecrement
-                label="Sets"
-                labelDirection="col"
-                value={group.sets}
-                nonZero
-                updateValue={(sets) => updateGroup(index, { ...group, sets })}
+            {group.measured !== false && (
+              <ButtonSelection
+                label="Measure"
+                options={["Reps", "Distance (m)", "Time"]}
+                selection={
+                  group.measure === "distance" ? "Distance (m)" : group.measure === "time" ? "Time" : "Reps"
+                }
+                onSelect={(value: string) =>
+                  updateGroup(index, {
+                    ...group,
+                    measure: value === "Distance (m)" ? "distance" : value === "Time" ? "time" : "reps",
+                  })
+                }
               />
-              {group.measure === "distance" ? (
+            )}
+
+            {group.measured !== false && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 justify-items-center">
                 <IncrementDecrement
-                  label="Distance"
+                  label="Sets"
                   labelDirection="col"
-                  unit="m"
-                  value={group.distance ?? 0}
+                  value={group.sets}
                   nonZero
-                  updateValue={(distance) => updateGroup(index, { ...group, distance })}
+                  updateValue={(sets) => updateGroup(index, { ...group, sets })}
                 />
-              ) : group.measure === "time" ? (
+                {group.measure === "distance" ? (
+                  <IncrementDecrement
+                    label="Distance"
+                    labelDirection="col"
+                    unit="m"
+                    value={group.distance ?? 0}
+                    nonZero
+                    updateValue={(distance) => updateGroup(index, { ...group, distance })}
+                  />
+                ) : group.measure === "time" ? (
+                  <IncrementDecrement
+                    label="Time"
+                    labelDirection="col"
+                    unit="s"
+                    value={group.time ?? 30}
+                    nonZero
+                    updateValue={(time) => updateGroup(index, { ...group, time })}
+                  />
+                ) : (
+                  <IncrementDecrement
+                    label="Reps"
+                    labelDirection="col"
+                    value={group.reps}
+                    nonZero
+                    updateValue={(reps) => updateGroup(index, { ...group, reps })}
+                  />
+                )}
                 <IncrementDecrement
-                  label="Time"
+                  label="% weight"
+                  labelDirection="col"
+                  unit="%"
+                  value={group.percent}
+                  updateValue={(percent) => updateGroup(index, { ...group, percent })}
+                />
+                <IncrementDecrement
+                  label="RPE"
+                  labelDirection="col"
+                  value={group.rpe}
+                  updateValue={(rpe) => updateGroup(index, { ...group, rpe })}
+                />
+                <IncrementDecrement
+                  label="Rest between sets"
                   labelDirection="col"
                   unit="s"
-                  value={group.time ?? 30}
-                  nonZero
-                  updateValue={(time) => updateGroup(index, { ...group, time })}
+                  value={group.rest ?? 0}
+                  updateValue={(rest) => updateGroup(index, { ...group, rest })}
                 />
-              ) : (
-                <IncrementDecrement
-                  label="Reps"
-                  labelDirection="col"
-                  value={group.reps}
-                  nonZero
-                  updateValue={(reps) => updateGroup(index, { ...group, reps })}
-                />
-              )}
-              <IncrementDecrement
-                label="% weight"
-                labelDirection="col"
-                unit="%"
-                value={group.percent}
-                updateValue={(percent) => updateGroup(index, { ...group, percent })}
-              />
-              <IncrementDecrement
-                label="RPE"
-                labelDirection="col"
-                value={group.rpe}
-                updateValue={(rpe) => updateGroup(index, { ...group, rpe })}
-              />
-              <IncrementDecrement
-                label="Rest between sets"
-                labelDirection="col"
-                unit="s"
-                value={group.rest ?? 0}
-                updateValue={(rest) => updateGroup(index, { ...group, rest })}
-              />
-              {group.leftRight && (
-                <IncrementDecrement
-                  label="Rest between sides"
-                  labelDirection="col"
-                  unit="s"
-                  value={group.sideRest ?? 15}
-                  updateValue={(sideRest) => updateGroup(index, { ...group, sideRest })}
-                />
-              )}
-            </div>
+                {group.leftRight && (
+                  <IncrementDecrement
+                    label="Rest between sides"
+                    labelDirection="col"
+                    unit="s"
+                    value={group.sideRest ?? 15}
+                    updateValue={(sideRest) => updateGroup(index, { ...group, sideRest })}
+                  />
+                )}
+              </div>
+            )}
 
             {errors[index] && <span className="text-sm text-danger">{errors[index]}</span>}
             <div className="flex justify-end">

@@ -178,9 +178,9 @@ const ActionMenu = ({
           <span className="text-sm text-text-light dark:text-text-dark">
             {deleteImpactMessage ?? "Are you sure? This can't be undone."}
           </span>
-          <div className="flex justify-end gap-2">
-            <Button label="Cancel" decoration="cancel" onClick={() => setConfirming(false)} />
-            <Button label="Yes, delete" decoration="delete" onClick={onDelete} />
+          <div className="flex gap-2">
+            <Button label="Cancel" decoration="cancel" className="flex-1" onClick={() => setConfirming(false)} />
+            <Button label="Yes, delete" decoration="delete" className="flex-1" onClick={onDelete} />
           </div>
         </div>
       </Modal>

@@ -324,21 +324,23 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
                 {shareUrl(shareDialog.session)}
               </span>
             )}
-            <div className="flex justify-end gap-2">
+            <div className="flex gap-2">
               {shareDialog.step === "confirm" ? (
                 <>
                   <Button
                     label="Cancel"
                     decoration="cancel"
+                    className="flex-1"
                     onClick={() => setShareDialog(null)}
                   />
                   <Button
                     label="Share and copy link"
+                    className="flex-1"
                     onClick={() => enableSharing(shareDialog.session)}
                   />
                 </>
               ) : (
-                <Button label="Close" onClick={() => setShareDialog(null)} />
+                <Button label="Close" className="flex-1" onClick={() => setShareDialog(null)} />
               )}
             </div>
           </div>

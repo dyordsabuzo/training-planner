@@ -21,6 +21,9 @@ export type SessionGroup = {
   exercises: string[];
   sets: number;
   reps: number;
+  // Off: no weight/reps/time shown or prompted during training, just DONE
+  // per set. Missing (older groups) counts as on.
+  measured?: boolean;
   measure?: "reps" | "distance" | "time";
   distance?: number;
   // Seconds held/performed for, when measure is "time" (e.g. a plank).
@@ -32,8 +35,8 @@ export type SessionGroup = {
   // Done on left and right separately (e.g. single-arm rows); off for
   // exercises done together, such as lunges or deadlifts.
   leftRight?: boolean;
-  // Rest between the left and right sides, in seconds. Informational only —
-  // shown as a note during training, not a running timer (see leftRight).
+  // Rest between the left and right sides, in seconds. Runs as a
+  // switch-sides countdown during training (see leftRight); 0 skips it.
   sideRest?: number;
 };
 
@@ -144,6 +147,7 @@ export const resolveSessionGroups = (
   let units: Record<string, any> = {};
 
   groups.forEach((group, index) => {
+    const measured = group.measured !== false;
     const exercises = group.exercises
       .filter((e) => sourceData.exercises?.[e])
       .map((e) => {
@@ -164,8 +168,12 @@ export const resolveSessionGroups = (
         key: keys[index],
         kind: "group",
         exercises,
-        type: group.measure === "time" ? "Time-based" : "Rep-based",
-        ...(group.measure === "time"
+        measured,
+        // Unmeasured groups never run a timer or show a distance.
+        type: measured && group.measure === "time" ? "Time-based" : "Rep-based",
+        ...(!measured
+          ? { targetRep: group.reps || seed.targetRep }
+          : group.measure === "time"
           ? { targetTime: group.time || 0 }
           : group.measure === "distance"
             ? { targetDistance: group.distance || 0 }

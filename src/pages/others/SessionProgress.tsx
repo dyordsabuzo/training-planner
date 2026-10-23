@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { ExerciseSuperset } from "../../types/Exercise";
 import { unitId } from "../resolveSessionSupersets";
 
@@ -14,6 +15,20 @@ export const SessionProgress = ({
   doneUpToIndex = -1,
   activeIndex,
 }: Props) => {
+  // Completed groups hide their exercises; ids here are expanded by the user.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
   return (
     <div className="flex flex-col">
       {supersets.map((superset: any, index: number) => {
@@ -22,9 +37,11 @@ export const SessionProgress = ({
         const exercises = superset.exercises.filter(
           (item: ExerciseSuperset) => item.exercise
         );
+        const id = unitId(superset);
+        const showExercises = !isDone || expanded.has(id);
 
         return (
-          <div key={unitId(superset)} className="flex gap-3">
+          <div key={id} className="flex gap-3">
             <div className="flex flex-col items-center">
               <div
                 className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center
@@ -58,8 +75,25 @@ export const SessionProgress = ({
                       : ""
                 }`}
             >
-              <span className="text-base font-bold">{superset.name}</span>
-              {exercises.map((item: ExerciseSuperset, exIndex: number) => (
+              {isDone ? (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(id)}
+                  aria-expanded={showExercises}
+                  className="flex items-center justify-between gap-2 text-left -m-1 p-1 rounded
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <span className="text-base font-bold">{superset.name}</span>
+                  <span className="flex items-center gap-1.5 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {!showExercises &&
+                      `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}`}
+                    <FontAwesomeIcon icon={showExercises ? faChevronUp : faChevronDown} />
+                  </span>
+                </button>
+              ) : (
+                <span className="text-base font-bold">{superset.name}</span>
+              )}
+              {showExercises && exercises.map((item: ExerciseSuperset, exIndex: number) => (
                 <span
                   key={exIndex}
                   className="text-sm text-text-muted-light dark:text-text-muted-dark"

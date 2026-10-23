@@ -12,6 +12,9 @@ type Props = {
   step?: number;
   // Lowest allowed value; overrides nonZero's floor of 0 when set.
   min?: number;
+  // Bigger, bolder value for reading at a glance mid-exercise. The unit moves
+  // into the label to leave room for the number.
+  large?: boolean;
   updateValue: (value: number) => void;
 };
 
@@ -26,6 +29,7 @@ export const DecimalIncrementDecrement = ({
   fullWidth = false,
   step = 0.5,
   min,
+  large = false,
   updateValue,
 }: Props) => {
   const [text, setText] = useState(String(value));
@@ -55,6 +59,10 @@ export const DecimalIncrementDecrement = ({
     if (!Number.isNaN(parsed)) updateValue(clamp(parsed));
   };
 
+  const showUnitInLabel =
+    large && unit && unit.toLowerCase() !== label.toLowerCase();
+  const showUnitCell = unit && !large;
+
   const handleBlur = () => {
     const parsed = parseFloat(text);
     commit(Number.isNaN(parsed) ? floor ?? 0 : parsed);
@@ -62,11 +70,12 @@ export const DecimalIncrementDecrement = ({
 
   return (
     <div className={`flex flex-col items-center gap-1 ${fullWidth ? "w-full" : ""}`}>
-      <span className="text-xs font-normal uppercase tracking-wide text-text-muted-light/70 dark:text-text-muted-dark/70 whitespace-nowrap text-center w-fit">
+      <span className={`${large ? "text-base font-bold text-text-light dark:text-text-dark" : "text-xs font-normal text-text-muted-light/70 dark:text-text-muted-dark/70"} uppercase tracking-wide whitespace-nowrap text-center w-fit`}>
         {label}
+        {showUnitInLabel && ` (${unit})`}
       </span>
       <div
-        className={`inline-flex items-stretch min-h-11 ${fullWidth ? "w-full" : "w-fit"} rounded-full border
+        className={`inline-flex items-stretch ${large ? "min-h-20" : "min-h-11"} ${fullWidth ? "w-full" : "w-fit"} rounded-full border
           border-gray-300 dark:border-gray-600 bg-white dark:bg-surface-dark overflow-hidden`}
       >
         <button
@@ -74,11 +83,11 @@ export const DecimalIncrementDecrement = ({
           aria-label={`Decrease ${label}`}
           disabled={floor !== undefined && value <= floor}
           onClick={() => commit(value - step)}
-          className="min-w-8 sm:min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
+          className={`${large ? "min-w-9 sm:min-w-11" : "min-w-8 sm:min-w-11"} flex items-center justify-center text-secondary dark:text-secondary-200
             hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10"
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10`}
         >
-          <FontAwesomeIcon icon={faMinus} className="text-xs" />
+          <FontAwesomeIcon icon={faMinus} className={large ? "text-base" : "text-xs"} />
         </button>
         <input
           type="text"
@@ -93,11 +102,11 @@ export const DecimalIncrementDecrement = ({
               e.currentTarget.blur();
             }
           }}
-          className={`${fullWidth ? "flex-1 min-w-4 sm:min-w-10" : "w-12"} text-center bg-transparent text-sm font-medium
-            text-text-light dark:text-text-dark border-l ${unit ? "" : "border-r"} border-gray-200 dark:border-gray-700
+          className={`${fullWidth ? "flex-1 min-w-4 sm:min-w-10" : "w-12"} text-center bg-transparent ${large ? "text-3xl sm:text-5xl font-bold" : "text-sm font-medium"}
+            text-text-light dark:text-text-dark border-l ${showUnitCell ? "" : "border-r"} border-gray-200 dark:border-gray-700
             focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10`}
         />
-        {unit && (
+        {showUnitCell && (
           <span className="flex items-center shrink-0 whitespace-nowrap pl-0.5 pr-1 sm:pl-1 sm:pr-2 text-xs sm:text-sm text-text-muted-light dark:text-text-muted-dark border-r border-gray-200 dark:border-gray-700">
             {unit}
           </span>
@@ -106,11 +115,11 @@ export const DecimalIncrementDecrement = ({
           type="button"
           aria-label={`Increase ${label}`}
           onClick={() => commit(value + step)}
-          className="min-w-8 sm:min-w-11 flex items-center justify-center text-secondary dark:text-secondary-200
+          className={`${large ? "min-w-9 sm:min-w-11" : "min-w-8 sm:min-w-11"} flex items-center justify-center text-secondary dark:text-secondary-200
             hover:bg-gray-100 dark:hover:bg-gray-700
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10"
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10`}
         >
-          <FontAwesomeIcon icon={faPlus} className="text-xs" />
+          <FontAwesomeIcon icon={faPlus} className={large ? "text-base" : "text-xs"} />
         </button>
       </div>
     </div>

@@ -40,8 +40,9 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const [groupsError, setGroupsError] = useState<string>();
   const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
   const tagFieldRef = useRef<HTMLDivElement>(null);
-  // Group waiting for an exercise created from the nested exercise modal.
-  const [exerciseGroupId, setExerciseGroupId] = useState<string | null>(null);
+  // Group waiting for an exercise created from the nested exercise modal,
+  // plus the name to pre-fill (search text from the dropdown, if any).
+  const [newExercise, setNewExercise] = useState<{ groupId: string; name: string } | null>(null);
 
   // Group edits on an existing session save on their own (debounced, and
   // flushed on close) so they aren't lost without Save. Only the groups are
@@ -153,7 +154,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
       isOpen={true}
       // Modal listens for Escape on document, so ignore it while the exercise
       // modal is open on top.
-      onClose={exerciseGroupId ? () => {} : closeForm}
+      onClose={newExercise ? () => {} : closeForm}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -197,7 +198,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           value={groups}
           onChange={setGroups}
           exerciseOptions={Object.keys(sourceData.exercises ?? {})}
-          onCreateExercise={setExerciseGroupId}
+          onCreateExercise={(groupId, name = "") => setNewExercise({ groupId, name })}
         />
         {groupsError && <span className="text-sm text-danger">{groupsError}</span>}
 
@@ -213,15 +214,16 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     </Modal>
 
     {/* Outside the session <form> so its submit doesn't bubble to handleSubmit. */}
-    {exerciseGroupId && (
+    {newExercise && (
       <ExerciseForm
-        data={null}
+        key={newExercise.groupId}
+        data={{ name: newExercise.name } as any}
         type="add"
-        closeForm={() => setExerciseGroupId(null)}
+        closeForm={() => setNewExercise(null)}
         onCreated={(exercise) =>
           setGroups((current) =>
             current.map((g) =>
-              g.id === exerciseGroupId && !g.exercises.includes(exercise)
+              g.id === newExercise.groupId && !g.exercises.includes(exercise)
                 ? { ...g, exercises: [...g.exercises, exercise] }
                 : g
             )

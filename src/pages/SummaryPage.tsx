@@ -11,8 +11,8 @@ import { SessionProgress } from "./others/SessionProgress";
 import { isTrainSessionPath } from "../routes/trainRoutes";
 import { Button } from "@dyordsabuzo/ui-components";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
-import { playApplauseSound, speak } from "../common/utils";
-import { pluralUnit, unitName, unitTitle, UnitKind } from "./resolveSessionSupersets";
+import { playApplauseSound, playVoiceClip } from "../common/utils";
+import { pluralUnit, unitName, UnitKind } from "./resolveSessionSupersets";
 
 type Props = {
   currentSuperset?: any;
@@ -66,7 +66,7 @@ export const SummaryPage = ({
     // effects, which would otherwise announce completion twice.
     if (sessionComplete && !hasAnnouncedCompletion.current) {
       hasAnnouncedCompletion.current = true;
-      speak("WORKOUT COMPLETE", playApplauseSound);
+      playVoiceClip("workout-complete", playApplauseSound);
     }
   }, [sessionComplete]);
 
@@ -78,7 +78,11 @@ export const SummaryPage = ({
       return;
     }
     announcedUnit.current = name;
-    speak(`${unitTitle(currentSuperset.kind as UnitKind)} ${name} complete`);
+    playVoiceClip(
+      currentSuperset.kind === "group"
+        ? "exercise-group-complete"
+        : "superset-complete"
+    );
   }, [currentSuperset?.name, sessionComplete]);
 
   const handleMoodAfterChange = (value: MoodValue) => {

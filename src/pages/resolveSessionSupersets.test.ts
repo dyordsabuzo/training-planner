@@ -98,6 +98,32 @@ describe("rest between sides", () => {
   });
 });
 
+describe("measured", () => {
+  const group = { exercises: ["Squat"], sets: 3, reps: 10, percent: 0, rpe: 0 };
+
+  it("treats groups without the flag as measured", () => {
+    const units = resolveSession(sourceData, {
+      groups: [{ ...group, name: "Plank", measure: "time", time: 45 }],
+    });
+    expect(units.Plank.measured).toBe(true);
+    expect(units.Plank.type).toBe("Time-based");
+    expect(units.Plank.targetTime).toBe(45);
+  });
+
+  it("drops time/distance targets for unmeasured groups so no timer runs", () => {
+    const units = resolveSession(sourceData, {
+      groups: [
+        { ...group, name: "Stretch", measure: "time", time: 45, measured: false },
+        { ...group, name: "Walk", measure: "distance", distance: 200, measured: false },
+      ],
+    });
+    expect(units.Stretch.measured).toBe(false);
+    expect(units.Stretch.type).toBe("Rep-based");
+    expect(units.Stretch).not.toHaveProperty("targetTime");
+    expect(units.Walk).not.toHaveProperty("targetDistance");
+  });
+});
+
 describe("supersets and groups together", () => {
   it("runs supersets then groups", () => {
     const mixed = { supersets: ["Legs"], groups: [{ name: "Core", exercises: ["Lunge"], sets: 2, reps: 10, percent: 0, rpe: 0 }] };

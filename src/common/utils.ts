@@ -138,6 +138,8 @@ export const unlockAudioContext = () => {
     if (audioContext.state === "suspended") {
       audioContext.resume();
     }
+    // Preload so the first announcement isn't delayed by a network fetch.
+    VOICE_CLIPS.forEach((clip) => loadVoiceClip(clip).catch(() => {}));
   } catch {}
 };
 
@@ -161,34 +163,86 @@ export const playCountdownWarningSound = () => {
   } catch {}
 };
 
-// Voice announcement via the Web Speech API rather than a bundled audio
-// asset. Silently no-ops if speechSynthesis is unavailable.
-// Held outside the function scope because Chrome can otherwise garbage
-// collect the utterance mid-speech (nothing else references it), silently
-// cutting off the speech and never firing onend/onerror.
-let activeUtterance: SpeechSynthesisUtterance | null = null;
+// Voice announcements are pre-recorded clips (public/audio) played through
+// the shared AudioContext rather than speechSynthesis: browser TTS takes
+// exclusive audio focus and pauses background music (e.g. Spotify), while
+// Web Audio under the "ambient" session mixes with it.
+export type VoiceClip =
+  | "resting"
+  | "workout"
+  | "workout-complete"
+  | "superset-complete"
+  | "exercise-group-complete"
+  | "halfway"
+  | "left-side"
+  | "right-side"
+  | "switch-sides";
 
-export const speak = (text: string, onEnd?: () => void) => {
-  try {
-    if (!("speechSynthesis" in window)) {
-      onEnd?.();
-      return;
-    }
-    setAmbientAudioSession();
-    const utterance = new SpeechSynthesisUtterance(text);
-    activeUtterance = utterance;
+const VOICE_CLIPS: VoiceClip[] = [
+  "resting",
+  "workout",
+  "workout-complete",
+  "superset-complete",
+  "exercise-group-complete",
+  "halfway",
+  "left-side",
+  "right-side",
+  "switch-sides",
+];
 
-    const handleDone = () => {
-      activeUtterance = null;
-      onEnd?.();
-    };
-    utterance.onend = handleDone;
-    utterance.onerror = handleDone;
+const voiceClipBuffers = new Map<VoiceClip, Promise<AudioBuffer>>();
 
-    window.speechSynthesis.speak(utterance);
-  } catch {
-    onEnd?.();
+const loadVoiceClip = (clip: VoiceClip): Promise<AudioBuffer> => {
+  let buffer = voiceClipBuffers.get(clip);
+  if (!buffer) {
+    buffer = fetch(`${import.meta.env.BASE_URL}audio/${clip}.m4a`)
+      .then((response) => response.arrayBuffer())
+      // Callback form: older Safari doesn't support the promise form.
+      .then(
+        (data) =>
+          new Promise<AudioBuffer>((resolve, reject) =>
+            getAudioContext().decodeAudioData(data, resolve, reject)
+          )
+      );
+    // Drop failed loads so a later call can retry.
+    buffer.catch(() => voiceClipBuffers.delete(clip));
+    voiceClipBuffers.set(clip, buffer);
   }
+  return buffer;
+};
+
+// Clips are queued so back-to-back cues (e.g. "Workout!" then "Left side")
+// play one after another instead of over each other.
+let voiceQueue: Promise<void> = Promise.resolve();
+
+// Silently no-ops (still calling onEnd) if the clip can't be loaded/played.
+export const playVoiceClip = (clip: VoiceClip, onEnd?: () => void) => {
+  voiceQueue = voiceQueue.then(
+    () =>
+      new Promise<void>((resolve) => {
+        let finished = false;
+        const done = () => {
+          if (finished) return;
+          finished = true;
+          resolve();
+          onEnd?.();
+        };
+
+        loadVoiceClip(clip)
+          .then((buffer) => {
+            const audioContext = getAudioContext();
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.onended = done;
+            source.start();
+            // Fallback so a suspended context (onended never fires) can't
+            // stall the queue.
+            setTimeout(done, buffer.duration * 1000 + 500);
+          })
+          .catch(done);
+      })
+  );
 };
 
 // Forces mobile browsers to snap back to scale 1 (e.g. after an accidental

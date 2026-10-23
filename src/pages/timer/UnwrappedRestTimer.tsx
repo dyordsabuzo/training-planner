@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@dyordsabuzo/ui-components";
 import { Timer } from "../../components/others/Timer";
-import { playCountdownWarningSound, speak } from "../../common/utils";
+import { playCountdownWarningSound, playVoiceClip } from "../../common/utils";
 
 const WARNING_SECONDS_REMAINING = 5;
 
@@ -24,14 +24,14 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
     // effects, which would otherwise speak "RESTING" twice.
     if (!hasAnnouncedRestStart.current) {
       hasAnnouncedRestStart.current = true;
-      speak("RESTING");
+      playVoiceClip("resting");
     }
     return () => {};
   }, []);
 
   useEffect(() => {
     if (countdownComplete) {
-      speak("WORKOUT!");
+      playVoiceClip("workout");
       toggleRest(false);
     }
     return () => {};
@@ -44,7 +44,8 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
           length={length}
           label="RESTING"
           setCountdownComplete={setCountdownComplete}
-          size={260}
+          // As big as fits: the card is the screen width minus its padding.
+          size={Math.min(320, window.innerWidth - 72)}
           onTick={(remainingTime) => {
             if (remainingTime === WARNING_SECONDS_REMAINING) {
               playCountdownWarningSound();
