@@ -10,7 +10,7 @@ import { findDuplicateName } from "../common/nameValidation";
 import { toDate } from "../common/planWeek";
 import { toStringArray } from "../common/utils";
 import { Button, DateInput, Input, ReorderableSelect, TagInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
-import { SessionGroup, groupKeys, resolveSession } from "../pages/resolveSessionSupersets";
+import { SessionGroup, groupId, groupKeys, resolveSession } from "../pages/resolveSessionSupersets";
 
 type Props = {
   data: any;
@@ -30,13 +30,14 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const [tags, setTags] = useState(toStringArray(formData?.tags));
   const [date, setDate] = useState<Dayjs | null>(toDate(formData?.date));
   const [supersets, setSupersets] = useState<string[]>(toStringArray(formData?.supersets));
-  // Every group gets an id so rows keep their identity when reordered.
-  const [groups, setGroups] = useState<SessionGroup[]>(() =>
-    (formData?.groups ?? []).map((group: SessionGroup) => ({
-      ...group,
-      id: group.id ?? crypto.randomUUID(),
-    }))
-  );
+  // Every group gets an id so rows keep their identity when reordered. Groups
+  // saved without one get the key-based id their logged progress already
+  // maps to (see groupId), so saving doesn't detach it.
+  const [groups, setGroups] = useState<SessionGroup[]>(() => {
+    const stored: SessionGroup[] = formData?.groups ?? [];
+    const keys = groupKeys(toStringArray(formData?.supersets), stored);
+    return stored.map((group, i) => ({ ...group, id: groupId(group, keys[i]) }));
+  });
   const [groupsError, setGroupsError] = useState<string>();
   const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
   const tagFieldRef = useRef<HTMLDivElement>(null);

@@ -13,16 +13,9 @@ import {
   getDocumentReference,
 } from "../common/firebase";
 
-export enum SourceDbReferences {
-  EXERCISES = "exercises",
-  SUPERSETS = "supersets",
-  SESSIONS = "sessions",
-  PLANS = "plans",
-  USERDATA = "userdata",
-}
+import { SourceDbReferences } from "./collections";
 
-export const toStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value : typeof value === "string" && value ? value.split(",") : [];
+export { SourceDbReferences, toStringArray } from "./collections";
 
 // Sentence case: only the first letter is capitalised, everything after it
 // is lowercase — regardless of how it was typed ("BENCH Press", "bench

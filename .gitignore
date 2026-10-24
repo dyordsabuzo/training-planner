@@ -26,3 +26,5 @@ yarn-error.log*
 
 *storybook.log
 *.log
+# Migration backups contain user data
+/scripts/backups

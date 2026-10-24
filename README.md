@@ -6,6 +6,14 @@ schedule sessions across a multi-week plan. During a workout, the app walks
 you through each exercise, tracks sets, and runs rest/work timers between
 exercises.
 
+## Documentation
+
+- [ARCHITECTURE.md](ARCHITECTURE.md): components, data model, id references, access and caching
+- [DEPLOYMENT.md](DEPLOYMENT.md): CI deploys, secrets, manual deploys and data migrations
+
+Firestore security rules for this project live in the
+[`dragonbeat`](https://github.com/dyordsabuzo/dragonbeat) repo, not here.
+
 ## Tech stack
 
 - React 18 + TypeScript
@@ -52,7 +60,9 @@ against real data, but be aware any writes during testing hit production.
 | `yarn storybook` | Run Storybook locally |
 | `yarn build-storybook` | Build a static Storybook site |
 | `yarn lint` / `yarn format` | Lint / format the codebase |
-| `yarn firebase:emulators` | Run local Firebase Auth/Firestore emulators |
+| `yarn firebase:emulators` | Run local Firebase emulators (Auth, Firestore, Functions) |
+| `yarn firebase:deploy` | Build and deploy Firebase Hosting only |
+| `yarn firebase:deploy:functions` | Deploy Cloud Functions from `functions/` |
 
 ## Deployment
 
@@ -61,4 +71,4 @@ The app is deployed as a static site to GitHub Pages via
 push to `main`, and Firebase Hosting previews are built per pull request via
 [`firebase-hosting-pull-request.yml`](.github/workflows/firebase-hosting-pull-request.yml).
 Firebase Hosting config (build output directory, SPA rewrites) lives in
-`firebase.json`.
+`firebase.json`. See [DEPLOYMENT.md](DEPLOYMENT.md) for details.

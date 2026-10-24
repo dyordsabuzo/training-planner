@@ -1,4 +1,4 @@
-import { toStringArray } from "../common/utils";
+import { toStringArray } from "../common/collections";
 
 // Resolves a session's superset names (and each superset's exercise names)
 // against sourceData into the enriched, runnable shape ExercisePage expects.
@@ -15,9 +15,13 @@ import { toStringArray } from "../common/utils";
 // it count as reps). percent is % of each exercise's reference weight
 // (0 = unset); rpe is informational (0 = unset).
 export type SessionGroup = {
-  // Stable identity for rendering; not used for saved data.
+  // Stable identity; saved progress is keyed by it (see groupId for groups
+  // saved before ids were assigned).
   id?: string;
   name: string;
+  // Earlier names, so progress logged under them before ids were used can
+  // still be matched (see refs.ts).
+  previousNames?: string[];
   exercises: string[];
   sets: number;
   reps: number;
@@ -135,6 +139,10 @@ export const groupKeys = (supersets: string[], groups: SessionGroup[]) => {
     return key;
   });
 };
+
+// A group's stable id. Groups saved before ids were assigned fall back to
+// their unit key, which the next save persists, so the id never changes.
+export const groupId = (group: SessionGroup, key: string) => group.id ?? `key:${key}`;
 
 // Plain name shown to the user for a unit key.
 export const displayUnitName = (key: string) => key.replace(/ #\d+$/, "");
