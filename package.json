@@ -45,7 +45,8 @@
     "firebase:login": "firebase login",
     "firebase:init": "firebase init",
     "firebase:use": "firebase use",
-    "firebase:deploy": "yarn build &&firebase deploy",
+    "firebase:deploy": "yarn build && firebase deploy --only hosting",
+    "firebase:deploy:functions": "firebase deploy --only functions",
     "firebase:emulators": "firebase emulators:start"
   },
   "eslintConfig": {
@@ -95,6 +96,7 @@
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-storybook": "^0.11.1",
+    "firebase-admin": "^14.5.0",
     "firebase-tools": "^13.29.1",
     "gh-pages": "^5.0.0",
     "jsdom": "^27.1.0",
@@ -103,6 +105,7 @@
     "prop-types": "^15.8.1",
     "storybook": "^8.4.7",
     "tailwindcss": "^3.3.2",
+    "tsx": "^4.23.15",
     "vite": "^6.4.3",
     "vitest": "^4.1.10"
   },
