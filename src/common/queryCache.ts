@@ -7,8 +7,9 @@ import { del, get, set } from "idb-keyval";
 // SourceDataContext).
 export const CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
-// Bump when the shape of cached data changes, to drop every device's old cache.
-export const CACHE_BUSTER = "v1";
+// Bump when the shape of cached data changes, to drop every device's old cache
+// (v2: references and progress keys stored as ids, see refs.ts).
+export const CACHE_BUSTER = "v2";
 
 const CACHE_STORAGE_KEY = "training-planner-query-cache";
 

@@ -10,6 +10,7 @@ import {
 import { getDocumentReference } from "../common/firebase";
 import { saveToDB, SourceDbReferences } from "../common/utils";
 import AuthContext from "./AuthContext";
+import { Collections, progressKeys } from "../common/refs";
 
 const SessionContext = createContext({
   sessionData: null,
@@ -45,6 +46,25 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   const user = isImpersonating ? null : authUser;
   const queryClient = useQueryClient();
 
+  // Session data uses names (as shown in the UI); progress is stored keyed by
+  // ids (see refs.ts). Content is read from SourceDataContext's caches, since
+  // this provider sits outside it.
+  const storedContent = (): Collections => {
+    const collection = (db: SourceDbReferences) =>
+      Object.assign(
+        {},
+        ...queryClient
+          .getQueriesData<Record<string, any>>({ queryKey: ["sourceData", db] })
+          .map(([, data]) => data ?? {})
+      );
+    return {
+      exercises: collection(SourceDbReferences.EXERCISES),
+      supersets: collection(SourceDbReferences.SUPERSETS),
+      sessions: collection(SourceDbReferences.SESSIONS),
+      plans: collection(SourceDbReferences.PLANS),
+    };
+  };
+
   const saveSessionUserData = async (
     data: any,
     sessionInfo: { plan: string; week: string; session: string }
@@ -52,11 +72,12 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     const { plan, week, session } = sessionInfo;
 
     if (user) {
+      const keys = progressKeys(storedContent());
       const userData = {
         id: user.uid,
-        [plan]: {
+        [keys.plan(plan)]: {
           [week]: {
-            [session]: {
+            [keys.session(session)]: {
               ...data,
             },
           },
@@ -94,11 +115,12 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   const saveProgress = async (data: any) => {
     if (!user || !sessionData) return;
     const ref = getDocumentReference(SourceDbReferences.USERDATA, user.uid);
+    const keys = progressKeys(storedContent());
     const payload = {
-      plan: sessionData.plan,
+      plan: keys.plan(sessionData.plan),
       week: sessionData.week,
-      session: sessionData.session,
-      data: toFirestoreData(data),
+      session: keys.session(sessionData.session),
+      data: keys.run(toFirestoreData(data), sessionData.session),
     };
     try {
       await updateDoc(ref, "inProgress", payload);
@@ -124,13 +146,19 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   // session (so a re-run doesn't keep stale sets) while mood check-ins stay.
   const saveRun = async (rawData: any) => {
     if (!user || !sessionData) return;
-    const data = toFirestoreData(rawData);
-    const { plan, week, session } = sessionData;
+    const keys = progressKeys(storedContent());
+    const named = toFirestoreData(rawData);
+    const data = keys.run(named, sessionData.session);
+    const week = sessionData.week;
+    const plan = keys.plan(sessionData.plan);
+    const session = keys.session(sessionData.session);
     const ref = getDocumentReference(SourceDbReferences.USERDATA, user.uid);
     const snapshot = await getDoc(ref);
     const meta = {
       completedAt: new Date().toISOString(),
       ...(sessionData.startedAt && { startedAt: sessionData.startedAt }),
+      // Keeps history readable after anything here is renamed or deleted.
+      labels: keys.labels({ plan: sessionData.plan, session: sessionData.session, run: named }),
     };
 
     if (snapshot.exists()) {
@@ -165,6 +193,16 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     const ref = getDocumentReference(SourceDbReferences.USERDATA, user.uid);
     const snapshot = await getDoc(ref);
     const data: any = snapshot.data() ?? {};
+
+    // History lists runs by name; find each one's stored keys (ids, or the
+    // name for runs logged before ids were used).
+    const keys = progressKeys(storedContent());
+    const storedKey = (obj: any, id: string, name: string) => (obj && id in obj ? id : name);
+    runs = runs.map((run) => {
+      const plan = storedKey(data, keys.plan(run.plan), run.plan);
+      const sessions = data[plan]?.[run.week];
+      return { ...run, plan, session: storedKey(sessions, keys.session(run.session), run.session) };
+    });
 
     const updates: any[] = [];
     const plans = Array.from(new Set(runs.map((r) => r.plan)));

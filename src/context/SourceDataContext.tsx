@@ -1,13 +1,13 @@
-import { createContext, ReactNode, useContext, useEffect } from "react";
+import { createContext, ReactNode, useContext, useEffect, useMemo } from "react";
 import { deleteDoc } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDocumentReference } from "../common/firebase";
-import { saveToDB, getFromDB, SourceDbReferences } from "../common/utils";
+import { saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
 import AppSettingsContext from "./AppSettingsContext";
 import { CONTENT_VERSION_KEY } from "../common/queryCache";
-import { getEntitiesNeedingRenameUpdate } from "./renameCascade";
+import { Collections, contentView, idLookup, toStoredEntity, userdataView } from "../common/refs";
 
 type SourceData = {
   exercises?: any;
@@ -127,8 +127,14 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   // in after the user) naturally refetches with the right filter.
   const planIdFilter =
     userPermission?.role === "admin" ? undefined : userPermission?.plans ?? [];
+  const plansQueryKey = [
+    "sourceData",
+    SourceDbReferences.PLANS,
+    userPermission?.role,
+    userPermission?.plans,
+  ];
   const plansQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.PLANS, userPermission?.role, userPermission?.plans],
+    queryKey: plansQueryKey,
     queryFn: () => getFromDB(SourceDbReferences.PLANS, planIdFilter),
     enabled: !!user,
     staleTime: Infinity,
@@ -140,13 +146,58 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     enabled: !!user,
   });
 
-  const sourceData: SourceData = {
-    exercises: exercisesQuery.data,
-    supersets: supersetsQuery.data,
-    sessions: sessionsQuery.data,
-    plans: plansQuery.data,
-    userdata: userdataQuery.data,
-  };
+  // The caches hold content as stored (references by id, see refs.ts); the
+  // UI reads a view with names in their place.
+  const contentData = useMemo(
+    () =>
+      contentView({
+        exercises: exercisesQuery.data,
+        supersets: supersetsQuery.data,
+        sessions: sessionsQuery.data,
+        plans: plansQuery.data,
+      }),
+    [exercisesQuery.data, supersetsQuery.data, sessionsQuery.data, plansQuery.data]
+  );
+  const userdata = useMemo(() => {
+    if (!userdataQuery.data) return userdataQuery.data;
+    const stored = {
+      exercises: exercisesQuery.data,
+      supersets: supersetsQuery.data,
+      sessions: sessionsQuery.data,
+      plans: plansQuery.data,
+    };
+    return Object.fromEntries(
+      Object.entries(userdataQuery.data).map(([uid, doc]) => [uid, userdataView(doc, stored)])
+    );
+  }, [
+    userdataQuery.data,
+    exercisesQuery.data,
+    supersetsQuery.data,
+    sessionsQuery.data,
+    plansQuery.data,
+  ]);
+
+  const sourceData: SourceData = { ...contentData, userdata };
+
+  // Latest stored content, read from the cache at call time rather than this
+  // render's closure — mutations save several entities in a row, and later
+  // saves must see ids assigned by earlier ones.
+  const getStored = (): Collections => ({
+    exercises: queryClient.getQueryData(["sourceData", SourceDbReferences.EXERCISES]),
+    supersets: queryClient.getQueryData(["sourceData", SourceDbReferences.SUPERSETS]),
+    sessions: queryClient.getQueryData(["sourceData", SourceDbReferences.SESSIONS]),
+    plans: queryClient.getQueryData(plansQueryKey),
+  });
+
+  // Saves an entity from the UI (name references) in its stored form.
+  const save = (
+    sourceDb:
+      | SourceDbReferences.EXERCISES
+      | SourceDbReferences.SUPERSETS
+      | SourceDbReferences.SESSIONS
+      | SourceDbReferences.PLANS,
+    entity: any
+  ) => saveToDB(sourceDb, toStoredEntity(sourceDb, entity, getStored()));
 
   const isLoading =
     exercisesQuery.isPending ||
@@ -176,13 +227,18 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   // `supersets` selection (the source of truth users edit) — adding the
   // exercise where newly selected AND removing it where deselected, unlike
   // a simple back-link that only ever adds and can never undo a link.
-  const linkExerciseWithSupersets = (exercise: any) => {
-    const selectedSupersets: string[] = exercise.supersets ?? [];
+  // Works on stored data (ids), so it's unaffected by a rename in progress.
+  const linkExerciseWithSupersets = (exerciseId: string, supersetNames: unknown) => {
+    const stored = getStored();
+    const toId = idLookup(stored);
+    const selectedIds = toStringArray(supersetNames).map((name) =>
+      toId(SourceDbReferences.SUPERSETS, name)
+    );
 
-    Object.values(sourceData.supersets ?? {}).forEach(async (supersetValue: any) => {
-      const exerciseList: string[] = supersetValue?.exercises ?? [];
-      const isSelected = selectedSupersets.includes(supersetValue.name);
-      const isLinked = exerciseList.includes(exercise.name);
+    Object.values(stored.supersets ?? {}).forEach(async (supersetValue: any) => {
+      const exerciseList = toStringArray(supersetValue?.exercises);
+      const isSelected = selectedIds.includes(supersetValue.id);
+      const isLinked = exerciseList.includes(exerciseId);
 
       if (isSelected === isLinked) {
         return;
@@ -191,8 +247,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       const superset = {
         ...supersetValue,
         exercises: isSelected
-          ? [...exerciseList, exercise.name]
-          : exerciseList.filter((e: string) => e !== exercise.name),
+          ? [...exerciseList, exerciseId]
+          : exerciseList.filter((e: string) => e !== exerciseId),
       };
 
       const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
@@ -200,12 +256,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     });
   };
 
-  const linkSupersetWithSessions = (superset: any) => {
-    superset.sessions.forEach(async (session: string) => {
+  const linkSupersetWithSessions = (supersetId: string, sessionNames: unknown) => {
+    const stored = getStored();
+    toStringArray(sessionNames).forEach(async (session: string) => {
       if (session) {
-        let sessionObject: any = Object.values(sourceData.sessions ?? {}).find(
-          (s: any) => s.name === session
-        );
+        let sessionObject: any = stored.sessions?.[session];
 
         // Only back-link an existing session — never auto-create a new one
         // for a name that doesn't match anything (e.g. a typo/stray value
@@ -215,10 +270,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           return;
         }
 
-        const supersetList: string[] = sessionObject?.supersets ?? [];
-        if (!supersetList.includes(superset.name)) {
-          supersetList.push(superset.name);
+        const supersetList = toStringArray(sessionObject?.supersets);
+        if (supersetList.includes(supersetId)) {
+          return;
         }
+        supersetList.push(supersetId);
         sessionObject = {
           ...sessionObject,
           supersets: supersetList,
@@ -262,26 +318,6 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const findPrevious = (dict: any, id?: string) =>
     Object.values(dict ?? {}).find((entity: any) => entity.id === id) as any;
 
-  // When an entity is renamed, every other entity that references its old
-  // name by string (e.g. a Superset's `exercises` list) needs that string
-  // updated to the new name, or the reference silently dangles.
-  const applyRenameCascade = async (
-    dbReference: SourceDbReferences,
-    oldName: string,
-    newName: string
-  ) => {
-    const updates = getEntitiesNeedingRenameUpdate(
-      sourceData,
-      dbReference,
-      oldName,
-      newName
-    );
-    for (const { collection, entity } of updates) {
-      const saved = await saveToDB(collection, entity);
-      updateSourceData(collection, saved);
-    }
-  };
-
   const saveRenamedEntity = async (
     dbReference: SourceDbReferences,
     previous: any,
@@ -290,9 +326,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     if (!data) {
       return;
     }
+    // Other entities reference this one by id, so a rename needs nothing
+    // beyond re-keying the cache.
     if (previous && previous.name !== data.name) {
       renameSourceData(dbReference, previous.name, data);
-      await applyRenameCascade(dbReference, previous.name, data.name);
     } else {
       updateSourceData(dbReference, data);
     }
@@ -302,18 +339,18 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     onSuccess: markContentChanged,
     mutationFn: async (exercise: any) => {
       const previous = findPrevious(sourceData.exercises, exercise.id);
-      const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
+      const data = await save(SourceDbReferences.EXERCISES, exercise);
       await saveRenamedEntity(SourceDbReferences.EXERCISES, previous, data);
-      linkExerciseWithSupersets(exercise);
+      if (data) linkExerciseWithSupersets(data.id, exercise.supersets);
     },
   });
 
   const addExerciseMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (exercise: any) => {
-      const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
+      const data = await save(SourceDbReferences.EXERCISES, exercise);
       updateSourceData(SourceDbReferences.EXERCISES, data);
-      linkExerciseWithSupersets(exercise);
+      if (data) linkExerciseWithSupersets(data.id, exercise.supersets);
     },
   });
 
@@ -325,9 +362,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const addSupersetMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (superset: any) => {
-      const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+      const data = await save(SourceDbReferences.SUPERSETS, superset);
       updateSourceData(SourceDbReferences.SUPERSETS, data);
-      linkSupersetWithSessions(superset);
+      if (data) linkSupersetWithSessions(data.id, superset.sessions);
     },
   });
 
@@ -342,9 +379,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           exercises.includes(e)
         ),
       };
-      const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+      const data = await save(SourceDbReferences.SUPERSETS, superset);
       await saveRenamedEntity(SourceDbReferences.SUPERSETS, previous, data);
-      linkSupersetWithSessions(superset);
+      if (data) linkSupersetWithSessions(data.id, superset.sessions);
     },
   });
 
@@ -356,7 +393,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const addSessionMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (session: any) => {
-      const data = await saveToDB(SourceDbReferences.SESSIONS, session);
+      const data = await save(SourceDbReferences.SESSIONS, session);
       updateSourceData(SourceDbReferences.SESSIONS, data);
     },
   });
@@ -365,7 +402,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     onSuccess: markContentChanged,
     mutationFn: async (session: any) => {
       const previous = findPrevious(sourceData.sessions, session.id);
-      const data = await saveToDB(SourceDbReferences.SESSIONS, session);
+      const data = await save(SourceDbReferences.SESSIONS, session);
       await saveRenamedEntity(SourceDbReferences.SESSIONS, previous, data);
     },
   });
@@ -389,7 +426,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       );
 
       // Recorded so plan lists can be sorted by when each plan was created.
-      const data = await saveToDB(SourceDbReferences.PLANS, {
+      const data = await save(SourceDbReferences.PLANS, {
         ...plan,
         weeks,
         createdAt: plan.createdAt ?? new Date().toISOString(),
@@ -419,7 +456,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         });
       }
 
-      const data = await saveToDB(SourceDbReferences.PLANS, {
+      const data = await save(SourceDbReferences.PLANS, {
         ...plan,
         weeks: plan.open ? {} : currentWeeks,
       });
@@ -452,7 +489,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         },
       };
 
-      const data = await saveToDB(SourceDbReferences.PLANS, planWithWeek);
+      const data = await save(SourceDbReferences.PLANS, planWithWeek);
       updateSourceData(SourceDbReferences.PLANS, data);
     },
   });
