@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import "./App.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { SessionContextProvider } from "./context/SessionContext";
 import { SourceDataContextProvider } from "./context/SourceDataContext";
@@ -11,19 +11,7 @@ import { ThemeContextProvider } from "./context/ThemeContext";
 import { SidebarContextProvider } from "./context/SidebarContext";
 import { AllRoutes } from "./routes/AllRoutes";
 import { unlockAudioContext } from "./common/utils";
-
-// Firestore reads aren't free and mutations already write straight into the
-// query cache, so a background refetch-on-focus buys no extra correctness —
-// only cost. A 5 minute staleTime means revisiting a page (Manage, Home, ...)
-// serves cached data instantly instead of re-fetching every collection.
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import { CACHE_BUSTER, CACHE_MAX_AGE, queryClient, queryPersister } from "./common/queryCache";
 
 function App() {
   useEffect(() => {
@@ -37,7 +25,20 @@ function App() {
 
   return (
     <div className={`w-full bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen`}>
-      <QueryClientProvider client={queryClient}>
+      {/* Fetched data is kept on the device, so a reload or app restart shows
+          it instantly — with no Firestore reads — even offline. */}
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: queryPersister,
+          maxAge: CACHE_MAX_AGE,
+          buster: CACHE_BUSTER,
+          dehydrateOptions: {
+            shouldDehydrateQuery: (query) =>
+              query.queryKey[0] === "sourceData" && query.state.status === "success",
+          },
+        }}
+      >
         <ThemeContextProvider>
           <SidebarContextProvider>
             <AuthContextProvider>
@@ -54,7 +55,7 @@ function App() {
           </SidebarContextProvider>
         </ThemeContextProvider>
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </div>
   );
 }

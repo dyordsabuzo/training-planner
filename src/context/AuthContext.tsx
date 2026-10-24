@@ -17,6 +17,7 @@ import {
 } from "firebase/auth";
 import { getDocumentReference } from "../common/firebase";
 import { getDoc, setDoc } from "firebase/firestore";
+import { clearQueryCache } from "../common/queryCache";
 
 type _Props = {
   children: ReactNode;
@@ -47,6 +48,12 @@ const AuthContext = createContext({
   isRealAdmin: false,
   isPreviewingAsUser: false,
   setPreviewAsUser: (flag: boolean) => {},
+  // Read-only "view as" a specific user for troubleshooting (admin only).
+  effectiveUid: undefined as string | undefined,
+  isImpersonating: false,
+  impersonatedUser: null as (UserPermission & { uid: string }) | null,
+  startImpersonation: async (uid: string) => {},
+  stopImpersonation: () => {},
   loginWithGoogle: () => {},
   registerWithEmailAndPassword: (email: string, password: string) => {},
   sendPasswordReset: (email: string) => {},
@@ -71,6 +78,9 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   );
   const [data, setData] = useState<any>(null);
   const [isPreviewingAsUser, setIsPreviewingAsUser] = useState(false);
+  const [impersonatedUser, setImpersonatedUser] = useState<
+    (UserPermission & { uid: string }) | null
+  >(null);
 
   useEffect(() => {
     const app = initializeApp({
@@ -98,6 +108,8 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         setIsLoggedIn(false);
         setUserPermission(null);
         setIsPreviewingAsUser(false);
+        setImpersonatedUser(null);
+        clearQueryCache();
       }
       setIsLoading(false);
     });
@@ -293,7 +305,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   const updateProfile = async (data: { firstName?: string; lastName?: string }) => {
-    if (!user) {
+    if (!user || impersonatedUser) {
       return;
     }
     const docRef = getDocumentReference("users", user.uid);
@@ -305,7 +317,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   // Written to the user's own doc, same as updateProfile above — an admin
   // sees and clears it from the Users admin screen (see UserForm.tsx).
   const requestAccess = async (note?: string) => {
-    if (!user) {
+    if (!user || impersonatedUser) {
       return;
     }
     const patch = {
@@ -323,10 +335,32 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   // upgrades it, and Firestore rules check the real auth token regardless —
   // so this can't grant access, only hide admin-only UI for the real admin.
   const isRealAdmin = userPermission?.role === "admin";
-  const effectiveUserPermission =
-    isPreviewingAsUser && userPermission
+  const effectiveUserPermission = impersonatedUser
+    ? impersonatedUser
+    : isPreviewingAsUser && userPermission
       ? { ...userPermission, role: "user" }
       : userPermission;
+
+  // Impersonation is client-side only: queries still run with the admin's
+  // real auth token, so Firestore rules must allow admins to read the
+  // target's docs. All writes are blocked while it is active (read-only).
+  const isImpersonating = !!impersonatedUser;
+  const effectiveUid = impersonatedUser?.uid ?? user?.uid;
+
+  const startImpersonation = async (uid: string) => {
+    if (!isRealAdmin || uid === user?.uid) {
+      return;
+    }
+    const snapshot = await getDoc(getDocumentReference("users", uid));
+    if (!snapshot.exists()) {
+      return;
+    }
+    const permission = snapshot.data() as UserPermission;
+    setIsPreviewingAsUser(false);
+    setImpersonatedUser({ ...permission, plans: permission.plans ?? [], uid });
+  };
+
+  const stopImpersonation = () => setImpersonatedUser(null);
 
   const setPreviewAsUser = (flag: boolean) => {
     if (flag && !isRealAdmin) {
@@ -348,6 +382,11 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         isRealAdmin,
         isPreviewingAsUser,
         setPreviewAsUser,
+        effectiveUid,
+        isImpersonating,
+        impersonatedUser,
+        startImpersonation,
+        stopImpersonation,
         loginWithGoogle: loginWithGoogle,
         loginWithEmailAndPassword: loginWithEmailAndPassword,
         registerWithEmailAndPassword: registerWithEmailAndPassword,

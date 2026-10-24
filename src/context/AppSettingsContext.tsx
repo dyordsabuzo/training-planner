@@ -13,6 +13,10 @@ const SETTINGS_DOC_ID = "app";
 const AppSettingsContext = createContext({
   adminEmail: DEFAULT_ADMIN_EMAIL,
   updateAdminEmail: (email: string) => {},
+  // Changes whenever an admin edits content (exercises, supersets, sessions,
+  // plans). Undefined until settings load, or when they can't (offline).
+  contentVersion: undefined as string | undefined,
+  updateContentVersion: (version: string) => {},
 });
 
 export default AppSettingsContext;
@@ -27,17 +31,22 @@ type Props = {
 export const AppSettingsContextProvider: React.FC<Props> = ({ children }) => {
   const { user } = useContext(AuthContext);
   const [adminEmail, setAdminEmail] = useState(DEFAULT_ADMIN_EMAIL);
+  const [contentVersion, setContentVersion] = useState<string>();
 
   useEffect(() => {
     if (!user) {
       return;
     }
-    getDoc(getDocumentReference(SETTINGS_COLLECTION, SETTINGS_DOC_ID)).then((snapshot) => {
-      const email = snapshot.exists() ? snapshot.data()?.adminEmail : undefined;
-      if (email) {
-        setAdminEmail(email);
-      }
-    });
+    getDoc(getDocumentReference(SETTINGS_COLLECTION, SETTINGS_DOC_ID))
+      .then((snapshot) => {
+        const email = snapshot.exists() ? snapshot.data()?.adminEmail : undefined;
+        if (email) {
+          setAdminEmail(email);
+        }
+        setContentVersion(snapshot.data()?.contentVersion);
+      })
+      // Offline: keep the defaults; cached content is used as-is.
+      .catch(() => {});
   }, [user]);
 
   const updateAdminEmail = async (email: string) => {
@@ -49,8 +58,19 @@ export const AppSettingsContextProvider: React.FC<Props> = ({ children }) => {
     setAdminEmail(email);
   };
 
+  const updateContentVersion = async (version: string) => {
+    setContentVersion(version);
+    await setDoc(
+      getDocumentReference(SETTINGS_COLLECTION, SETTINGS_DOC_ID),
+      { contentVersion: version },
+      { merge: true }
+    );
+  };
+
   return (
-    <AppSettingsContext.Provider value={{ adminEmail, updateAdminEmail }}>
+    <AppSettingsContext.Provider
+      value={{ adminEmail, updateAdminEmail, contentVersion, updateContentVersion }}
+    >
       {children}
     </AppSettingsContext.Provider>
   );

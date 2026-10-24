@@ -1,10 +1,12 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import { deleteDoc } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDocumentReference } from "../common/firebase";
 import { saveToDB, getFromDB, SourceDbReferences } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
+import AppSettingsContext from "./AppSettingsContext";
+import { CONTENT_VERSION_KEY } from "../common/queryCache";
 import { getEntitiesNeedingRenameUpdate } from "./renameCascade";
 
 type SourceData = {
@@ -63,23 +65,59 @@ type _Props = {
 
 export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const authContext = useContext(AuthContext);
-  const { user, userPermission } = authContext;
+  const { user, userPermission, effectiveUid } = authContext;
   const queryClient = useQueryClient();
+  const { contentVersion, updateContentVersion } = useContext(AppSettingsContext);
+
+  // Content (exercises, supersets, sessions, plans) is kept on the device
+  // and never goes stale on its own. Instead, settings/app.contentVersion —
+  // already read on startup — changes on every admin edit, and only then is
+  // content re-downloaded. Saves reading every collection on each app start.
+  useEffect(() => {
+    if (!contentVersion) {
+      return;
+    }
+    const seenVersion = localStorage.getItem(CONTENT_VERSION_KEY);
+    if (seenVersion === contentVersion) {
+      return;
+    }
+    // No seen version means nothing is cached yet, so the queries are
+    // already fetching fresh content.
+    if (seenVersion !== null) {
+      queryClient.invalidateQueries({
+        predicate: ({ queryKey }) =>
+          queryKey[0] === "sourceData" && queryKey[1] !== SourceDbReferences.USERDATA,
+      });
+    }
+    localStorage.setItem(CONTENT_VERSION_KEY, contentVersion);
+  }, [contentVersion, queryClient]);
+
+  // Every mutation below edits content: publish a new version so other
+  // devices refetch it. This device already has the edit in its cache, so it
+  // records the version as seen.
+  const markContentChanged = () => {
+    const version = new Date().toISOString();
+    localStorage.setItem(CONTENT_VERSION_KEY, version);
+    updateContentVersion(version);
+  };
 
   const exercisesQuery = useQuery({
     queryKey: ["sourceData", SourceDbReferences.EXERCISES],
     queryFn: () => getFromDB(SourceDbReferences.EXERCISES),
     enabled: !!user,
+    staleTime: Infinity,
   });
   const supersetsQuery = useQuery({
     queryKey: ["sourceData", SourceDbReferences.SUPERSETS],
     queryFn: () => getFromDB(SourceDbReferences.SUPERSETS),
     enabled: !!user,
+    staleTime: Infinity,
   });
   const sessionsQuery = useQuery({
     queryKey: ["sourceData", SourceDbReferences.SESSIONS],
     queryFn: () => getFromDB(SourceDbReferences.SESSIONS),
     enabled: !!user,
+    staleTime: Infinity,
   });
 
   // Admins see every plan; everyone else is restricted to the plans
@@ -93,11 +131,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     queryKey: ["sourceData", SourceDbReferences.PLANS, userPermission?.role, userPermission?.plans],
     queryFn: () => getFromDB(SourceDbReferences.PLANS, planIdFilter),
     enabled: !!user,
+    staleTime: Infinity,
   });
 
   const userdataQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.USERDATA, user?.uid],
-    queryFn: () => getFromDB(SourceDbReferences.USERDATA, [user!.uid]),
+    queryKey: ["sourceData", SourceDbReferences.USERDATA, effectiveUid],
+    queryFn: () => getFromDB(SourceDbReferences.USERDATA, [effectiveUid!]),
     enabled: !!user,
   });
 
@@ -260,6 +299,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   const updateExerciseMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (exercise: any) => {
       const previous = findPrevious(sourceData.exercises, exercise.id);
       const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
@@ -269,6 +309,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const addExerciseMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (exercise: any) => {
       const data = await saveToDB(SourceDbReferences.EXERCISES, exercise);
       updateSourceData(SourceDbReferences.EXERCISES, data);
@@ -277,10 +318,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const deleteExerciseMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: (exercise: any) => deleteFromDB(SourceDbReferences.EXERCISES, exercise),
   });
 
   const addSupersetMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (superset: any) => {
       const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
       updateSourceData(SourceDbReferences.SUPERSETS, data);
@@ -289,6 +332,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const editSupersetMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (superset: any) => {
       const previous = findPrevious(sourceData.supersets, superset.id);
       const exercises = Object.keys(sourceData.exercises ?? {});
@@ -305,10 +349,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const deleteSupersetMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: (superset: any) => deleteFromDB(SourceDbReferences.SUPERSETS, superset),
   });
 
   const addSessionMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (session: any) => {
       const data = await saveToDB(SourceDbReferences.SESSIONS, session);
       updateSourceData(SourceDbReferences.SESSIONS, data);
@@ -316,6 +362,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const editSessionMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (session: any) => {
       const previous = findPrevious(sourceData.sessions, session.id);
       const data = await saveToDB(SourceDbReferences.SESSIONS, session);
@@ -324,10 +371,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const deleteSessionMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: (session: any) => deleteFromDB(SourceDbReferences.SESSIONS, session),
   });
 
   const addPlanMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (plan: any) => {
       let weeks = {};
       Array.from(Array(parseInt(plan.numberOfWeeks ?? "0")).keys()).forEach(
@@ -350,6 +399,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const editPlanMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async (plan: any) => {
       const previous = findPrevious(sourceData.plans, plan.id);
       let currentWeeks = previous?.weeks ?? {};
@@ -378,10 +428,12 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const deletePlanMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: (plan: any) => deleteFromDB(SourceDbReferences.PLANS, plan),
   });
 
   const updateWeekPlanMutation = useMutation({
+    onSuccess: markContentChanged,
     mutationFn: async ({
       planName,
       weekData,

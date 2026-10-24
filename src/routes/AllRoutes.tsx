@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 import Navigation from "../components/navigation/Navigation";
 import ErrorPage from "../pages/ErrorPage";
 import ListingPage from "../pages/ListingPage";
@@ -17,12 +17,22 @@ import { HistoryPage } from "../pages/HistoryPage";
 import { MainPage } from "../pages/MainPage";
 import { useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
+import { getDisplayName } from "../common/utils";
 import SidebarContext from "../context/SidebarContext";
 import { AUTH_ROUTES } from "./authRoutes";
 
 const AppShell = () => {
   const authContext = useContext(AuthContext);
-  const { user, userPermission, isPreviewingAsUser, setPreviewAsUser } = authContext;
+  const {
+    user,
+    userPermission,
+    isPreviewingAsUser,
+    setPreviewAsUser,
+    isImpersonating,
+    impersonatedUser,
+    stopImpersonation,
+  } = authContext;
+  const navigate = useNavigate();
   const { isCollapsed } = useContext(SidebarContext);
   const location = useLocation();
   const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
@@ -39,7 +49,32 @@ const AppShell = () => {
           isAuthRoute ? "" : isCollapsed ? "lg:pl-20" : "lg:pl-64"
         }`}
       >
-        {isPreviewingAsUser && !isAuthRoute && (
+        {isImpersonating && impersonatedUser && !isAuthRoute && (
+          <div className="bg-amber-600 text-white text-sm px-4 py-2 flex flex-wrap items-center justify-center gap-2 text-center">
+            <span>
+              Viewing as{" "}
+              <strong>
+                {getDisplayName(
+                  impersonatedUser.firstName,
+                  impersonatedUser.lastName,
+                  impersonatedUser.email
+                )}
+              </strong>{" "}
+              — read-only, changes are not saved.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                stopImpersonation();
+                navigate("/training-planner/admin");
+              }}
+              className="underline font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
+            >
+              Stop viewing
+            </button>
+          </div>
+        )}
+        {isPreviewingAsUser && !isImpersonating && !isAuthRoute && (
           <div className="bg-primary text-white text-sm px-4 py-2 flex flex-wrap items-center justify-center gap-2 text-center">
             <span>Previewing the app as a normal user.</span>
             <button

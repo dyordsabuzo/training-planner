@@ -1,5 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import UserManagementContext, { AppUser } from "../context/UserManagementContext";
+import { useNavigate } from "react-router";
+import UserManagementContext, {
+  AppUser,
+  hasPendingAccessRequest,
+} from "../context/UserManagementContext";
+import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
 import { UserForm } from "../forms/UserForm";
 import { AddUserForm } from "../forms/AddUserForm";
@@ -12,7 +17,11 @@ import { useLoadMore } from "../common/useLoadMore";
 import { LoadMore } from "./LoadMore";
 import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
 
-const buildColumns = (planNameById: Record<string, string>): DataTableColumn<AppUser>[] => [
+const buildColumns = (
+  planNameById: Record<string, string>,
+  currentUid: string | undefined,
+  onViewAs: (u: AppUser) => void
+): DataTableColumn<AppUser>[] => [
   {
     key: "user",
     header: "User",
@@ -22,7 +31,7 @@ const buildColumns = (planNameById: Record<string, string>): DataTableColumn<App
           <span className="font-bold truncate">
             {getDisplayName(u.firstName, u.lastName, u.email)}
           </span>
-          {u.accessRequested && (
+          {hasPendingAccessRequest(u) && (
             <Badge variant="warning" className="shrink-0">
               Requested access
             </Badge>
@@ -63,6 +72,25 @@ const buildColumns = (planNameById: Record<string, string>): DataTableColumn<App
         <span className="text-text-muted-light dark:text-text-muted-dark italic">None</span>
       ),
   },
+  {
+    key: "actions",
+    header: "",
+    render: (u) =>
+      u.id === currentUid ? null : (
+        <button
+          type="button"
+          onClick={(e) => {
+            // Don't also open the edit form via the row click.
+            e.stopPropagation();
+            onViewAs(u);
+          }}
+          className="text-sm text-primary underline font-semibold whitespace-nowrap rounded
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          View as
+        </button>
+      ),
+  },
 ];
 
 // Admin-only listing of everyone who has signed up (a users/{uid} Firestore
@@ -73,11 +101,15 @@ const PAGE_SIZE = 20;
 
 export const UserListing = () => {
   const { users, fetchUsers, saveUser, createUser } = useContext(UserManagementContext);
+  const { user, startImpersonation } = useContext(AuthContext);
+  const navigate = useNavigate();
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
   const [isInitialised, setIsInitialised] = useState(false);
   const [search, setSearch] = useState("");
-  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  // Keep only the id so the open form always shows the latest saved user,
+  // not a stale snapshot from when the row was clicked.
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
 
@@ -94,7 +126,15 @@ export const UserListing = () => {
     return Object.fromEntries(entries.map(([name, plan]) => [plan.id, name]));
   }, [sourceData.plans]);
 
-  const columns = useMemo(() => buildColumns(planNameById), [planNameById]);
+  const columns = useMemo(
+    () =>
+      buildColumns(planNameById, user?.uid, async (u) => {
+        await startImpersonation(u.id);
+        navigate("/training-planner");
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [planNameById, user?.uid]
+  );
 
   // Users waiting on a request float to the top, so an admin sees them first
   // without having to search or sort.
@@ -106,7 +146,9 @@ export const UserListing = () => {
             .toLowerCase()
             .includes(search.toLowerCase())
         )
-        .sort((a, b) => Number(!!b.accessRequested) - Number(!!a.accessRequested)),
+        .sort(
+          (a, b) => Number(hasPendingAccessRequest(b)) - Number(hasPendingAccessRequest(a))
+        ),
     [users, search]
   );
 
@@ -114,7 +156,8 @@ export const UserListing = () => {
     return <Loading />;
   }
 
-  const pendingCount = users.filter((u) => u.accessRequested).length;
+  const editingUser = users.find((u) => u.id === editingUserId);
+  const pendingCount = users.filter(hasPendingAccessRequest).length;
 
   return (
     <BaseListing>
@@ -138,7 +181,7 @@ export const UserListing = () => {
         columns={columns}
         rows={entries.slice(0, limit)}
         getRowKey={(u) => u.id}
-        onRowClick={setEditingUser}
+        onRowClick={(u) => setEditingUserId(u.id)}
         emptyMessage={search ? "No users match your search." : "No registered users yet."}
       />
 
@@ -147,7 +190,7 @@ export const UserListing = () => {
       {editingUser && (
         <UserForm
           data={editingUser}
-          closeForm={() => setEditingUser(null)}
+          closeForm={() => setEditingUserId(null)}
           onSave={saveUser}
         />
       )}

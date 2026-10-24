@@ -53,8 +53,17 @@ const sidebarLinkClassName =
 
 const Navigation = () => {
   const authContext = useContext(AuthContext);
-  const { user, userPermission, isRealAdmin, isPreviewingAsUser, setPreviewAsUser } =
-    authContext;
+  const {
+    user,
+    userPermission,
+    isRealAdmin,
+    isPreviewingAsUser,
+    setPreviewAsUser,
+    isImpersonating,
+    stopImpersonation,
+  } = authContext;
+  const togglePreview = () =>
+    isImpersonating ? stopImpersonation() : setPreviewAsUser(!isPreviewingAsUser);
   const { isCollapsed, toggleSidebar } = useContext(SidebarContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -199,8 +208,8 @@ const Navigation = () => {
               lastName={userPermission?.lastName}
               isAdmin={userPermission?.role === "admin"}
               isRealAdmin={isRealAdmin}
-              isPreviewingAsUser={isPreviewingAsUser}
-              onTogglePreview={() => setPreviewAsUser(!isPreviewingAsUser)}
+              isPreviewingAsUser={isPreviewingAsUser || isImpersonating}
+              onTogglePreview={togglePreview}
               showEmail={!isCollapsed}
               menuAlign="left"
             />
@@ -270,8 +279,8 @@ const Navigation = () => {
                     lastName={userPermission?.lastName}
                     isAdmin={userPermission?.role === "admin"}
                     isRealAdmin={isRealAdmin}
-                    isPreviewingAsUser={isPreviewingAsUser}
-                    onTogglePreview={() => setPreviewAsUser(!isPreviewingAsUser)}
+                    isPreviewingAsUser={isPreviewingAsUser || isImpersonating}
+                    onTogglePreview={togglePreview}
                     showEmail={false}
                     menuAlign="right"
                   />

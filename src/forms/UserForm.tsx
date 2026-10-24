@@ -6,7 +6,7 @@ import { FormButtons } from "./FormButtons";
 import { useEntityForm } from "./useEntityForm";
 import SourceDataContext from "../context/SourceDataContext";
 import AuthContext from "../context/AuthContext";
-import { AppUser } from "../context/UserManagementContext";
+import { AppUser, hasPendingAccessRequest } from "../context/UserManagementContext";
 import { getDisplayName } from "../common/utils";
 import { Modal, Input, Toggle, MultiSelect, Button, Badge } from "@dyordsabuzo/ui-components";
 
@@ -90,7 +90,7 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
       onClose={closeForm}
       headerAction={headerAction}
     >
-      {data.accessRequested && (
+      {hasPendingAccessRequest(data) && (
         <div className="mb-4 flex flex-col gap-2 rounded-md border border-warning-200 dark:border-warning-700 bg-warning-50 dark:bg-warning-800/20 p-3">
           <div className="flex items-center justify-between gap-2">
             <Badge variant="warning">Access requested</Badge>

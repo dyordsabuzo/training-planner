@@ -18,6 +18,12 @@ export type AppUser = {
   accessRequestNote?: string;
 };
 
+// A request is only pending while the user still has no plans. The flag can
+// outlive a grant (e.g. the user asked again from a stale page after being
+// granted), so a user with any granted plan never counts as waiting.
+export const hasPendingAccessRequest = (user: AppUser) =>
+  !!user.accessRequested && user.plans.length === 0;
+
 const UserManagementContext = createContext({
   users: null as AppUser[] | null,
   fetchUsers: () => {},

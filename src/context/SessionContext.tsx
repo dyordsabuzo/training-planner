@@ -40,7 +40,9 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   const [isSessionOn, setIsSessionOn] = useState(false);
 
   const authContext = useContext(AuthContext);
-  const { user } = authContext;
+  // Writes are no-ops while an admin is impersonating another user (read-only).
+  const { user: authUser, isImpersonating } = authContext;
+  const user = isImpersonating ? null : authUser;
   const queryClient = useQueryClient();
 
   const saveSessionUserData = async (
