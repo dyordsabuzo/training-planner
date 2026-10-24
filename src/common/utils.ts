@@ -170,6 +170,7 @@ export const playCountdownWarningSound = () => {
 export type VoiceClip =
   | "resting"
   | "workout"
+  | "starting-workout"
   | "workout-complete"
   | "superset-complete"
   | "exercise-group-complete"
@@ -181,6 +182,7 @@ export type VoiceClip =
 const VOICE_CLIPS: VoiceClip[] = [
   "resting",
   "workout",
+  "starting-workout",
   "workout-complete",
   "superset-complete",
   "exercise-group-complete",

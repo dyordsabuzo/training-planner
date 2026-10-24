@@ -469,6 +469,8 @@ export const ExercisePage = () => {
                   targetDistance={"targetDistance" in supersetData ? targetDistance : undefined}
                   measured={supersetData.measured !== false}
                   canAnnounce={!showWeightPrompt}
+                  // The counter only resets when a new unit starts.
+                  isUnitStart={exerciseState.exerciseCounter === 0}
                   leftRight={!!supersetData.leftRight}
                   sideRest={supersetData.sideRest}
                   tempo={supersetData.tempo}

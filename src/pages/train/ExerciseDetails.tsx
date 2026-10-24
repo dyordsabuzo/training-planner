@@ -45,8 +45,10 @@ type Props = {
   // Free-text target tempo/rate; shown under the exercise name when set.
   tempo?: string;
   // False while a modal (e.g. the Targets prompt) covers the page; the
-  // "Left side" cue waits until it's closed.
+  // "Starting workout" and "Left side" cues wait until it's closed.
   canAnnounce?: boolean;
+  // First exercise of a new superset/exercise group: "Starting workout".
+  isUnitStart?: boolean;
   // Done on each side: adds a left/right tracker and splits DONE (or the
   // timer, for time-based) into one per side.
   leftRight?: boolean;
@@ -73,6 +75,7 @@ export const ExerciseDetails = ({
   measured = true,
   tempo,
   canAnnounce = true,
+  isUnitStart = false,
   leftRight,
   sideRest,
   targetTime = "0",
@@ -93,7 +96,7 @@ export const ExerciseDetails = ({
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [side, setSide] = useState<Side>("left");
   const dragStartX = useRef<number | null>(null);
-  const announcedLeftFor = useRef<string | null>(null);
+  const announcedFor = useRef<string | null>(null);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -157,12 +160,23 @@ export const ExerciseDetails = ({
   // guards against StrictMode's dev-only double-invoke.
   useEffect(() => {
     const announceKey = `${transitionKey}-${name}`;
-    if (!leftRight || !name || !canAnnounce || announcedLeftFor.current === announceKey) {
+    if (
+      !(leftRight || isUnitStart) ||
+      !name ||
+      !canAnnounce ||
+      announcedFor.current === announceKey
+    ) {
       return;
     }
     const timeout = setTimeout(() => {
-      announcedLeftFor.current = announceKey;
-      playVoiceClip("left-side");
+      announcedFor.current = announceKey;
+      // Queued, so "Starting workout" always plays before "Left side".
+      if (isUnitStart) {
+        playVoiceClip("starting-workout");
+      }
+      if (leftRight) {
+        playVoiceClip("left-side");
+      }
     }, ANNOUNCE_SETTLE_MS);
     return () => clearTimeout(timeout);
   }, [transitionKey, name, canAnnounce]);
