@@ -63,11 +63,63 @@ Administrator, Service Account User and Firebase Viewer.
 `firebase:deploy` is deliberately limited to Hosting so a deploy from this
 repo can never overwrite the shared Firestore rules.
 
+## Cost controls
+
+Cloud Functions are set up to cost nothing for normal use, and to stop
+themselves once they start costing money.
+
+- **Capped spend rate.** Every function runs as at most one small instance
+  (`maxInstances: 1`, `cpu: "gcf_gen1"`, 256 MiB, 10 s timeout; see
+  `functions/src/index.ts`). Extra concurrent calls are refused, not scaled out.
+- **Kill switch.** A $1 Cloud Billing budget publishes to the Pub/Sub topic
+  `billing-alerts`. `billingGuard` (`functions/src/guard.ts`) removes public
+  access from every callable as soon as the month-to-date cost is above 0.
+  It also sets `settings/platform.functionsSuspended`. Blocked calls are
+  refused by Cloud Run before any instance runs. Hosting and Firestore keep
+  working.
+
+```mermaid
+flowchart LR
+  Budget["Budget ($1)"] -->|a few times a day| Topic["Pub/Sub: billing-alerts"]
+  Topic --> Guard["billingGuard"]
+  Guard -->|cost > allowed| Close["Remove allUsers invoker<br/>from every callable"]
+  Guard --> Flag["settings/platform<br/>functionsSuspended: true"]
+```
+
+Billing data lags usage by hours, so some cost can still build up before
+the guard fires. The capped spend rate keeps that small.
+
+### One-time setup
+
+Do this before the first deploy that includes `billingGuard`:
+
+1. Create a service account `billing-guard`. Give it a custom role with
+   `run.services.getIamPolicy` and `run.services.setIamPolicy`, plus
+   `roles/datastore.user`.
+2. Give the deploy service account (`FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200`)
+   Eventarc Admin and Pub/Sub Admin, and enable the Eventarc and Pub/Sub APIs.
+3. Create the budget on the billing account: $1, scoped to this project, with
+   Pub/Sub notifications to `projects/training-planner-387200/topics/billing-alerts`.
+
+### Resuming after a suspension
+
+```
+npx tsx scripts/resume-functions.ts                          # shows cost and state
+npx tsx scripts/resume-functions.ts --allow-up-to=2 --apply  # re-open, accept up to 2 this month
+```
+
+The allowance only lasts until the end of the billing month. After that the
+guard trips again on the first cent.
+
 ## Data migrations
 
 One-off Admin SDK scripts live in `scripts/`. They target the emulator when
 `FIRESTORE_EMULATOR_HOST` is set, and otherwise the real project using
 Application Default Credentials (`gcloud auth application-default login`).
+With user credentials, also set
+`GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200`, or run
+`gcloud auth application-default set-quota-project training-planner-387200`
+once. Otherwise Auth and Cloud Run API calls fail with `auth/internal-error`.
 They write nothing unless `--apply` is passed, and save a JSON backup to
 `scripts/backups/` first. Backups contain user data and are gitignored.
 

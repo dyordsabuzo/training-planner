@@ -64,6 +64,7 @@ exercises**.
 | `users` | `users/{uid}` | `role` (`admin` / `user`), `plans[]` (granted plan ids), profile |
 | `userdata` | `userdata/{uid}` | logged progress, plus `inProgress` for a run underway |
 | `settings` | `settings/app` | admin contact email, `contentVersion` |
+| `settings` | `settings/platform` | billing guard state: `functionsSuspended`, `costAmount`, `allowedCost` |
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
@@ -148,6 +149,10 @@ Suspended orgs are left out. Under `orgs/{orgId}`:
 | `removeMember` | owner, or the member themselves | removes the membership |
 | `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |
 | `suspendOrg` | super admin | suspends or reactivates an org |
+
+`billingGuard` isn't callable. It runs on Cloud Billing budget notifications
+and closes the callables to the public once the project starts costing
+money (see [DEPLOYMENT.md](DEPLOYMENT.md#cost-controls)).
 
 ## Caching and offline use
 
