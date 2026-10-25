@@ -18,6 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      # Yarn reads the root .npmrc on every command (install and the
+      # functions predeploy build), and it fails if this is unset.
+      NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,9 +29,8 @@ jobs:
         with:
           node-version: 22
 
-      # Only the functions package is installed: the root needs the GitHub
-      # Packages token and isn't needed to deploy. The functions predeploy
-      # in firebase.json builds the TypeScript.
+      # Only the functions package is installed; the functions predeploy in
+      # firebase.json builds the TypeScript.
       - run: yarn --cwd functions install --frozen-lockfile
 
       - uses: google-github-actions/auth@v2
