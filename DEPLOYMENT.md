@@ -89,27 +89,55 @@ flowchart LR
 Billing data lags usage by hours, so some cost can still build up before
 the guard fires. The capped spend rate keeps that small.
 
-### One-time setup
+### One-time setup (done 2026-10-25)
 
-Do this before the first deploy that includes `billingGuard`:
+This is already set up. It's recorded here in case the project needs to be
+set up again. If your local `gcloud auth login` doesn't work, get a token from
+your application-default login and pass it with `--access-token-file=/tmp/gtoken`:
+`gcloud auth application-default print-access-token > /tmp/gtoken`.
+APIs that bill to a quota project, such as Budgets, also need
+`--billing-project=training-planner-387200`.
 
-1. Create a service account `billing-guard`. Give it a custom role with
-   `run.services.getIamPolicy` and `run.services.setIamPolicy`, plus
-   `roles/datastore.user`.
-2. Give the deploy service account (`FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200`)
-   Eventarc Admin and Pub/Sub Admin, and enable the Eventarc and Pub/Sub APIs.
-3. Create the budget on the billing account: $1, scoped to this project, with
-   Pub/Sub notifications to `projects/training-planner-387200/topics/billing-alerts`.
+| What | Value |
+| --- | --- |
+| Guard service account | `billing-guard@training-planner-387200.iam.gserviceaccount.com` |
+| Its roles | custom `runInvokerPolicyAdmin` (`run.services.getIamPolicy`, `run.services.setIamPolicy`), `roles/datastore.user`, `roles/eventarc.eventReceiver` |
+| Deploy service account | `github-action-642560285@…` (`FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200`), with Eventarc Admin and Pub/Sub Admin added |
+| Service agents (needed by the Firebase CLI for Pub/Sub triggers) | Pub/Sub agent `service-659190863445@gcp-sa-pubsub…` → `roles/iam.serviceAccountTokenCreator`; default compute SA → `roles/run.invoker` and `roles/eventarc.eventReceiver` |
+| Pub/Sub topic | `billing-alerts` |
+| Budget | "training-planner cost guard": 1 AUD on billing account `01B296-8CABCA-583CE6`, scoped to this project, sends to `billing-alerts` |
+
+These project-level invoker grants are for specific service accounts only.
+The guard removes public (`allUsers`) access, so they don't weaken it.
 
 ### Resuming after a suspension
 
-```
-npx tsx scripts/resume-functions.ts                          # shows cost and state
-npx tsx scripts/resume-functions.ts --allow-up-to=2 --apply  # re-open, accept up to 2 this month
-```
+When the guard fires:
+- every callable stops accepting public calls (Cloud Run refuses them)
+- `settings/platform.functionsSuspended` is `true`, and `costAmount` holds the
+  month-to-date cost that tripped it
+- the function logs show `Billing guard: … callables suspended.`
+
+To reopen:
+
+1. Check what it cost (Billing → Reports) and decide how much more you
+   accept this month.
+2. Dry run, which shows the recorded cost and the current state:
+   ```
+   GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/resume-functions.ts
+   ```
+3. Reopen, accepting a month-to-date cost of up to that amount (it must be
+   at least the current cost):
+   ```
+   GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/resume-functions.ts --allow-up-to=2 --apply
+   ```
+   It writes the allowance first and then gives `allUsers` invoker access
+   back on each callable.
 
 The allowance only lasts until the end of the billing month. After that the
-guard trips again on the first cent.
+guard trips again on the first cent. To keep functions off, just don't
+resume them. A later functions deploy may make them public again, but the
+guard closes them on the next budget notification.
 
 ## Data migrations
 
