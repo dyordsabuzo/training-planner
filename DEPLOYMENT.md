@@ -26,13 +26,18 @@ Two workflows run on every push to `main`:
 - [`deploy-static-site.yml`](.github/workflows/deploy-static-site.yml) deploys
   the same build to **GitHub Pages**.
 
+A third, [`deploy-functions.yml`](.github/workflows/deploy-functions.yml),
+deploys **Cloud Functions** only when `functions/`, `firebase.json` or the
+workflow itself changes.
+
 ```mermaid
 flowchart LR
   Main["Push to main"] --> B1["Build"] --> Live["Firebase Hosting (live)"]
   Main --> B2["Build"] --> Pages["GitHub Pages"]
+  Main -->|functions/ changed| B3["Build functions"] --> Fns["Cloud Functions"]
 ```
 
-Both can also be started by hand (`workflow_dispatch`).
+All three can also be started by hand (`workflow_dispatch`).
 
 ## Secrets
 
@@ -42,14 +47,18 @@ Repository secrets used by the workflows (values are never committed):
 | --- | --- |
 | `VITE_FBASE_APIKEY`, `VITE_FBASE_AUTHDOMAIN`, `VITE_FBASE_PROJECTID`, `VITE_FBASE_APPID` | Firebase web config baked into the build |
 | `PACKAGES_READ_TOKEN` | Installs `@dyordsabuzo/ui-components` from GitHub Packages |
-| `FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200` | Deploys to Firebase Hosting |
+| `FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200` | Deploys to Firebase Hosting and Cloud Functions |
+
+To deploy functions, the service account also needs these roles: Cloud
+Functions Admin, Cloud Run Admin, Cloud Build Editor, Artifact Registry
+Administrator, Service Account User and Firebase Viewer.
 
 ## Manual deploys
 
 | Command | Deploys |
 | --- | --- |
 | `yarn firebase:deploy` | Hosting only (builds first) |
-| `yarn firebase:deploy:functions` | Cloud Functions in `functions/`. Set the region in `functions/src/index.ts` before the first deploy. Requires the Blaze plan. |
+| `yarn firebase:deploy:functions` | Cloud Functions in `functions/` (region `australia-southeast1`, set in `functions/src/index.ts`). Requires the Blaze plan. |
 
 `firebase:deploy` is deliberately limited to Hosting so a deploy from this
 repo can never overwrite the shared Firestore rules.
@@ -80,3 +89,28 @@ content:
 3. `npx tsx scripts/migrate-ids.ts --apply`
 
 The script can be re-run safely. A second run reports 0 changes.
+
+### `migrate-orgs.ts` (organisations)
+
+This puts the existing data into one org. It copies the content to
+`orgs/{orgId}/...` with the same ids and leaves the top-level collections in
+place. It creates a member for each `users` doc: the given owner becomes
+`owner`, other admins become `trainer`, and everyone else becomes a `client`
+whose granted `plans` become `assignedPlanIds`. Then it sets everyone's `orgs`
+claim; the owner also gets `superAdmin`. To also update claims in the
+emulator, set `FIREBASE_AUTH_EMULATOR_HOST`.
+
+```mermaid
+flowchart LR
+  Rules["Merge dragonbeat rules<br/>(CI deploys)"] --> Fns["yarn firebase:deploy:functions"]
+  Fns --> Dry["migrate-orgs.ts<br/>(dry run)"]
+  Dry --> Apply["migrate-orgs.ts --apply"]
+```
+
+1. Merge the dragonbeat rules for `orgs/` and wait for its deploy.
+2. `yarn firebase:deploy:functions`
+3. `npx tsx scripts/migrate-orgs.ts`, then check the counts. It defaults to org `default` ("Default org"), owned by the production admin. Override with `--org-id=`, `--name=` and `--owner=`.
+4. Run it again with `--apply`.
+
+The script can be re-run safely. Existing members are left alone, and
+content that is already copied is skipped.

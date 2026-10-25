@@ -1,0 +1,38 @@
+name: Deploy Cloud Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'firebase.json'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: functions-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Only the functions package is installed: the root needs the GitHub
+      # Packages token and isn't needed to deploy. The functions predeploy
+      # in firebase.json builds the TypeScript.
+      - run: yarn --cwd functions install --frozen-lockfile
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200 }}
+
+      # --force: accept the default Artifact Registry cleanup policy instead of prompting.
+      - run: npx --yes firebase-tools@15 deploy --only functions --project training-planner-387200 --non-interactive --force

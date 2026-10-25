@@ -1,8 +1,10 @@
 # Architecture
 
 Training Planner is a client-only React single-page app backed by Firebase.
-There is no app server: the browser talks to Firebase Auth and Firestore
-directly, and access is enforced by Firestore security rules.
+The browser talks to Firebase Auth and Firestore directly, and access is
+enforced by Firestore security rules. Callable Cloud Functions handle the few
+writes the client may not make itself: creating orgs, invites and
+memberships, and setting the custom claims the rules check.
 
 ```mermaid
 flowchart LR
@@ -10,6 +12,9 @@ flowchart LR
   Browser -->|reads / writes| Firestore["Cloud Firestore"]
   Hosting["Firebase Hosting<br/>+ GitHub Pages"] -->|serves build/| Browser
   Rules["Security rules<br/>(dragonbeat repo)"] -.->|enforce| Firestore
+  Browser -->|callables| Functions["Cloud Functions<br/>(australia-southeast1)"]
+  Functions -->|members, invites| Firestore
+  Functions -->|custom claims| Auth
 ```
 
 ## External interfaces and dependencies
@@ -18,6 +23,7 @@ flowchart LR
 | --- | --- |
 | Firebase Auth | Email/password and Google sign-in |
 | Cloud Firestore | All app data (see [Data model](#data-model)) |
+| Cloud Functions | Org, invite and membership management; custom claims (see [Organisations](#organisations)) |
 | Firebase Hosting / GitHub Pages | Serving the static build (see [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | `@dyordsabuzo/ui-components` | Shared UI library (GitHub Packages, needs `PACKAGES_READ_TOKEN`) |
 | `@tanstack/react-query` | Data fetching and caching, persisted to IndexedDB |
@@ -38,7 +44,7 @@ here.
 | `src/forms/` | Create/edit forms for exercises, supersets, sessions, plans, users |
 | `src/common/` | Pure helpers: Firestore access (`utils.ts`), references (`refs.ts`), plan cycles, stats, caching |
 | `src/routes/` | Route table and app shell |
-| `functions/` | Cloud Functions (scaffold for the multi-tenant work; no functions yet) |
+| `functions/` | Callable Cloud Functions for orgs, invites, members and claims |
 | `scripts/` | One-off Admin SDK data migrations |
 
 Providers are nested in `src/App.tsx`: Theme → Sidebar → Auth → AppSettings →
@@ -58,6 +64,14 @@ exercises**.
 | `users` | `users/{uid}` | `role` (`admin` / `user`), `plans[]` (granted plan ids), profile |
 | `userdata` | `userdata/{uid}` | logged progress, plus `inProgress` for a run underway |
 | `settings` | `settings/app` | admin contact email, `contentVersion` |
+| `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
+| `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `email`, `displayName` |
+| `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
+| `orgs/{orgId}/{exercises,supersets,sessions,plans}` | same as top level | copies of the content, made by `scripts/migrate-orgs.ts` |
+
+The app still reads the top-level content collections. Moving it to
+`orgs/{orgId}/...` is the next step of the multi-tenant work; the top-level
+copies are removed after that.
 
 ### References are ids, the UI uses names
 
@@ -112,6 +126,28 @@ userdata/{uid}
 - Only admins write content, users' roles and grants, and settings.
 - A shared session (`isShareable`) opens without signing in, through its
   self-contained `sharedSnapshot`.
+
+### Organisations
+
+Each user's ID token carries a custom claim `orgs: {[orgId]: role}` (and
+`superAdmin` for platform admins). Only `functions/src/claims.ts` sets it,
+rebuilding it from the user's member docs whenever a membership changes.
+Suspended orgs are left out. Under `orgs/{orgId}`:
+
+- Members read exercises, supersets and sessions. Owners and trainers write them.
+- Clients read only the plans in their member doc's `assignedPlanIds`.
+- Members and invites are written only by Cloud Functions. Owners invite
+  and change roles. Trainers assign plans. Anyone signed in can create an org.
+
+| Callable | Who | Does |
+| --- | --- | --- |
+| `createOrg` | any signed-in user | creates an org, caller becomes `owner` |
+| `createInvite` | owner | invite token for `trainer` or `client` (expiry, max uses) |
+| `acceptInvite` | any signed-in user | joins the org with the invite's role |
+| `setMemberRole` | owner | `trainer` ↔ `client` |
+| `removeMember` | owner, or the member themselves | removes the membership |
+| `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |
+| `suspendOrg` | super admin | suspends or reactivates an org |
 
 ## Caching and offline use
 
