@@ -26,13 +26,18 @@ Two workflows run on every push to `main`:
 - [`deploy-static-site.yml`](.github/workflows/deploy-static-site.yml) deploys
   the same build to **GitHub Pages**.
 
+A third, [`deploy-functions.yml`](.github/workflows/deploy-functions.yml),
+deploys **Cloud Functions** only when `functions/`, `firebase.json` or the
+workflow itself changes.
+
 ```mermaid
 flowchart LR
   Main["Push to main"] --> B1["Build"] --> Live["Firebase Hosting (live)"]
   Main --> B2["Build"] --> Pages["GitHub Pages"]
+  Main -->|functions/ changed| B3["Build functions"] --> Fns["Cloud Functions"]
 ```
 
-Both can also be started by hand (`workflow_dispatch`).
+All three can also be started by hand (`workflow_dispatch`).
 
 ## Secrets
 
@@ -42,7 +47,11 @@ Repository secrets used by the workflows (values are never committed):
 | --- | --- |
 | `VITE_FBASE_APIKEY`, `VITE_FBASE_AUTHDOMAIN`, `VITE_FBASE_PROJECTID`, `VITE_FBASE_APPID` | Firebase web config baked into the build |
 | `PACKAGES_READ_TOKEN` | Installs `@dyordsabuzo/ui-components` from GitHub Packages |
-| `FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200` | Deploys to Firebase Hosting |
+| `FIREBASE_SERVICE_ACCOUNT_TRAINING_PLANNER_387200` | Deploys to Firebase Hosting and Cloud Functions |
+
+To deploy functions, the service account also needs these roles: Cloud
+Functions Admin, Cloud Run Admin, Cloud Build Editor, Artifact Registry
+Administrator, Service Account User and Firebase Viewer.
 
 ## Manual deploys
 
