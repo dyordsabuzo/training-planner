@@ -9,6 +9,7 @@ import AppSettingsContext from "../context/AppSettingsContext";
 import SourceDataContext from "../context/SourceDataContext";
 import { UserForm } from "../forms/UserForm";
 import { AddUserForm } from "../forms/AddUserForm";
+import { InviteForm } from "../forms/InviteForm";
 
 import { ManageListHeader } from "./ManageListHeader";
 import BaseListing from "./BaseListing";
@@ -16,7 +17,7 @@ import { Loading } from "../pages/helpers/Loading";
 import { getDisplayName } from "../common/utils";
 import { useLoadMore } from "../common/useLoadMore";
 import { LoadMore } from "./LoadMore";
-import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
+import { DataTable, DataTableColumn, Badge, Button } from "@dyordsabuzo/ui-components";
 
 const buildColumns = (
   planNameById: Record<string, string>,
@@ -103,7 +104,7 @@ const PAGE_SIZE = 20;
 export const UserListing = () => {
   const { users, fetchUsers, saveUser, createUser, saveError } = useContext(UserManagementContext);
   const { functionsSuspended } = useContext(AppSettingsContext);
-  const { user, startImpersonation } = useContext(AuthContext);
+  const { user, startImpersonation, orgRole } = useContext(AuthContext);
   const navigate = useNavigate();
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -113,6 +114,7 @@ export const UserListing = () => {
   // not a stale snapshot from when the row was clicked.
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
   const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
 
   useEffect(() => {
@@ -173,6 +175,10 @@ export const UserListing = () => {
         onAdd={() => setIsAdding(true)}
       />
 
+      {orgRole === "owner" && !functionsSuspended && (
+        <Button label="Invite someone" className="min-h-11 self-start" onClick={() => setIsInviting(true)} />
+      )}
+
       {functionsSuspended && (
         <Badge variant="warning" className="w-fit">
           Changing roles and plans is temporarily unavailable.
@@ -207,6 +213,8 @@ export const UserListing = () => {
           onSave={saveUser}
         />
       )}
+
+      {isInviting && <InviteForm closeForm={() => setIsInviting(false)} />}
 
       {isAdding && (
         <AddUserForm

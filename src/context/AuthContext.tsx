@@ -64,7 +64,8 @@ const AuthContext = createContext({
   orgRole: null as OrgRole | null,
   isSuperAdmin: false,
   switchOrg: (orgId: string) => {},
-  refreshOrgs: async () => {},
+  // Re-reads memberships after a change; preferOrgId becomes the active org.
+  refreshOrgs: async (preferOrgId?: string) => {},
   setOrgContentVersion: (version: string) => {},
   loginWithGoogle: () => {},
   registerWithEmailAndPassword: (email: string, password: string) => {},
@@ -154,11 +155,10 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         }
 
         // First login for this account (any sign-in method) — no
-        // users/{uid} doc exists yet, so provision one with safe defaults.
-        // Only an admin can grant a role/plan access beyond this afterward.
+        // users/{uid} doc exists yet, so provision a profile. Access comes
+        // from org membership, not from this doc.
         const defaultPermission: UserPermission = { role: "user", plans: [] };
         await setDoc(docRef, {
-          ...defaultPermission,
           email: user.email ?? "",
           displayName: user.displayName ?? "",
           createdAt: new Date().toISOString(),

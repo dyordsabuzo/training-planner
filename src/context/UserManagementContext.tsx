@@ -109,7 +109,7 @@ export const UserManagementContextProvider: React.FC<Props> = ({ children }) => 
       email: user.email ?? "",
       firstName: user.firstName ?? "",
       lastName: user.lastName ?? "",
-      ...(create ? { role: "user", plans: [] } : { accessRequested: user.accessRequested ?? false }),
+      ...(!create && { accessRequested: user.accessRequested ?? false }),
     };
     const ref = getDocumentReference("users", user.id);
     return create ? setDoc(ref, profile) : updateDoc(ref, profile);

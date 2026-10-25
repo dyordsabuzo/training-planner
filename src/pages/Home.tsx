@@ -8,6 +8,8 @@ import { Loading } from "./helpers/Loading";
 import { getDisplayName } from "../common/utils";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { PlanProgressCard } from "./others/PlanProgressCard";
+import { StartOrgForm } from "./others/StartOrgForm";
+import { PENDING_INVITE_KEY } from "./JoinPage";
 
 import { EmptyState } from "../management/EmptyState";
 import { LoadMore } from "../management/LoadMore";
@@ -97,13 +99,22 @@ export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
   const userManagementContext = useContext(UserManagementContext);
-  const { user, userPermission, isLoading, requestAccess } = authContext;
+  const { user, userPermission, isLoading, requestAccess, orgs } = authContext;
   const { sourceData } = sourceDataContext;
   const { users, fetchUsers } = userManagementContext;
   const { role, plans: grantedPlans = [] } = userPermission || {};
   const navigate = useNavigate();
   const [requestNote, setRequestNote] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
+
+  // Back to an invite link that was opened before signing in.
+  useEffect(() => {
+    const pendingInvite = user && localStorage.getItem(PENDING_INVITE_KEY);
+    if (pendingInvite) {
+      navigate(pendingInvite);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // `role` resolves asynchronously after `user` (userPermission is a
   // separate Firestore fetch) — keying this on `role`/`users` directly,
@@ -306,7 +317,8 @@ export const Home = () => {
             <p>Thank you for signing up for Training Planner.</p>
             <p>
               In order to start training, you need to be assigned at least one
-              training program.
+              training program. If your trainer sent you an invite link, open it
+              to join their organisation.
             </p>
 
             {userPermission?.accessRequested ? (
@@ -345,6 +357,12 @@ export const Home = () => {
                     }
                   }}
                 />
+              </div>
+            )}
+
+            {orgs.length === 0 && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <StartOrgForm />
               </div>
             )}
           </Card>

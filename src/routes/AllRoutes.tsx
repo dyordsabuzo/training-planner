@@ -7,6 +7,7 @@ import ProfilePage from "../pages/ProfilePage";
 import SessionPage from "../pages/SessionPage";
 import SimulateSessionPage from "../pages/SimulateSessionPage";
 import SharedSessionPage from "../pages/SharedSessionPage";
+import JoinPage from "../pages/JoinPage";
 import { Login } from "../pages/auth/Login";
 import { ForgotPassword } from "../pages/auth/ForgotPassword";
 import { PasswordReset } from "../pages/auth/PasswordReset";
@@ -172,6 +173,12 @@ const AppShell = () => {
           <Route
             path={"/training-planner/share/:orgId/:sessionId"}
             element={<SharedSessionPage />}
+            errorElement={<ErrorPage />}
+          />
+          {/* Invite links; works signed out too (see PENDING_INVITE_KEY). */}
+          <Route
+            path={"/training-planner/join/:orgId/:token"}
+            element={<JoinPage />}
             errorElement={<ErrorPage />}
           />
           {/* Links shared before orgs existed; their sessions are in the default org. */}

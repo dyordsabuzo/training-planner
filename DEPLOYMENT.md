@@ -194,3 +194,19 @@ flowchart LR
 
 The script can be re-run safely. Existing members are left alone, and
 content that is already copied is skipped.
+
+### `cleanup-top-level.ts` (remove pre-org data)
+
+This deletes the top-level `exercises`, `supersets`, `sessions` and `plans`,
+strips `role` and `plans` from `users` docs, and drops
+`settings/app.contentVersion`. If any top-level doc has no copy in the org,
+it stops without changing anything. Run it only after:
+
+1. the dragonbeat rules that use the `superAdmin` claim (and no longer allow
+   the top-level collections) are deployed, and
+2. the app version that stops writing `role` / `plans` is deployed.
+
+```
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/cleanup-top-level.ts          # dry run
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/cleanup-top-level.ts --apply
+```

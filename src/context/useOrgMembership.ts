@@ -58,9 +58,10 @@ export const useOrgMembership = (user: User | null) => {
   const [isMemberLoading, setIsMemberLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Pass forceRefresh after a call that changed the user's memberships.
+  // Pass forceRefresh after a call that changed the user's memberships, and
+  // preferOrgId to make a just-joined org active.
   const loadClaims = useCallback(
-    async (forceRefresh = false) => {
+    async (forceRefresh = false, preferOrgId?: string) => {
       if (!user) {
         setRoles({});
         setIsSuperAdmin(false);
@@ -74,16 +75,20 @@ export const useOrgMembership = (user: User | null) => {
       }
       const claimed = (claims.orgs ?? {}) as Record<string, OrgRole>;
       remember(user.uid, { roles: claimed, isSuperAdmin: claims.superAdmin === true });
-      applyRoles(claimed, claims.superAdmin === true);
+      applyRoles(claimed, claims.superAdmin === true, preferOrgId);
     },
     [user]
   );
 
-  const applyRoles = (claimed: Record<string, OrgRole>, superAdmin: boolean) => {
+  const applyRoles = (claimed: Record<string, OrgRole>, superAdmin: boolean, preferOrgId?: string) => {
     setRoles(claimed);
     setIsSuperAdmin(superAdmin);
+    if (preferOrgId && claimed[preferOrgId]) {
+      localStorage.setItem(ACTIVE_ORG_KEY, preferOrgId);
+    }
     setActiveOrgId((current) => {
       const stored = localStorage.getItem(ACTIVE_ORG_KEY);
+      if (preferOrgId && claimed[preferOrgId]) return preferOrgId;
       const ids = Object.keys(claimed).sort();
       return [current, stored].find((id) => id && claimed[id]) ?? ids[0];
     });
@@ -151,7 +156,7 @@ export const useOrgMembership = (user: User | null) => {
     // Plans assigned to a client are on the member doc, so wait for it too.
     isLoading: isLoading || isMemberLoading,
     switchOrg,
-    refreshOrgs: () => loadClaims(true),
+    refreshOrgs: (preferOrgId?: string) => loadClaims(true, preferOrgId),
     setOrgContentVersion,
   };
 };

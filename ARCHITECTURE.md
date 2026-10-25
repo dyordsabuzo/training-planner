@@ -61,7 +61,7 @@ exercises**.
 | `orgs/{orgId}/supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
 | `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
 | `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings |
-| `users` | `users/{uid}` | profile and access request (its old `role` / `plans[]` are no longer read) |
+| `users` | `users/{uid}` | profile and access request |
 | `userdata` | `userdata/{uid}` | logged progress, plus `inProgress` for a run underway |
 | `settings` | `settings/app` | admin contact email |
 | `settings` | `settings/platform` | billing guard state: `functionsSuspended`, `costAmount`, `allowedCost` |
@@ -69,10 +69,10 @@ exercises**.
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
 
-The top-level `exercises`, `supersets`, `sessions` and `plans` collections
-are the pre-org originals, copied into `orgs/default` by
-`scripts/migrate-orgs.ts`. The app no longer reads them; they are removed in
-a later cleanup.
+Before orgs, content lived in top-level collections and roles in
+`users/{uid}.role` / `plans[]`. `scripts/migrate-orgs.ts` copied it all into
+`orgs/default`, and `scripts/cleanup-top-level.ts` removes the old copies
+and fields.
 
 ### References are ids, the UI uses names
 
@@ -145,6 +145,19 @@ Suspended orgs are left out. The app reads the claim on sign-in, refreshing
 the token once if it has no orgs yet. It remembers the active org on the
 device, and the profile menu offers a switcher when there is more than one.
 Under `orgs/{orgId}`:
+
+How people get into an org:
+
+- **Trainers** start their own from Home ("Start my organisation", which
+  calls `createOrg`). Anyone signed in who isn't in an org sees it.
+- **Clients and trainers** join through an invite link the owner makes on the
+  Users screen: `/training-planner/join/{orgId}/{token}` (`acceptInvite`).
+  A link opened while signed out is remembered, and Home returns to it
+  after sign-in or sign-up.
+- **The platform admin** can still add an existing account that asked for
+  access (`addMember`, from the Users screen).
+
+Rules under `orgs/{orgId}`:
 
 - Members read exercises, supersets and sessions. Owners and trainers write them.
 - Clients read only the plans in their member doc's `assignedPlanIds`.
