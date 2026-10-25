@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { contentView, progressKeys, toStoredEntity, toStoredUserdata, userdataView } from "./refs";
+import {
+  assembleUserdata,
+  contentView,
+  progressKeys,
+  toStoredEntity,
+  toStoredUserdata,
+  userdataPlans,
+  userdataView,
+} from "./refs";
 import { SourceDbReferences } from "./utils";
 
 const stored = {
@@ -273,5 +281,27 @@ describe("toStoredUserdata", () => {
     expect(toStoredUserdata(once, stored)).toEqual(once);
     const view = userdataView(once, stored);
     expect(view.Strength["Week 1"]["Day 1"].Legs).toEqual(legacy.Strength["Week 1"]["Day 1"].Legs);
+  });
+});
+
+describe("split userdata", () => {
+  const weeks = { "Week 1": { se1: { ss1: { ex1: {} }, meta: { completedAt: "2026-01-01" } } } };
+  const inProgress = { plan: "pl1", week: "Week 1", session: "se1", data: {} };
+
+  it("assembles plan docs and the root's inProgress into one doc", () => {
+    const root = { id: "alice", inProgress, legacyPlan: { "Week 1": {} } };
+    expect(assembleUserdata("alice", root, { pl1: { orgId: "orgA", ...weeks } })).toEqual({
+      id: "alice",
+      pl1: weeks,
+      inProgress,
+    });
+  });
+
+  it("works without a root doc", () => {
+    expect(assembleUserdata("alice", undefined, {})).toEqual({ id: "alice" });
+  });
+
+  it("takes the plan entries out of a single-doc userdata", () => {
+    expect(userdataPlans({ id: "alice", inProgress, pl1: weeks })).toEqual({ pl1: weeks });
   });
 });

@@ -283,6 +283,29 @@ const mapUserdata = (doc: any, keys: KeyMaps) => {
   return result;
 };
 
+// --- Stored split by plan ---
+// userdata/{uid} keeps inProgress; each plan's runs live in
+// userdata/{uid}/plans/{planId} as { orgId, [week]: ... }, so a trainer of
+// that org can read them (Firestore rules check orgId).
+export const userdataPlansPath = (uid: string) => `userdata/${uid}/plans`;
+
+// Root doc + plan docs -> the single-doc shape the rest of the app reads.
+// Plan fields still on the root (before scripts/split-userdata.ts --cleanup)
+// are ignored: plans come only from the plan docs of the active org.
+export const assembleUserdata = (uid: string, root: any, planDocs: Record<string, any>) => ({
+  ...Object.fromEntries(
+    Object.entries(planDocs).map(([planId, { orgId, ...weeks }]) => [planId, weeks])
+  ),
+  id: uid,
+  ...(isObject(root?.inProgress) && { inProgress: root.inProgress }),
+});
+
+// A single-doc userdata -> its plan entries (scripts/split-userdata.ts).
+export const userdataPlans = (doc: any): Record<string, any> =>
+  Object.fromEntries(
+    Object.entries(doc ?? {}).filter(([key, value]) => !DOC_RESERVED.includes(key) && isObject(value))
+  );
+
 // Names saved with each run (meta.labels), so history can still name items
 // that were deleted since, or plans the user no longer has access to.
 const savedLabels = (doc: any): Record<string, string> => {

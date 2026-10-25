@@ -6,11 +6,12 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
-import { getDocumentReference } from "../common/firebase";
-import { saveToDB, SourceDbReferences } from "../common/utils";
+import { database, getDocumentReference } from "../common/firebase";
+import { SourceDbReferences } from "../common/utils";
 import AuthContext from "./AuthContext";
-import { Collections, progressKeys } from "../common/refs";
+import { Collections, progressKeys, userdataPlansPath } from "../common/refs";
 
 const SessionContext = createContext({
   sessionData: null,
@@ -67,6 +68,10 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     };
   };
 
+  // A plan's runs: userdata/{uid}/plans/{planId}, tagged with the org (refs.ts).
+  const planRef = (planId: string) => getDocumentReference(userdataPlansPath(user!.uid), planId);
+  const rootRef = () => getDocumentReference(SourceDbReferences.USERDATA, user!.uid);
+
   const saveSessionUserData = async (
     data: any,
     sessionInfo: { plan: string; week: string; session: string }
@@ -75,17 +80,11 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
 
     if (user) {
       const keys = progressKeys(storedContent());
-      const userData = {
-        id: user.uid,
-        [keys.plan(plan)]: {
-          [week]: {
-            [keys.session(session)]: {
-              ...data,
-            },
-          },
-        },
-      };
-      await saveToDB(SourceDbReferences.USERDATA, userData);
+      await setDoc(
+        planRef(keys.plan(plan)),
+        { orgId: activeOrgId, [week]: { [keys.session(session)]: { ...data } } },
+        { merge: true }
+      );
       // SourceDataContext caches userdata separately (used by SessionPage's
       // completedWeeks) — invalidate it so a just-finished/logged workout is
       // reflected immediately instead of waiting for a full page reload.
@@ -154,7 +153,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     const week = sessionData.week;
     const plan = keys.plan(sessionData.plan);
     const session = keys.session(sessionData.session);
-    const ref = getDocumentReference(SourceDbReferences.USERDATA, user.uid);
+    const ref = planRef(plan);
     const snapshot = await getDoc(ref);
     const meta = {
       completedAt: new Date().toISOString(),
@@ -163,25 +162,24 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
       labels: keys.labels({ plan: sessionData.plan, session: sessionData.session, run: named }),
     };
 
+    const batch = writeBatch(database);
     if (snapshot.exists()) {
-      const existing = snapshot.data()?.[plan]?.[week]?.[session] ?? {};
+      const existing = snapshot.data()?.[week]?.[session] ?? {};
       const updates: any[] = [];
       Object.keys(existing)
         .filter((key) => !["mood", "meta"].includes(key) && !(key in data))
-        .forEach((unit) => updates.push(new FieldPath(plan, week, session, unit), deleteField()));
+        .forEach((unit) => updates.push(new FieldPath(week, session, unit), deleteField()));
       Object.entries(data).forEach(([unit, value]) =>
-        updates.push(new FieldPath(plan, week, session, unit), value)
+        updates.push(new FieldPath(week, session, unit), value)
       );
-      updates.push(new FieldPath(plan, week, session, "meta"), meta);
-      updates.push("inProgress", deleteField());
-      await (updateDoc as (...args: any[]) => Promise<void>)(ref, ...updates);
+      updates.push(new FieldPath(week, session, "meta"), meta);
+      const [field, value, ...rest] = updates;
+      batch.update(ref, field, value, ...rest);
     } else {
-      await setDoc(
-        ref,
-        { id: user.uid, [plan]: { [week]: { [session]: { ...data, meta } } } },
-        { merge: true }
-      );
+      batch.set(ref, { orgId: activeOrgId, [week]: { [session]: { ...data, meta } } });
     }
+    batch.set(rootRef(), { inProgress: deleteField() }, { merge: true });
+    await batch.commit();
 
     queryClient.invalidateQueries({
       queryKey: ["sourceData", SourceDbReferences.USERDATA, user.uid],
@@ -192,44 +190,46 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   // removed too, since the progress counts treat any week key as completed.
   const deleteRuns = async (runs: { plan: string; week: string; session: string }[]) => {
     if (!user || runs.length === 0) return;
-    const ref = getDocumentReference(SourceDbReferences.USERDATA, user.uid);
-    const snapshot = await getDoc(ref);
-    const data: any = snapshot.data() ?? {};
-
     // History lists runs by name; find each one's stored keys (ids, or the
     // name for runs logged before ids were used).
     const keys = progressKeys(storedContent());
     const storedKey = (obj: any, id: string, name: string) => (obj && id in obj ? id : name);
-    runs = runs.map((run) => {
-      const plan = storedKey(data, keys.plan(run.plan), run.plan);
-      const sessions = data[plan]?.[run.week];
-      return { ...run, plan, session: storedKey(sessions, keys.session(run.session), run.session) };
-    });
+    const planIds = Array.from(new Set(runs.map((run) => keys.plan(run.plan))));
+    const batch = writeBatch(database);
 
-    const updates: any[] = [];
-    const plans = Array.from(new Set(runs.map((r) => r.plan)));
-    plans.forEach((plan) => {
-      const weeks = Object.keys(data[plan] ?? {});
-      const removedIn = (week: string) => runs.filter((r) => r.plan === plan && r.week === week);
+    for (const plan of planIds) {
+      const ref = planRef(plan);
+      const { orgId, ...data }: any = (await getDoc(ref)).data() ?? {};
+      const planRuns = runs
+        .filter((run) => keys.plan(run.plan) === plan)
+        .map((run) => ({
+          ...run,
+          session: storedKey(data[run.week], keys.session(run.session), run.session),
+        }));
+      const weeks = Object.keys(data);
+      const removedIn = (week: string) => planRuns.filter((r) => r.week === week);
       const fullyRemoved = weeks.filter(
         (week) =>
           removedIn(week).length > 0 &&
-          removedIn(week).length >= Object.keys(data[plan][week] ?? {}).length
+          removedIn(week).length >= Object.keys(data[week] ?? {}).length
       );
 
+      if (weeks.length === 0) continue;
       if (fullyRemoved.length === weeks.length) {
-        updates.push(new FieldPath(plan), deleteField());
-        return;
+        batch.delete(ref);
+        continue;
       }
-      fullyRemoved.forEach((week) => updates.push(new FieldPath(plan, week), deleteField()));
-      runs
-        .filter((r) => r.plan === plan && !fullyRemoved.includes(r.week))
-        .forEach((r) => updates.push(new FieldPath(plan, r.week, r.session), deleteField()));
-    });
-
-    if (updates.length > 0) {
-      await (updateDoc as (...args: any[]) => Promise<void>)(ref, ...updates);
+      const updates: any[] = [];
+      fullyRemoved.forEach((week) => updates.push(new FieldPath(week), deleteField()));
+      planRuns
+        .filter((r) => !fullyRemoved.includes(r.week))
+        .forEach((r) => updates.push(new FieldPath(r.week, r.session), deleteField()));
+      if (updates.length > 0) {
+        const [field, value, ...rest] = updates;
+        batch.update(ref, field, value, ...rest);
+      }
     }
+    await batch.commit();
     queryClient.invalidateQueries({
       queryKey: ["sourceData", SourceDbReferences.USERDATA, user.uid],
     });

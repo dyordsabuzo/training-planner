@@ -1,12 +1,20 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo } from "react";
-import { deleteDoc, setDoc } from "firebase/firestore";
+import { deleteDoc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDocumentReference } from "../common/firebase";
+import { getCollection, getDocumentReference } from "../common/firebase";
 import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
 import { contentVersionKey } from "../common/queryCache";
-import { Collections, contentView, idLookup, toStoredEntity, userdataView } from "../common/refs";
+import {
+  assembleUserdata,
+  Collections,
+  contentView,
+  idLookup,
+  toStoredEntity,
+  userdataPlansPath,
+  userdataView,
+} from "../common/refs";
 
 type SourceData = {
   exercises?: any;
@@ -64,7 +72,8 @@ type _Props = {
 
 export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const authContext = useContext(AuthContext);
-  const { user, userPermission, effectiveUid, activeOrgId, activeOrg, setOrgContentVersion } = authContext;
+  const { user, userPermission, effectiveUid, isImpersonating, activeOrgId, activeOrg, setOrgContentVersion } =
+    authContext;
   const queryClient = useQueryClient();
   const contentVersion = activeOrg?.contentVersion;
   // Content is per org (orgs/{orgId}/...), and so are its cache keys:
@@ -150,10 +159,21 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     staleTime: Infinity,
   });
 
+  // Progress for the active org only: the plan docs tagged with its orgId
+  // (the filter is also what lets a trainer's "View as" pass the rules),
+  // plus inProgress from the root doc, which only the user can read.
   const userdataQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.USERDATA, effectiveUid],
-    queryFn: () => getFromDB(SourceDbReferences.USERDATA, [effectiveUid!]),
-    enabled: !!user,
+    queryKey: ["sourceData", SourceDbReferences.USERDATA, effectiveUid, activeOrgId],
+    queryFn: async () => {
+      const uid = effectiveUid!;
+      const [root, plans] = await Promise.all([
+        isImpersonating ? null : getDoc(getDocumentReference(SourceDbReferences.USERDATA, uid)),
+        getDocs(query(getCollection(userdataPlansPath(uid)), where("orgId", "==", activeOrgId))),
+      ]);
+      const planDocs = Object.fromEntries(plans.docs.map((doc) => [doc.id, doc.data()]));
+      return { [uid]: assembleUserdata(uid, root?.data(), planDocs) };
+    },
+    enabled: contentEnabled,
   });
 
   // The caches hold content as stored (references by id, see refs.ts); the
