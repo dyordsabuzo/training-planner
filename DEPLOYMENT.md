@@ -109,7 +109,7 @@ flowchart LR
 
 1. Merge the dragonbeat rules for `orgs/` and wait for its deploy.
 2. `yarn firebase:deploy:functions`
-3. `npx tsx scripts/migrate-orgs.ts --org-id=<id> --name="<org name>" --owner=<uid>`, then check the counts.
+3. `npx tsx scripts/migrate-orgs.ts`, then check the counts. It defaults to org `default` ("Default org"), owned by the production admin. Override with `--org-id=`, `--name=` and `--owner=`.
 4. Run it again with `--apply`.
 
 The script can be re-run safely. Existing members are left alone, and

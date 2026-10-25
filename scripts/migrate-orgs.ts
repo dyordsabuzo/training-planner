@@ -7,8 +7,10 @@
 // left alone and unchanged content is skipped.
 //
 //   Emulator:   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 \
-//               npx tsx scripts/migrate-orgs.ts --org-id=<id> --name="<org name>" --owner=<uid> [--apply]
-//   Production: npx tsx scripts/migrate-orgs.ts --org-id=<id> --name="<org name>" --owner=<uid> [--apply]
+//               npx tsx scripts/migrate-orgs.ts [--apply]
+//   Production: npx tsx scripts/migrate-orgs.ts [--apply]   (needs ADC credentials)
+//
+// Defaults to the production org below; override with --org-id=, --name= and --owner=.
 //
 // Always writes a JSON backup of everything it reads first.
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -32,11 +34,11 @@ const readAll = async (path: string): Promise<Doc[]> =>
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
 
 const main = async () => {
-  const orgId = arg("org-id");
-  const name = arg("name");
-  const ownerUid = arg("owner");
+  const orgId = arg("org-id") ?? "default";
+  const name = arg("name") ?? "Default org";
+  const ownerUid = arg("owner") ?? "kX9q51cQXDOdhJXVtHkATRbJWG73";
   if (!orgId || !/^[A-Za-z0-9_-]+$/.test(orgId) || !name || !ownerUid) {
-    throw new Error('Usage: migrate-orgs.ts --org-id=<id> --name="<org name>" --owner=<uid> [--apply]');
+    throw new Error('Usage: migrate-orgs.ts [--org-id=<id>] [--name="<org name>"] [--owner=<uid>] [--apply]');
   }
   logTarget("migrate-orgs");
 
