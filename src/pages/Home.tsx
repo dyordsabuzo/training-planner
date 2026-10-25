@@ -13,7 +13,8 @@ import { PENDING_INVITE_KEY } from "./JoinPage";
 
 import { EmptyState } from "../management/EmptyState";
 import { LoadMore } from "../management/LoadMore";
-import { openPlanDoneSessions, sortPlansByCreated } from "../common/planSessions";
+import { openPlanDoneSessions, openPlanSkippedSessions, sortPlansByCreated } from "../common/planSessions";
+import { isSkipped } from "../common/sessionStats";
 import { useLoadMore } from "../common/useLoadMore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -142,16 +143,18 @@ export const Home = () => {
       if (plan.open) {
         // Open plans count sessions instead of weeks.
         const sessionNames: string[] = plan.sessions ?? [];
-        const done = openPlanDoneSessions(userdata, planName).filter((s) =>
+        // Skipped sessions move the plan along but aren't logged workouts.
+        const handled = openPlanDoneSessions(userdata, planName).filter((s) =>
           sessionNames.includes(s)
-        ).length;
+        );
+        const skipped = openPlanSkippedSessions(userdata, planName);
         return {
           planName,
           isOpen: true,
           totalWeeks: sessionNames.length,
-          completedWeeks: done,
+          completedWeeks: handled.length,
           currentWeekIndex: null,
-          sessionsLogged: done,
+          sessionsLogged: handled.filter((s) => !skipped.includes(s)).length,
         };
       }
 
@@ -161,7 +164,8 @@ export const Home = () => {
       // the week picker, so this stays consistent with that behavior.
       const completedWeekKeys = Object.keys(planWeeks);
       const sessionsLogged = completedWeekKeys.reduce(
-        (sum, weekKey) => sum + Object.keys(planWeeks[weekKey] ?? {}).length,
+        (sum, weekKey) =>
+          sum + Object.values(planWeeks[weekKey] ?? {}).filter((logged) => !isSkipped(logged)).length,
         0
       );
 

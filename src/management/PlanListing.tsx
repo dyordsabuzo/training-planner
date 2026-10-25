@@ -19,6 +19,7 @@ import {
   formatSessionDate,
   sortPlansByCreated,
   openPlanDoneSessions,
+  openPlanSkippedSessions,
   sessionDueStatus,
   sortSessionsByDate,
 } from "../common/planSessions";
@@ -217,20 +218,20 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                   {sortSessionsByDate(toStringArray(plan.sessions), sourceData.sessions).map(
                     (sessionName) => {
                       const date: string | undefined = sourceData.sessions?.[sessionName]?.date;
-                      const done = openPlanDoneSessions(
-                        Object.values(sourceData.userdata ?? {})[0],
-                        planName
-                      ).includes(sessionName);
+                      const userdata = Object.values(sourceData.userdata ?? {})[0];
+                      const done = openPlanDoneSessions(userdata, planName).includes(sessionName);
+                      const skipped = openPlanSkippedSessions(userdata, planName).includes(sessionName);
                       const status = sessionDueStatus(date, done);
                       return (
                         <div key={sessionName} className="flex items-center justify-between gap-2 text-sm">
                           <span className="flex items-center gap-2 min-w-0">
-                            <SessionStatusIcon date={date} done={done} />
+                            <SessionStatusIcon date={date} done={done} skipped={skipped} />
                             <span className="font-medium break-words min-w-0">{sessionName}</span>
                           </span>
                           <span className="flex items-center gap-2 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
                             {date && formatSessionDate(date)}
-                            {status === "done" && <Badge variant="success">Done</Badge>}
+                            {skipped && <Badge variant="neutral">Skipped</Badge>}
+                            {status === "done" && !skipped && <Badge variant="success">Done</Badge>}
                             {status === "overdue" && <Badge variant="danger">Overdue</Badge>}
                           </span>
                         </div>

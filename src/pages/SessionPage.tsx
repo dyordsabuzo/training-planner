@@ -27,6 +27,7 @@ import {
   formatSessionDate,
   sortPlansByCreated,
   openPlanDoneSessions,
+  openPlanSkippedSessions,
   sessionDueStatus,
   sortSessionsByDate,
 } from "../common/planSessions";
@@ -81,6 +82,25 @@ const SessionPage = () => {
   const [viewingRun, setViewingRun] = useState<CompletedRun | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moodBefore, setMoodBefore] = useState<MoodValue>({});
+  // The session just skipped from Up next, so it can be undone.
+  const [lastSkipped, setLastSkipped] = useState<{ plan: string; week: string; session: string } | null>(null);
+  const [isSkipping, setIsSkipping] = useState(false);
+
+  const skip = async (target: { plan: string; week: string; session: string }) => {
+    setIsSkipping(true);
+    try {
+      await sessionContext.skipSession(target);
+      setLastSkipped(target);
+    } finally {
+      setIsSkipping(false);
+    }
+  };
+
+  const undoSkip = async () => {
+    if (!lastSkipped) return;
+    await sessionContext.deleteRuns([lastSkipped]);
+    setLastSkipped(null);
+  };
 
   useEffect(() => {
     sessionContext.setIsSessionOn(true);
@@ -129,6 +149,9 @@ const SessionPage = () => {
   const openDone = isOpenPlan
     ? openPlanDoneSessions(Object.values(sourceData?.userdata ?? {})[0], sessionData.plan)
     : [];
+  const openSkipped = isOpenPlan
+    ? openPlanSkippedSessions(Object.values(sourceData?.userdata ?? {})[0], sessionData.plan)
+    : [];
 
   const completedList = sessionData.plan
     ? completedRuns(Object.values(sourceData?.userdata ?? {})[0], sessionData.plan)
@@ -160,6 +183,7 @@ const SessionPage = () => {
       supersets,
     });
     setPickerOpen(false);
+    setLastSkipped(null);
   };
 
   // The next session to do: the first unfinished one in the selected plan.
@@ -337,6 +361,18 @@ const SessionPage = () => {
           </div>
         )}
 
+        {lastSkipped && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm"
+          >
+            <span className="min-w-0 break-words">Skipped {lastSkipped.session}.</span>
+            <button type="button" onClick={undoSkip} className="min-h-11 shrink-0 font-medium underline">
+              Undo
+            </button>
+          </div>
+        )}
+
         {!showPicker && !sessionData.session && upNext && (
           <div className="flex flex-col gap-4 rounded-xl bg-primary-50 dark:bg-primary-800/30 p-5">
             <span className={stepLabelClassName}>Up next</span>
@@ -365,6 +401,14 @@ const SessionPage = () => {
               className="self-center min-h-11 text-sm underline text-text-muted-light dark:text-text-muted-dark"
             >
               Choose a different session
+            </button>
+            <button
+              type="button"
+              disabled={isSkipping}
+              onClick={() => skip({ plan: upNext.plan, week: upNext.week, session: upNext.session })}
+              className="self-center min-h-11 text-sm underline text-text-muted-light dark:text-text-muted-dark disabled:opacity-50"
+            >
+              {isSkipping ? "Skipping…" : "Skip this session"}
             </button>
           </div>
         )}
@@ -475,6 +519,7 @@ const SessionPage = () => {
                       <SessionStatusIcon
                         date={sourceData?.sessions?.[session]?.date}
                         done={openDone.includes(session)}
+                        skipped={openSkipped.includes(session)}
                       />
                     )}
                   </button>

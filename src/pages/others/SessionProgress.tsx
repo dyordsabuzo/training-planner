@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faChevronDown, faChevronUp, faForward } from "@fortawesome/free-solid-svg-icons";
 import { ExerciseSuperset } from "../../types/Exercise";
 import { unitId } from "../resolveSessionSupersets";
 
@@ -8,12 +8,15 @@ type Props = {
   supersets: any[];
   doneUpToIndex?: number;
   activeIndex?: number;
+  // Unit ids skipped during the run; shown as passed but not done.
+  skippedIds?: string[];
 };
 
 export const SessionProgress = ({
   supersets,
   doneUpToIndex = -1,
   activeIndex,
+  skippedIds = [],
 }: Props) => {
   // Completed groups hide their exercises; ids here are expanded by the user.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -32,13 +35,14 @@ export const SessionProgress = ({
   return (
     <div className="flex flex-col">
       {supersets.map((superset: any, index: number) => {
-        const isDone = index <= doneUpToIndex;
+        const id = unitId(superset);
+        const isSkipped = index <= doneUpToIndex && skippedIds.includes(id);
+        const isDone = index <= doneUpToIndex && !isSkipped;
         const isActive = activeIndex === index;
         const exercises = superset.exercises.filter(
           (item: ExerciseSuperset) => item.exercise
         );
-        const id = unitId(superset);
-        const showExercises = !isDone || expanded.has(id);
+        const showExercises = !(isDone || isSkipped) || expanded.has(id);
 
         return (
           <div key={id} className="flex gap-3">
@@ -48,11 +52,16 @@ export const SessionProgress = ({
                   ${
                     isDone
                       ? "border-success-500 bg-success-500"
-                      : isActive
-                        ? "border-primary"
-                        : "border-gray-300 dark:border-gray-600"
+                      : isSkipped
+                        ? "border-gray-400 bg-gray-400 dark:border-gray-500 dark:bg-gray-500"
+                        : isActive
+                          ? "border-primary"
+                          : "border-gray-300 dark:border-gray-600"
                   }`}
               >
+                {isSkipped && (
+                  <FontAwesomeIcon icon={faForward} className="text-white text-xs" aria-label="Skipped" />
+                )}
                 {isDone && (
                   <FontAwesomeIcon
                     icon={faCheckCircle}
@@ -75,7 +84,7 @@ export const SessionProgress = ({
                       : ""
                 }`}
             >
-              {isDone ? (
+              {isDone || isSkipped ? (
                 <button
                   type="button"
                   onClick={() => toggleExpanded(id)}
@@ -85,6 +94,7 @@ export const SessionProgress = ({
                 >
                   <span className="text-base font-bold">{superset.name}</span>
                   <span className="flex items-center gap-1.5 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {isSkipped && "Skipped · "}
                     {!showExercises &&
                       `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}`}
                     <FontAwesomeIcon icon={showExercises ? faChevronUp : faChevronDown} />

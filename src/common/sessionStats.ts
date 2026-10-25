@@ -73,6 +73,10 @@ export const summariseRun = (
   return { units, totals };
 };
 
+// A session the user chose to skip: saved like a run, with no units, so it
+// counts as handled (Up next moves on) but isn't a workout.
+export const isSkipped = (logged: any) => logged?.meta?.skipped === true;
+
 export type CompletedRun = { week: string; session: string; logged: any };
 
 // Every finished session of a plan, newest week first.
@@ -81,6 +85,7 @@ export const completedRuns = (userdata: any, planName: string): CompletedRun[] =
     .flatMap(([week, sessions]: [string, any]) =>
       Object.entries(sessions ?? {}).map(([session, logged]) => ({ week, session, logged }))
     )
+    .filter(({ logged }) => !isSkipped(logged))
     .sort((a, b) => b.week.localeCompare(a.week));
 
 export type ExerciseOccurrence = {
@@ -124,13 +129,15 @@ export const historyRuns = (userdata: any): HistoryRun[] =>
     .filter(([plan, weeks]: [string, any]) => weeks && typeof weeks === "object" && plan !== "inProgress")
     .flatMap(([plan, weeks]: [string, any]) =>
       Object.entries(weeks).flatMap(([week, sessions]: [string, any]) =>
-        Object.entries(sessions ?? {}).map(([session, logged]: [string, any]) => ({
-          plan,
-          week,
-          session,
-          logged,
-          completedAt: logged?.meta?.completedAt,
-        }))
+        Object.entries(sessions ?? {})
+          .filter(([, logged]) => !isSkipped(logged))
+          .map(([session, logged]: [string, any]) => ({
+            plan,
+            week,
+            session,
+            logged,
+            completedAt: logged?.meta?.completedAt,
+          }))
       )
     )
     .sort(

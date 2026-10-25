@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest";
 import dayjs from "dayjs";
-import { sessionDueStatus, sortPlansByCreated, sortSessionsByDate } from "./planSessions";
+import {
+  openPlanDoneSessions,
+  openPlanSkippedSessions,
+  sessionDueStatus,
+  sortPlansByCreated,
+  sortSessionsByDate,
+} from "./planSessions";
+import { completedRuns, historyRuns } from "./sessionStats";
+import { OPEN_WEEK } from "./planCycle";
+
+describe("skipped sessions", () => {
+  const userdata = {
+    Plan: {
+      [OPEN_WEEK]: {
+        Ran: { Squats: { Squat: { 1: { targetRep: 5 } } }, meta: { completedAt: "2026-10-01T00:00:00.000Z" } },
+        Skipped: { meta: { skipped: true, skippedAt: "2026-10-02T00:00:00.000Z" } },
+      },
+    },
+  };
+
+  it("count as handled, so Up next moves past them", () => {
+    expect(openPlanDoneSessions(userdata, "Plan").sort()).toEqual(["Ran", "Skipped"]);
+    expect(openPlanSkippedSessions(userdata, "Plan")).toEqual(["Skipped"]);
+  });
+
+  it("aren't completed runs or history", () => {
+    expect(completedRuns(userdata, "Plan").map((r) => r.session)).toEqual(["Ran"]);
+    expect(historyRuns(userdata).map((r) => r.session)).toEqual(["Ran"]);
+  });
+});
 
 const sessions = {
   Late: { date: "2030-05-02" },

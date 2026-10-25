@@ -26,6 +26,8 @@ const SessionContext = createContext({
   saveProgress: (data: any) => {},
   saveRun: (data: any) => {},
   deleteRuns: (runs: any[]) => {},
+  // Marks a session as skipped (see isSkipped); undone with deleteRuns.
+  skipSession: async (session: { plan: string; week: string; session: string }) => {},
   wrapSession: () => {},
 });
 
@@ -243,6 +245,22 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     await saveSessionUserData(data, sessionData);
   };
 
+  // Saved in the run's meta slot, so running the session later (saveRun
+  // replaces meta) clears the skip.
+  const skipSession = async (info: { plan: string; week: string; session: string }) => {
+    const keys = progressKeys(storedContent());
+    await saveSessionUserData(
+      {
+        meta: {
+          skipped: true,
+          skippedAt: new Date().toISOString(),
+          labels: keys.labels({ plan: info.plan, session: info.session, run: {} }),
+        },
+      },
+      info
+    );
+  };
+
   return (
     <SessionContext.Provider
       value={{
@@ -260,6 +278,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
         saveProgress,
         saveRun,
         deleteRuns,
+        skipSession,
       }}
     >
       {children}

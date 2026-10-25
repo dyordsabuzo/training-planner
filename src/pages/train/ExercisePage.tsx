@@ -2,7 +2,13 @@
 import { ConfirmDeleteButton } from "../../forms/ConfirmDeleteButton";
 import React, { useContext, useEffect, useReducer, useState } from "react";
 import { useNavigate } from "react-router";
-import { faCircleXmark, faCompress, faListCheck } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCircleXmark,
+  faCompress,
+  faForward,
+  faForwardStep,
+  faListCheck,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SessionContext from "../../context/SessionContext";
 import WrapperPage from "../WrapperPage";
@@ -33,7 +39,8 @@ type State = {
 type Action =
   | { type: "reset" }
   | { type: "update"; payload: any }
-  | { type: "continue"; payload?: any };
+  | { type: "continue"; payload?: any }
+  | { type: "skipExercise"; payload: { exerciseLength: number; targetSet: number; position: number } };
 
 const pluralize = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -91,6 +98,22 @@ const reducer = (state: State, action: Action) => {
         supersetRest,
         supersetComplete,
       };
+    // The exercise at `position` was dropped from the unit, leaving
+    // `exerciseLength` exercises. The next one slides into its slot, or, if
+    // it was the last of the round, the set ends as it would on "continue".
+    case "skipExercise": {
+      const { exerciseLength: length, targetSet, position } = action.payload;
+      if (position < length) {
+        return { ...state, exerciseCounter: state.exerciseSet * length + position };
+      }
+      const complete = state.exerciseSet + 1 >= targetSet;
+      return {
+        ...state,
+        exerciseCounter: (state.exerciseSet + 1) * length,
+        supersetRest: !complete,
+        supersetComplete: complete,
+      };
+    }
     default:
       return state;
   }
@@ -112,6 +135,9 @@ export const ExercisePage = () => {
   const [weightPrompted, setWeightPrompted] = useState<Set<string>>(new Set());
 
   const [showGroups, setShowGroups] = useState(false);
+  const [showSkipExercise, setShowSkipExercise] = useState(false);
+  // Units skipped from here, shown as "Skipped" in the progress list.
+  const [skippedUnits, setSkippedUnits] = useState<string[]>([]);
 
   const [targetRep, setTargetRep] = useState<string>("0");
   const [targetDistance, setTargetDistance] = useState<string>("0");
@@ -304,6 +330,31 @@ export const ExercisePage = () => {
     setTargetWeight(String(weight));
   };
 
+  // Moves past the current exercise for this set only; nothing is logged.
+  const skipExerciseSet = () => {
+    setShowSkipExercise(false);
+    completeExercise();
+  };
+
+  // Drops the current exercise from the rest of this unit's sets. Sets
+  // already logged for it are kept.
+  const skipExerciseForUnit = () => {
+    setShowSkipExercise(false);
+    const position = exerciseState.exerciseCounter % exerciseLength;
+    const exercises = supersetData.exercises.filter((_: any, i: number) => i !== position);
+    setSupersetData({ ...supersetData, exercises });
+    dispatch({
+      type: "skipExercise",
+      payload: { exerciseLength: exercises.length, targetSet: parseInt(supersetData.targetSet), position },
+    });
+  };
+
+  // Straight to the next unit (or the finish), keeping any sets logged here.
+  const skipUnit = () => {
+    setSkippedUnits((prev) => [...prev, unitId(supersetData)]);
+    dispatch({ type: "reset" });
+  };
+
   const weightPromptKey = `${exerciseState.supersetCounter}-${exerciseData.exercise?.name}`;
   const showWeightPrompt =
     exerciseState.exerciseSet === 0 &&
@@ -344,7 +395,25 @@ export const ExercisePage = () => {
           supersets={allSupersets}
           doneUpToIndex={exerciseState.supersetCounter - 1}
           activeIndex={exerciseState.supersetCounter}
+          skippedIds={skippedUnits}
         />
+      </Modal>
+      <Modal
+        title={`Skip ${exerciseData.exercise?.name ?? "exercise"}`}
+        isOpen={showSkipExercise}
+        onClose={() => setShowSkipExercise(false)}
+      >
+        <div className="flex flex-col gap-2">
+          <Button label="Just this set" className="min-h-11" onClick={skipExerciseSet} />
+          {exerciseLength > 1 && (
+            <Button
+              label="For the rest of this group"
+              decoration="cancel"
+              className="min-h-11"
+              onClick={skipExerciseForUnit}
+            />
+          )}
+        </div>
       </Modal>
       <TargetWeightPrompt
         isOpen={showWeightPrompt}
@@ -476,7 +545,9 @@ export const ExercisePage = () => {
                   tempo={supersetData.tempo}
                   targetTime={targetTime}
                   exerciseLabel={exerciseLabel}
-                  transitionKey={`${exerciseState.supersetCounter}-${exerciseState.exerciseCounter}`}
+                  // The length changes when an exercise is skipped for the
+                  // unit, so the next exercise starts fresh even in the same slot.
+                  transitionKey={`${exerciseState.supersetCounter}-${exerciseState.exerciseCounter}-${exerciseLength}`}
                   videoLink={exerciseData.exercise?.videoLink}
                   alternatives={exerciseData.exercise?.alternatives}
                   onSelectAlternative={handleSelectAlternative}
@@ -502,7 +573,26 @@ export const ExercisePage = () => {
               )}
             </div>
           </div>
-          <div className="flex justify-end mx-2 lg:mx-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 mx-2 lg:mx-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {!exerciseState.supersetRest && (
+                <Button decoration="cancel" onClick={() => setShowSkipExercise(true)}>
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faForward} />
+                    Skip exercise
+                  </span>
+                </Button>
+              )}
+              <ConfirmDeleteButton
+                label="Skip group"
+                icon={faForwardStep}
+                decoration="cancel"
+                useModal
+                scrollToTopOnClose
+                impactMessage="Move on to the next group? Sets you've already logged in this one are kept."
+                onDelete={skipUnit}
+              />
+            </div>
             <ConfirmDeleteButton
               label="Cancel session"
               icon={faCircleXmark}
@@ -529,6 +619,7 @@ export const ExercisePage = () => {
             supersets={allSupersets}
             doneUpToIndex={exerciseState.supersetCounter - 1}
             activeIndex={exerciseState.supersetCounter}
+            skippedIds={skippedUnits}
           />
         </aside>
       </div>
