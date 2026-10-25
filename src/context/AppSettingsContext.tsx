@@ -9,14 +9,14 @@ export const DEFAULT_ADMIN_EMAIL = "trainingplanner6@gmail.com";
 
 const SETTINGS_COLLECTION = "settings";
 const SETTINGS_DOC_ID = "app";
+const PLATFORM_DOC_ID = "platform";
 
 const AppSettingsContext = createContext({
   adminEmail: DEFAULT_ADMIN_EMAIL,
   updateAdminEmail: (email: string) => {},
-  // Changes whenever an admin edits content (exercises, supersets, sessions,
-  // plans). Undefined until settings load, or when they can't (offline).
-  contentVersion: undefined as string | undefined,
-  updateContentVersion: (version: string) => {},
+  // Set by the billing guard (functions/src/guard.ts) once Cloud Functions
+  // start costing money; anything that calls a function is unavailable.
+  functionsSuspended: false,
 });
 
 export default AppSettingsContext;
@@ -31,7 +31,7 @@ type Props = {
 export const AppSettingsContextProvider: React.FC<Props> = ({ children }) => {
   const { user } = useContext(AuthContext);
   const [adminEmail, setAdminEmail] = useState(DEFAULT_ADMIN_EMAIL);
-  const [contentVersion, setContentVersion] = useState<string>();
+  const [functionsSuspended, setFunctionsSuspended] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -43,9 +43,11 @@ export const AppSettingsContextProvider: React.FC<Props> = ({ children }) => {
         if (email) {
           setAdminEmail(email);
         }
-        setContentVersion(snapshot.data()?.contentVersion);
       })
-      // Offline: keep the defaults; cached content is used as-is.
+      // Offline: keep the default.
+      .catch(() => {});
+    getDoc(getDocumentReference(SETTINGS_COLLECTION, PLATFORM_DOC_ID))
+      .then((snapshot) => setFunctionsSuspended(snapshot.data()?.functionsSuspended === true))
       .catch(() => {});
   }, [user]);
 
@@ -58,18 +60,9 @@ export const AppSettingsContextProvider: React.FC<Props> = ({ children }) => {
     setAdminEmail(email);
   };
 
-  const updateContentVersion = async (version: string) => {
-    setContentVersion(version);
-    await setDoc(
-      getDocumentReference(SETTINGS_COLLECTION, SETTINGS_DOC_ID),
-      { contentVersion: version },
-      { merge: true }
-    );
-  };
-
   return (
     <AppSettingsContext.Provider
-      value={{ adminEmail, updateAdminEmail, contentVersion, updateContentVersion }}
+      value={{ adminEmail, updateAdminEmail, functionsSuspended }}
     >
       {children}
     </AppSettingsContext.Provider>

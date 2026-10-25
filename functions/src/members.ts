@@ -1,3 +1,4 @@
+import { getAuth } from "firebase-admin/auth";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { refreshClaims } from "./claims";
@@ -8,6 +9,36 @@ const targetMember = async (orgId: string, uid: string) => {
   if (!member.exists) throw new HttpsError("not-found", "Not a member of this organisation.");
   return member;
 };
+
+// Owner only: adds an existing account (e.g. one that asked for access) as a
+// trainer or client. Existing members are left as they are.
+export const addMember = onCall(async (request) => {
+  const caller = requireUid(request);
+  const { orgId, uid, role } = parse(
+    z.object({ orgId: idSchema, uid: idSchema, role: z.enum(["trainer", "client"]) }),
+    request.data
+  );
+  await requireRole(orgId, caller, ["owner"]);
+  const account = await getAuth()
+    .getUser(uid)
+    .catch(() => {
+      throw new HttpsError("not-found", "No such account.");
+    });
+
+  const ref = memberRef(orgId, uid);
+  if (!(await ref.get()).exists) {
+    await ref.create({
+      uid,
+      role,
+      assignedPlanIds: [],
+      email: account.email ?? null,
+      displayName: account.displayName ?? null,
+      joinedAt: new Date(),
+    });
+    await refreshClaims(uid);
+  }
+  return { ok: true };
+});
 
 // Owner only; the owner role itself can't be given or taken here.
 export const setMemberRole = onCall(async (request) => {

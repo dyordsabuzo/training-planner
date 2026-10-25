@@ -4,7 +4,7 @@ import { getDoc } from "firebase/firestore";
 import { useQuery } from "@tanstack/react-query";
 import SessionContext from "../context/SessionContext";
 import { getDocumentReference } from "../common/firebase";
-import { SourceDbReferences } from "../common/utils";
+import { collectionPath, SourceDbReferences } from "../common/utils";
 import { ExercisePage } from "./train/ExercisePage";
 import { SummaryPage } from "./SummaryPage";
 import { Loading } from "./helpers/Loading";
@@ -12,6 +12,8 @@ import { EmptyState } from "../management/EmptyState";
 import WrapperPage from "./WrapperPage";
 
 const HOME_PATH = "/";
+// Org of share links made before orgs existed (/share/:sessionId).
+const LEGACY_SHARE_ORG_ID = "default";
 
 // Public, unauthenticated equivalent of SimulateSessionPage: fetches a single
 // session doc directly (bypassing SourceDataContext, whose queries are all
@@ -20,14 +22,14 @@ const HOME_PATH = "/";
 // the supersets/exercises collections, since anonymous visitors have no
 // access to them.
 const SharedSessionPage = () => {
-  const { sessionId } = useParams();
+  const { orgId = LEGACY_SHARE_ORG_ID, sessionId } = useParams();
   const [isRunning, setIsRunning] = useState(false);
 
   const { data: session, isLoading } = useQuery({
-    queryKey: ["sharedSession", sessionId],
+    queryKey: ["sharedSession", orgId, sessionId],
     queryFn: async () => {
       const snapshot = await getDoc(
-        getDocumentReference(SourceDbReferences.SESSIONS, sessionId as string)
+        getDocumentReference(collectionPath(SourceDbReferences.SESSIONS, orgId), sessionId as string)
       );
       return snapshot.exists() ? snapshot.data() : null;
     },

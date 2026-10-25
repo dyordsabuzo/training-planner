@@ -328,8 +328,13 @@ export const sortObject = (data: any) => {
     }, {});
 };
 
-export const saveToDB = async (sourceDb: SourceDbReferences, data: any) => {
-  const collection = getCollection(sourceDb);
+// Content lives under its org (orgs/{orgId}/...); userdata stays per user.
+export const collectionPath = (sourceDb: SourceDbReferences, orgId?: string) =>
+  sourceDb === SourceDbReferences.USERDATA ? sourceDb : `orgs/${orgId}/${sourceDb}`;
+
+export const saveToDB = async (sourceDb: SourceDbReferences, data: any, orgId?: string) => {
+  const path = collectionPath(sourceDb, orgId);
+  const collection = getCollection(path);
 
   if (!(data.id ?? "")) {
     try {
@@ -344,7 +349,7 @@ export const saveToDB = async (sourceDb: SourceDbReferences, data: any) => {
   } else {
     try {
       const { id, ...plaindata } = data;
-      const docRef = doc(database, sourceDb, id);
+      const docRef = doc(database, path, id);
       await setDoc(docRef, plaindata, { merge: true });
       return data;
     } catch (error) {
@@ -356,7 +361,8 @@ export const saveToDB = async (sourceDb: SourceDbReferences, data: any) => {
 
 export const getFromDB = async (
   sourceDb: SourceDbReferences,
-  idFilters?: string[]
+  idFilters?: string[],
+  orgId?: string
 ): Promise<any> => {
   try {
     // `idFilters` omitted (undefined) means "no filter, return everything".
@@ -366,7 +372,7 @@ export const getFromDB = async (
       return {};
     }
 
-    const collection = getCollection(sourceDb);
+    const collection = getCollection(collectionPath(sourceDb, orgId));
     // A broad, unconstrained getDocs(collection) can't be granted by a
     // security rule that depends on which specific document is being read
     // (e.g. "is this plan ID in my grants?") — Firestore can't prove that

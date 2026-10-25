@@ -5,6 +5,7 @@ import UserManagementContext, {
   hasPendingAccessRequest,
 } from "../context/UserManagementContext";
 import AuthContext from "../context/AuthContext";
+import AppSettingsContext from "../context/AppSettingsContext";
 import SourceDataContext from "../context/SourceDataContext";
 import { UserForm } from "../forms/UserForm";
 import { AddUserForm } from "../forms/AddUserForm";
@@ -100,7 +101,8 @@ const buildColumns = (
 const PAGE_SIZE = 20;
 
 export const UserListing = () => {
-  const { users, fetchUsers, saveUser, createUser } = useContext(UserManagementContext);
+  const { users, fetchUsers, saveUser, createUser, saveError } = useContext(UserManagementContext);
+  const { functionsSuspended } = useContext(AppSettingsContext);
   const { user, startImpersonation } = useContext(AuthContext);
   const navigate = useNavigate();
   const sourceDataContext = useContext(SourceDataContext);
@@ -170,6 +172,17 @@ export const UserListing = () => {
         onSearchChange={setSearch}
         onAdd={() => setIsAdding(true)}
       />
+
+      {functionsSuspended && (
+        <Badge variant="warning" className="w-fit">
+          Changing roles and plans is temporarily unavailable.
+        </Badge>
+      )}
+      {saveError && !functionsSuspended && (
+        <Badge variant="danger" className="w-fit">
+          {saveError}
+        </Badge>
+      )}
 
       {pendingCount > 0 && (
         <Badge variant="warning" className="w-fit">

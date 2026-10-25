@@ -61,6 +61,9 @@ const Navigation = () => {
     setPreviewAsUser,
     isImpersonating,
     stopImpersonation,
+    orgs,
+    activeOrgId,
+    switchOrg,
   } = authContext;
   const togglePreview = () =>
     isImpersonating ? stopImpersonation() : setPreviewAsUser(!isPreviewingAsUser);
@@ -212,6 +215,9 @@ const Navigation = () => {
               onTogglePreview={togglePreview}
               showEmail={!isCollapsed}
               menuAlign="left"
+              orgs={orgs}
+              activeOrgId={activeOrgId}
+              onSwitchOrg={switchOrg}
             />
           </div>
         )}
@@ -283,6 +289,9 @@ const Navigation = () => {
                     onTogglePreview={togglePreview}
                     showEmail={false}
                     menuAlign="right"
+                    orgs={orgs}
+                    activeOrgId={activeOrgId}
+                    onSwitchOrg={switchOrg}
                   />
                 </div>
               ) : (

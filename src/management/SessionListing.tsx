@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { faChevronDown, faChevronRight, faPlay, faShareNodes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SourceDataContext from "../context/SourceDataContext";
+import AuthContext from "../context/AuthContext";
 import { SessionForm } from "../forms/SessionForm";
 import { sortObject, toStringArray } from "../common/utils";
 import BaseListing from "./BaseListing";
@@ -154,8 +155,9 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
     setFormType("edit");
   };
 
+  const { activeOrgId } = useContext(AuthContext);
   const shareUrl = (session: any) =>
-    `${window.location.origin}/training-planner/share/${session.id}`;
+    `${window.location.origin}/training-planner/share/${activeOrgId}/${session.id}`;
 
   const copyLink = async (session: any) => {
     try {

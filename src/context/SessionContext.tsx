@@ -42,7 +42,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
 
   const authContext = useContext(AuthContext);
   // Writes are no-ops while an admin is impersonating another user (read-only).
-  const { user: authUser, isImpersonating } = authContext;
+  const { user: authUser, isImpersonating, activeOrgId } = authContext;
   const user = isImpersonating ? null : authUser;
   const queryClient = useQueryClient();
 
@@ -54,7 +54,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
       Object.assign(
         {},
         ...queryClient
-          .getQueriesData<Record<string, any>>({ queryKey: ["sourceData", db] })
+          .getQueriesData<Record<string, any>>({ queryKey: ["sourceData", db, activeOrgId] })
           .map(([, data]) => data ?? {})
       );
     return {

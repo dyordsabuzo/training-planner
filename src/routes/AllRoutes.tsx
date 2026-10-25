@@ -170,6 +170,12 @@ const AppShell = () => {
             errorElement={<ErrorPage />}
           />
           <Route
+            path={"/training-planner/share/:orgId/:sessionId"}
+            element={<SharedSessionPage />}
+            errorElement={<ErrorPage />}
+          />
+          {/* Links shared before orgs existed; their sessions are in the default org. */}
+          <Route
             path={"/training-planner/share/:sessionId"}
             element={<SharedSessionPage />}
             errorElement={<ErrorPage />}

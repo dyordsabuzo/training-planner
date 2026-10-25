@@ -21,6 +21,10 @@ type Props = {
   onTogglePreview?: () => void;
   showEmail?: boolean;
   menuAlign?: "left" | "right";
+  // Shown only when the user belongs to more than one org.
+  orgs?: { id: string; name: string }[];
+  activeOrgId?: string;
+  onSwitchOrg?: (orgId: string) => void;
 };
 
 export const ProfileMenu = ({
@@ -34,6 +38,9 @@ export const ProfileMenu = ({
   onTogglePreview,
   showEmail = true,
   menuAlign = "left",
+  orgs = [],
+  activeOrgId,
+  onSwitchOrg,
 }: Props) => {
   const displayName = getDisplayName(firstName, lastName, email ?? undefined);
   const [isOpen, setIsOpen] = useState(false);
@@ -114,6 +121,29 @@ export const ProfileMenu = ({
               {email}
             </div>
           </Link>
+
+          {orgs.length > 1 && onSwitchOrg && (
+            <div className="py-1 border-b border-gray-100 dark:border-gray-700" role="group" aria-label="Organisation">
+              {orgs.map((org) => (
+                <button
+                  key={org.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={org.id === activeOrgId}
+                  onClick={() => {
+                    onSwitchOrg(org.id);
+                    setIsOpen(false);
+                  }}
+                  className="w-full min-h-11 flex items-center gap-2 px-3 text-sm text-left text-text-light dark:text-text-dark
+                    hover:bg-gray-50 dark:hover:bg-gray-800
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                >
+                  <span className="w-4 text-primary">{org.id === activeOrgId ? "✓" : ""}</span>
+                  <span className="truncate">{org.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {isAdmin && (
             <Link

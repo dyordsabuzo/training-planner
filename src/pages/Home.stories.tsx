@@ -109,7 +109,7 @@ const DelayedUserManagement = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserManagementContext.Provider value={{ users, fetchUsers, saveUser: () => {}, createUser: () => {} }}>
+    <UserManagementContext.Provider value={{ users, fetchUsers, saveUser: () => {}, createUser: () => {}, saveError: null }}>
       {children}
     </UserManagementContext.Provider>
   );

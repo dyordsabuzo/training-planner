@@ -1,12 +1,11 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo } from "react";
-import { deleteDoc } from "firebase/firestore";
+import { deleteDoc, setDoc } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDocumentReference } from "../common/firebase";
-import { saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
+import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
-import AppSettingsContext from "./AppSettingsContext";
-import { CONTENT_VERSION_KEY } from "../common/queryCache";
+import { contentVersionKey } from "../common/queryCache";
 import { Collections, contentView, idLookup, toStoredEntity, userdataView } from "../common/refs";
 
 type SourceData = {
@@ -65,19 +64,25 @@ type _Props = {
 
 export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const authContext = useContext(AuthContext);
-  const { user, userPermission, effectiveUid } = authContext;
+  const { user, userPermission, effectiveUid, activeOrgId, activeOrg, setOrgContentVersion } = authContext;
   const queryClient = useQueryClient();
-  const { contentVersion, updateContentVersion } = useContext(AppSettingsContext);
+  const contentVersion = activeOrg?.contentVersion;
+  // Content is per org (orgs/{orgId}/...), and so are its cache keys:
+  // ["sourceData", collection, orgId, ...].
+  const contentEnabled = !!user && !!activeOrgId;
+  const contentKey = (db: SourceDbReferences) => ["sourceData", db, activeOrgId];
 
   // Content (exercises, supersets, sessions, plans) is kept on the device
-  // and never goes stale on its own. Instead, settings/app.contentVersion —
-  // already read on startup — changes on every admin edit, and only then is
-  // content re-downloaded. Saves reading every collection on each app start.
+  // and never goes stale on its own. Instead, the org's contentVersion —
+  // read with the org on startup — changes on every trainer edit, and only
+  // then is that org's content re-downloaded. Saves reading every
+  // collection on each app start.
   useEffect(() => {
-    if (!contentVersion) {
+    if (!contentVersion || !activeOrgId) {
       return;
     }
-    const seenVersion = localStorage.getItem(CONTENT_VERSION_KEY);
+    const versionKey = contentVersionKey(activeOrgId);
+    const seenVersion = localStorage.getItem(versionKey);
     if (seenVersion === contentVersion) {
       return;
     }
@@ -86,57 +91,62 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     if (seenVersion !== null) {
       queryClient.invalidateQueries({
         predicate: ({ queryKey }) =>
-          queryKey[0] === "sourceData" && queryKey[1] !== SourceDbReferences.USERDATA,
+          queryKey[0] === "sourceData" &&
+          queryKey[1] !== SourceDbReferences.USERDATA &&
+          queryKey[2] === activeOrgId,
       });
     }
-    localStorage.setItem(CONTENT_VERSION_KEY, contentVersion);
-  }, [contentVersion, queryClient]);
+    localStorage.setItem(versionKey, contentVersion);
+  }, [contentVersion, activeOrgId, queryClient]);
 
   // Every mutation below edits content: publish a new version so other
   // devices refetch it. This device already has the edit in its cache, so it
   // records the version as seen.
   const markContentChanged = () => {
+    if (!activeOrgId) {
+      return;
+    }
     const version = new Date().toISOString();
-    localStorage.setItem(CONTENT_VERSION_KEY, version);
-    updateContentVersion(version);
+    localStorage.setItem(contentVersionKey(activeOrgId), version);
+    setOrgContentVersion(version);
+    setDoc(getDocumentReference("orgs", activeOrgId), { contentVersion: version }, { merge: true });
   };
 
   const exercisesQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.EXERCISES],
-    queryFn: () => getFromDB(SourceDbReferences.EXERCISES),
-    enabled: !!user,
+    queryKey: contentKey(SourceDbReferences.EXERCISES),
+    queryFn: () => getFromDB(SourceDbReferences.EXERCISES, undefined, activeOrgId),
+    enabled: contentEnabled,
     staleTime: Infinity,
   });
   const supersetsQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.SUPERSETS],
-    queryFn: () => getFromDB(SourceDbReferences.SUPERSETS),
-    enabled: !!user,
+    queryKey: contentKey(SourceDbReferences.SUPERSETS),
+    queryFn: () => getFromDB(SourceDbReferences.SUPERSETS, undefined, activeOrgId),
+    enabled: contentEnabled,
     staleTime: Infinity,
   });
   const sessionsQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.SESSIONS],
-    queryFn: () => getFromDB(SourceDbReferences.SESSIONS),
-    enabled: !!user,
+    queryKey: contentKey(SourceDbReferences.SESSIONS),
+    queryFn: () => getFromDB(SourceDbReferences.SESSIONS, undefined, activeOrgId),
+    enabled: contentEnabled,
     staleTime: Infinity,
   });
 
-  // Admins see every plan; everyone else is restricted to the plans
-  // explicitly granted on their users/{uid} doc — an empty/undefined list
-  // here must mean "no plans", not "no filter". Including the permission in
-  // the query key means a change in role/grants (e.g. permissions loading
-  // in after the user) naturally refetches with the right filter.
+  // Trainers see every plan; clients are restricted to the plans assigned
+  // on their member doc — an empty/undefined list here must mean "no
+  // plans", not "no filter". Including the permission in the query key
+  // means a change in role/assignments (e.g. membership loading in after
+  // the user) naturally refetches with the right filter.
   const planIdFilter =
     userPermission?.role === "admin" ? undefined : userPermission?.plans ?? [];
   const plansQueryKey = [
-    "sourceData",
-    SourceDbReferences.PLANS,
+    ...contentKey(SourceDbReferences.PLANS),
     userPermission?.role,
     userPermission?.plans,
   ];
   const plansQuery = useQuery({
     queryKey: plansQueryKey,
-    queryFn: () => getFromDB(SourceDbReferences.PLANS, planIdFilter),
-    enabled: !!user,
+    queryFn: () => getFromDB(SourceDbReferences.PLANS, planIdFilter, activeOrgId),
+    enabled: contentEnabled,
     staleTime: Infinity,
   });
 
@@ -183,9 +193,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   // render's closure — mutations save several entities in a row, and later
   // saves must see ids assigned by earlier ones.
   const getStored = (): Collections => ({
-    exercises: queryClient.getQueryData(["sourceData", SourceDbReferences.EXERCISES]),
-    supersets: queryClient.getQueryData(["sourceData", SourceDbReferences.SUPERSETS]),
-    sessions: queryClient.getQueryData(["sourceData", SourceDbReferences.SESSIONS]),
+    exercises: queryClient.getQueryData(contentKey(SourceDbReferences.EXERCISES)),
+    supersets: queryClient.getQueryData(contentKey(SourceDbReferences.SUPERSETS)),
+    sessions: queryClient.getQueryData(contentKey(SourceDbReferences.SESSIONS)),
     plans: queryClient.getQueryData(plansQueryKey),
   });
 
@@ -197,13 +207,15 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       | SourceDbReferences.SESSIONS
       | SourceDbReferences.PLANS,
     entity: any
-  ) => saveToDB(sourceDb, toStoredEntity(sourceDb, entity, getStored()));
+  ) => saveToDB(sourceDb, toStoredEntity(sourceDb, entity, getStored()), activeOrgId);
 
+  // Without an org there's no content to wait for (the queries are disabled).
   const isLoading =
-    exercisesQuery.isPending ||
-    supersetsQuery.isPending ||
-    sessionsQuery.isPending ||
-    plansQuery.isPending ||
+    (contentEnabled &&
+      (exercisesQuery.isPending ||
+        supersetsQuery.isPending ||
+        sessionsQuery.isPending ||
+        plansQuery.isPending)) ||
     userdataQuery.isPending;
 
   const error =
@@ -215,8 +227,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     null;
 
   const deleteFromDB = async (sourceDb: SourceDbReferences, data: any) => {
-    await deleteDoc(getDocumentReference(sourceDb, data.id));
-    queryClient.setQueriesData({ queryKey: ["sourceData", sourceDb] }, (prev: any) => {
+    await deleteDoc(getDocumentReference(collectionPath(sourceDb, activeOrgId), data.id));
+    queryClient.setQueriesData({ queryKey: contentKey(sourceDb) }, (prev: any) => {
       const sourceDataElement = { ...(prev ?? {}) };
       delete sourceDataElement[data.name];
       return sourceDataElement;
@@ -251,7 +263,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           : exerciseList.filter((e: string) => e !== exerciseId),
       };
 
-      const data = await saveToDB(SourceDbReferences.SUPERSETS, superset);
+      const data = await saveToDB(SourceDbReferences.SUPERSETS, superset, activeOrgId);
       updateSourceData(SourceDbReferences.SUPERSETS, data);
     });
   };
@@ -280,7 +292,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
           supersets: supersetList,
         };
 
-        const data = await saveToDB(SourceDbReferences.SESSIONS, sessionObject);
+        const data = await saveToDB(SourceDbReferences.SESSIONS, sessionObject, activeOrgId);
         updateSourceData(SourceDbReferences.SESSIONS, data);
       }
     });
@@ -290,7 +302,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     if (!data) {
       return;
     }
-    queryClient.setQueriesData({ queryKey: ["sourceData", dbReference] }, (prev: any) => ({
+    queryClient.setQueriesData({ queryKey: contentKey(dbReference) }, (prev: any) => ({
       ...(prev ?? {}),
       [data.name]: data,
     }));
@@ -307,7 +319,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     if (!data) {
       return;
     }
-    queryClient.setQueriesData({ queryKey: ["sourceData", dbReference] }, (prev: any) => {
+    queryClient.setQueriesData({ queryKey: contentKey(dbReference) }, (prev: any) => {
       const sourceDataElement = { ...(prev ?? {}) };
       delete sourceDataElement[oldName];
       sourceDataElement[data.name] = data;

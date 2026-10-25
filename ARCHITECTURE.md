@@ -57,22 +57,22 @@ exercises**.
 
 | Collection | Doc | Key fields |
 | --- | --- | --- |
-| `exercises` | one per exercise | `name`, `supersets[]`, `alternatives[]`, targets |
-| `supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
-| `sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
-| `plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings |
-| `users` | `users/{uid}` | `role` (`admin` / `user`), `plans[]` (granted plan ids), profile |
+| `orgs/{orgId}/exercises` | one per exercise | `name`, `supersets[]`, `alternatives[]`, targets |
+| `orgs/{orgId}/supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
+| `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
+| `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings |
+| `users` | `users/{uid}` | profile and access request (its old `role` / `plans[]` are no longer read) |
 | `userdata` | `userdata/{uid}` | logged progress, plus `inProgress` for a run underway |
-| `settings` | `settings/app` | admin contact email, `contentVersion` |
+| `settings` | `settings/app` | admin contact email |
 | `settings` | `settings/platform` | billing guard state: `functionsSuspended`, `costAmount`, `allowedCost` |
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
-| `orgs/{orgId}/{exercises,supersets,sessions,plans}` | same as top level | copies of the content, made by `scripts/migrate-orgs.ts` |
 
-The app still reads the top-level content collections. Moving it to
-`orgs/{orgId}/...` is the next step of the multi-tenant work; the top-level
-copies are removed after that.
+The top-level `exercises`, `supersets`, `sessions` and `plans` collections
+are the pre-org originals, copied into `orgs/default` by
+`scripts/migrate-orgs.ts`. The app no longer reads them; they are removed in
+a later cleanup.
 
 ### References are ids, the UI uses names
 
@@ -119,21 +119,32 @@ userdata/{uid}
 
 ## Access model
 
-- Signed-in users can read exercises, supersets and sessions.
-- Plans are readable by admins, or by users whose `users/{uid}.plans` include
-  the plan's id. Non-admins query plans by `documentId() in` their grants.
-- A user reads and writes only their own `userdata/{uid}`. Admins can read it
-  for the read-only "View as" troubleshooting mode.
-- Only admins write content, users' roles and grants, and settings.
+Everything is scoped to the user's **active org** (see
+[Organisations](#organisations)). In the UI, an owner or trainer of the
+active org has the `admin` role and a client has `user`
+(`AuthContext.tsx`, from `useOrgMembership.ts`).
+
+- Members of the org can read its exercises, supersets and sessions.
+- Trainers see every plan. Clients query plans by `documentId() in` their
+  member doc's `assignedPlanIds`.
+- A user reads and writes only their own `userdata/{uid}`. The platform admin
+  can read it for the read-only "View as" troubleshooting mode.
+- Trainers write content. Roles and plan assignments change only through
+  Cloud Functions. App settings are for the platform admin.
 - A shared session (`isShareable`) opens without signing in, through its
-  self-contained `sharedSnapshot`.
+  self-contained `sharedSnapshot`. Share links are
+  `/training-planner/share/{orgId}/{sessionId}`. Older links without an org
+  id open from `orgs/default`.
 
 ### Organisations
 
 Each user's ID token carries a custom claim `orgs: {[orgId]: role}` (and
 `superAdmin` for platform admins). Only `functions/src/claims.ts` sets it,
 rebuilding it from the user's member docs whenever a membership changes.
-Suspended orgs are left out. Under `orgs/{orgId}`:
+Suspended orgs are left out. The app reads the claim on sign-in, refreshing
+the token once if it has no orgs yet. It remembers the active org on the
+device, and the profile menu offers a switcher when there is more than one.
+Under `orgs/{orgId}`:
 
 - Members read exercises, supersets and sessions. Owners and trainers write them.
 - Clients read only the plans in their member doc's `assignedPlanIds`.
@@ -145,6 +156,7 @@ Suspended orgs are left out. Under `orgs/{orgId}`:
 | `createOrg` | any signed-in user | creates an org, caller becomes `owner` |
 | `createInvite` | owner | invite token for `trainer` or `client` (expiry, max uses) |
 | `acceptInvite` | any signed-in user | joins the org with the invite's role |
+| `addMember` | owner | adds an existing account as `trainer` or `client` (used by the Users screen) |
 | `setMemberRole` | owner | `trainer` ↔ `client` |
 | `removeMember` | owner, or the member themselves | removes the membership |
 | `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |
@@ -152,15 +164,20 @@ Suspended orgs are left out. Under `orgs/{orgId}`:
 
 `billingGuard` isn't callable. It runs on Cloud Billing budget notifications
 and closes the callables to the public once the project starts costing
-money (see [DEPLOYMENT.md](DEPLOYMENT.md#cost-controls)).
+money (see [DEPLOYMENT.md](DEPLOYMENT.md#cost-controls)). The app reads
+`settings/platform.functionsSuspended` and shows "temporarily unavailable"
+on the Users screen instead of calling them.
 
 ## Caching and offline use
 
 - React Query keeps fetched data in IndexedDB for up to 7 days
   (`src/common/queryCache.ts`), so the app opens instantly and works offline.
-- Content queries never go stale on their own. Each admin edit writes a new
-  `settings/app.contentVersion`, and clients refetch content only when that
-  value changes. This costs no extra reads, since `settings/app` is read at
-  startup anyway.
+- Content queries are keyed by org (`["sourceData", collection, orgId, ...]`)
+  and never go stale on their own. Each trainer edit writes a new
+  `orgs/{orgId}.contentVersion`, and clients refetch that org's content only
+  when the value changes. This costs no extra reads, since the org doc is
+  read at startup anyway.
+- The last known memberships are kept in localStorage, so a cold start
+  offline still opens the right org's cached content.
 - The cache is cleared on sign-out. Bump `CACHE_BUSTER` whenever the cached
   data's shape changes.

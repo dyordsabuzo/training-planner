@@ -9,6 +9,7 @@ export const CALLABLES = [
   "createOrg",
   "createInvite",
   "acceptInvite",
+  "addMember",
   "setMemberRole",
   "removeMember",
   "setAssignedPlans",

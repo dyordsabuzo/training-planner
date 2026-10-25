@@ -3,7 +3,7 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import { del, get, set } from "idb-keyval";
 
 // How long a cache kept on the device stays usable. Content is still
-// refreshed sooner whenever settings/app.contentVersion changes (see
+// refreshed sooner whenever orgs/{orgId}.contentVersion changes (see
 // SourceDataContext).
 export const CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
@@ -13,8 +13,9 @@ export const CACHE_BUSTER = "v2";
 
 const CACHE_STORAGE_KEY = "training-planner-query-cache";
 
-// The content version the device's cached content was loaded against.
-export const CONTENT_VERSION_KEY = "training-planner-content-version";
+// The content version the device's cached content of an org was loaded against.
+const CONTENT_VERSION_KEY = "training-planner-content-version";
+export const contentVersionKey = (orgId: string) => `${CONTENT_VERSION_KEY}:${orgId}`;
 
 // Firestore reads aren't free and mutations already write straight into the
 // query cache, so a background refetch-on-focus buys no extra correctness —
@@ -47,6 +48,8 @@ export const queryPersister = createAsyncStoragePersister({
 // previous user's cached progress.
 export const clearQueryCache = async () => {
   queryClient.clear();
-  localStorage.removeItem(CONTENT_VERSION_KEY);
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith(CONTENT_VERSION_KEY))
+    .forEach((key) => localStorage.removeItem(key));
   await queryPersister.removeClient();
 };

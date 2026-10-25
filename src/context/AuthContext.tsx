@@ -18,13 +18,16 @@ import {
 import { getDocumentReference } from "../common/firebase";
 import { getDoc, setDoc } from "firebase/firestore";
 import { clearQueryCache } from "../common/queryCache";
+import { forgetMembership, isTrainerRole, Org, OrgMember, OrgRole, useOrgMembership } from "./useOrgMembership";
 
 type _Props = {
   children: ReactNode;
 };
 
 export type UserPermission = {
+  // "admin" for an owner or trainer of the active org, otherwise "user".
   role: string;
+  // Plans assigned on the active org's member doc.
   plans: string[];
   firstName?: string;
   lastName?: string;
@@ -54,6 +57,15 @@ const AuthContext = createContext({
   impersonatedUser: null as (UserPermission & { uid: string }) | null,
   startImpersonation: async (uid: string) => {},
   stopImpersonation: () => {},
+  // Active org (see useOrgMembership). Content is read from orgs/{activeOrgId}.
+  orgs: [] as Org[],
+  activeOrgId: undefined as string | undefined,
+  activeOrg: undefined as Org | undefined,
+  orgRole: null as OrgRole | null,
+  isSuperAdmin: false,
+  switchOrg: (orgId: string) => {},
+  refreshOrgs: async () => {},
+  setOrgContentVersion: (version: string) => {},
   loginWithGoogle: () => {},
   registerWithEmailAndPassword: (email: string, password: string) => {},
   sendPasswordReset: (email: string) => {},
@@ -81,6 +93,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   const [impersonatedUser, setImpersonatedUser] = useState<
     (UserPermission & { uid: string }) | null
   >(null);
+  const membership = useOrgMembership(user);
 
   useEffect(() => {
     const app = initializeApp({
@@ -109,6 +122,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         setUserPermission(null);
         setIsPreviewingAsUser(false);
         setImpersonatedUser(null);
+        forgetMembership();
         clearQueryCache();
       }
       setIsLoading(false);
@@ -334,12 +348,19 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   // only ever downgrades what the client believes its own role is, never
   // upgrades it, and Firestore rules check the real auth token regardless —
   // so this can't grant access, only hide admin-only UI for the real admin.
-  const isRealAdmin = userPermission?.role === "admin";
+  // Role and plans come from the active org's membership, not users/{uid}
+  // (which now only holds the profile and access requests).
+  const isRealAdmin = isTrainerRole(membership.orgRole);
+  const orgPermission: UserPermission | null = userPermission && {
+    ...userPermission,
+    role: isRealAdmin ? "admin" : "user",
+    plans: membership.member?.assignedPlanIds ?? [],
+  };
   const effectiveUserPermission = impersonatedUser
     ? impersonatedUser
-    : isPreviewingAsUser && userPermission
-      ? { ...userPermission, role: "user" }
-      : userPermission;
+    : isPreviewingAsUser && orgPermission
+      ? { ...orgPermission, role: "user" }
+      : orgPermission;
 
   // Impersonation is client-side only: queries still run with the admin's
   // real auth token, so Firestore rules must allow admins to read the
@@ -348,16 +369,22 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   const effectiveUid = impersonatedUser?.uid ?? user?.uid;
 
   const startImpersonation = async (uid: string) => {
-    if (!isRealAdmin || uid === user?.uid) {
+    if (!isRealAdmin || !membership.activeOrgId || uid === user?.uid) {
       return;
     }
-    const snapshot = await getDoc(getDocumentReference("users", uid));
+    const snapshot = await getDoc(getDocumentReference(`orgs/${membership.activeOrgId}/members`, uid));
     if (!snapshot.exists()) {
       return;
     }
-    const permission = snapshot.data() as UserPermission;
+    const target = snapshot.data() as OrgMember;
     setIsPreviewingAsUser(false);
-    setImpersonatedUser({ ...permission, plans: permission.plans ?? [], uid });
+    setImpersonatedUser({
+      uid,
+      role: isTrainerRole(target.role) ? "admin" : "user",
+      plans: target.assignedPlanIds ?? [],
+      email: target.email ?? "",
+      displayName: target.displayName ?? "",
+    });
   };
 
   const stopImpersonation = () => setImpersonatedUser(null);
@@ -373,7 +400,8 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     <AuthContext.Provider
       value={{
         isLoggedIn: isLoggedIn,
-        isLoading: isLoading,
+        // Wait for org claims too, or pages would briefly show "no access".
+        isLoading: isLoading || (!!user && membership.isLoading),
         error: errorObject,
         user: user,
         data: data,
@@ -387,6 +415,18 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         impersonatedUser,
         startImpersonation,
         stopImpersonation,
+        orgs: membership.orgs,
+        activeOrgId: membership.activeOrgId,
+        activeOrg: membership.activeOrg,
+        orgRole: membership.orgRole,
+        isSuperAdmin: membership.isSuperAdmin,
+        switchOrg: (orgId: string) => {
+          setImpersonatedUser(null);
+          setIsPreviewingAsUser(false);
+          membership.switchOrg(orgId);
+        },
+        refreshOrgs: membership.refreshOrgs,
+        setOrgContentVersion: membership.setOrgContentVersion,
         loginWithGoogle: loginWithGoogle,
         loginWithEmailAndPassword: loginWithEmailAndPassword,
         registerWithEmailAndPassword: registerWithEmailAndPassword,
