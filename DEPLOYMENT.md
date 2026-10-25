@@ -49,7 +49,7 @@ Repository secrets used by the workflows (values are never committed):
 | Command | Deploys |
 | --- | --- |
 | `yarn firebase:deploy` | Hosting only (builds first) |
-| `yarn firebase:deploy:functions` | Cloud Functions in `functions/`. Set the region in `functions/src/index.ts` before the first deploy. Requires the Blaze plan. |
+| `yarn firebase:deploy:functions` | Cloud Functions in `functions/` (region `australia-southeast1`, set in `functions/src/index.ts`). Requires the Blaze plan. |
 
 `firebase:deploy` is deliberately limited to Hosting so a deploy from this
 repo can never overwrite the shared Firestore rules.
@@ -80,3 +80,28 @@ content:
 3. `npx tsx scripts/migrate-ids.ts --apply`
 
 The script can be re-run safely. A second run reports 0 changes.
+
+### `migrate-orgs.ts` (organisations)
+
+This puts the existing data into one org. It copies the content to
+`orgs/{orgId}/...` with the same ids and leaves the top-level collections in
+place. It creates a member for each `users` doc: the given owner becomes
+`owner`, other admins become `trainer`, and everyone else becomes a `client`
+whose granted `plans` become `assignedPlanIds`. Then it sets everyone's `orgs`
+claim; the owner also gets `superAdmin`. To also update claims in the
+emulator, set `FIREBASE_AUTH_EMULATOR_HOST`.
+
+```mermaid
+flowchart LR
+  Rules["Merge dragonbeat rules<br/>(CI deploys)"] --> Fns["yarn firebase:deploy:functions"]
+  Fns --> Dry["migrate-orgs.ts<br/>(dry run)"]
+  Dry --> Apply["migrate-orgs.ts --apply"]
+```
+
+1. Merge the dragonbeat rules for `orgs/` and wait for its deploy.
+2. `yarn firebase:deploy:functions`
+3. `npx tsx scripts/migrate-orgs.ts --org-id=<id> --name="<org name>" --owner=<uid>`, then check the counts.
+4. Run it again with `--apply`.
+
+The script can be re-run safely. Existing members are left alone, and
+content that is already copied is skipped.
