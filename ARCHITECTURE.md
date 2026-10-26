@@ -194,6 +194,8 @@ Rules under `orgs/{orgId}`:
 | --- | --- | --- |
 | `createOrg` | any signed-in user | creates an org, caller becomes `owner` |
 | `findOrgByCode` | owner or trainer of any org | `{id, name, code}` of the active org with that code, to share with it |
+| `listLibrary` | owner, trainer | items shared with the org, or public ones, with their owner org's name |
+| `copyToOrg` | owner, trainer of the target org | copies a shared item and everything it uses into the org |
 | `createInvite` | owner (any role), trainer (`client` only) | invite token (expiry, max uses) |
 | `acceptInvite` | any signed-in user | joins the org with the invite's role |
 | `addMember` | owner | adds an existing account as `trainer` or `client` (used by the Users screen) |
@@ -250,8 +252,35 @@ via `EntityActions`). Shared items show a globe (public) or group icon.
 - Rules (dragonbeat `tpSharedRead` / `tpValidSharing`) allow direct reads of
   shared items and the collection-group "marketplace" query
   (`visibility == "public"`). They can't prove a "shared with my orgs" list
-  query, so that list will come from a Cloud Function.
+  query, so the Library lists come from a Cloud Function (below).
 - The public share page (`isShareable`) is separate and unchanged.
+
+### Library and copying
+
+**Manage → Library** (`LibraryBrowser.tsx`) has two views: **Shared with
+me** and **Marketplace** (public). Both come from `listLibrary`, which runs
+the collection-group queries server-side and adds each owner org's name,
+since other orgs' docs aren't readable from the app. You can search by name,
+tag or org, and filter by type.
+
+**Copy to my org** calls `copyToOrg` (`functions/src/library.ts`, with pure
+helpers in `functions/src/sharing.ts`):
+
+- It copies the item and everything it uses, including dependencies the
+  owner left private, because the item is unusable without them.
+- Each copy gets the id `x_{srcOrgId}_{srcId}` (`copyId`), so copying again
+  reuses what an earlier copy created instead of duplicating it.
+- References are remapped to the copies, and references to deleted items
+  are dropped. Back-links (`exercise.supersets`, `superset.sessions`) are
+  kept only within the copied set. An item copied earlier gains back-links
+  to the new copies that use it.
+- Share and history fields (`visibility`, `isShareable`, `sharedSnapshot`,
+  `previousNames`, `personalisedFor`, ...) are stripped. Each copy records
+  `source: {orgId, id, mode: "copy", copiedAt}`.
+- A name the org already uses becomes "… (copy)".
+- It writes everything in one batch and bumps the org's `contentVersion`.
+  The app then refetches its content (`reloadContent`).
+- Editing a copy never touches the original.
 
 ## Caching and offline use
 

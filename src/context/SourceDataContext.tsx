@@ -73,6 +73,8 @@ type SourceDataContextValue = {
   sharingDependencies: (db: ContentDb, name: string) => Dependency[];
   // Sets an item's visibility; its dependencies only ever get wider access.
   setSharing: (db: ContentDb, name: string, sharing: Sharing, withDependencies: boolean) => Promise<void>;
+  // Refetches the active org's content after a server-side change (copyToOrg).
+  reloadContent: () => Promise<void>;
 };
 
 const noop = () => {};
@@ -98,6 +100,7 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   personalisePlan: async () => undefined,
   sharingDependencies: () => [],
   setSharing: async () => {},
+  reloadContent: async () => {},
 });
 
 export default SourceDataContext;
@@ -116,6 +119,13 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   // ["sourceData", collection, orgId, ...].
   const contentEnabled = !!user && !!activeOrgId;
   const contentKey = (db: SourceDbReferences) => ["sourceData", db, activeOrgId];
+  const invalidateOrgContent = (orgId: string) =>
+    queryClient.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        queryKey[0] === "sourceData" &&
+        queryKey[1] !== SourceDbReferences.USERDATA &&
+        queryKey[2] === orgId,
+    });
 
   // Content (exercises, supersets, sessions, plans) is kept on the device
   // and never goes stale on its own. Instead, the org's contentVersion —
@@ -134,12 +144,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     // No seen version means nothing is cached yet, so the queries are
     // already fetching fresh content.
     if (seenVersion !== null) {
-      queryClient.invalidateQueries({
-        predicate: ({ queryKey }) =>
-          queryKey[0] === "sourceData" &&
-          queryKey[1] !== SourceDbReferences.USERDATA &&
-          queryKey[2] === activeOrgId,
-      });
+      invalidateOrgContent(activeOrgId);
     }
     localStorage.setItem(versionKey, contentVersion);
   }, [contentVersion, activeOrgId, queryClient]);
@@ -639,6 +644,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         sharingDependencies: (db, name) => dependenciesOf(db, name, getStored()),
         setSharing: (db, name, sharing, withDependencies) =>
           setSharingMutation.mutateAsync({ db, name, sharing, withDependencies }),
+        reloadContent: async () => {
+          if (activeOrgId) await invalidateOrgContent(activeOrgId);
+        },
       }}
     >
       {children}
