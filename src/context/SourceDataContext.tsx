@@ -6,6 +6,7 @@ import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray 
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
 import { contentVersionKey } from "../common/queryCache";
+import { personalisePlan } from "../management/cloneEntity";
 import {
   assembleUserdata,
   Collections,
@@ -56,6 +57,8 @@ type SourceDataContextValue = {
   editPlan: (plan: any) => void;
   deletePlan: (plan: any) => void;
   updateWeekPlan: (planName: string, weekData: any) => void;
+  // Copies a plan and its sessions for one client; resolves to the new plan's id.
+  personalisePlan: (planName: string, client: { uid: string; name: string }) => Promise<string | undefined>;
 };
 
 const noop = () => {};
@@ -78,6 +81,7 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   editPlan: noop,
   deletePlan: noop,
   updateWeekPlan: noop,
+  personalisePlan: async () => undefined,
 });
 
 export default SourceDataContext;
@@ -472,6 +476,21 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     },
   });
 
+  // Sessions first, one at a time, so the plan's session names resolve to
+  // the new ids when it's saved.
+  const personalisePlanMutation = useMutation({
+    onSuccess: markContentChanged,
+    mutationFn: async ({ planName, client }: { planName: string; client: { uid: string; name: string } }) => {
+      const copies = personalisePlan(sourceData.plans?.[planName], sourceData.sessions, sourceData.plans, client);
+      for (const session of copies.sessions) {
+        updateSourceData(SourceDbReferences.SESSIONS, await save(SourceDbReferences.SESSIONS, session));
+      }
+      const data = await save(SourceDbReferences.PLANS, { ...copies.plan, createdAt: new Date().toISOString() });
+      updateSourceData(SourceDbReferences.PLANS, data);
+      return data?.id as string | undefined;
+    },
+  });
+
   const editPlanMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (plan: any) => {
@@ -553,6 +572,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         editPlan: editPlanMutation.mutate,
         deletePlan: deletePlanMutation.mutate,
         updateWeekPlan,
+        personalisePlan: (planName, client) => personalisePlanMutation.mutateAsync({ planName, client }),
       }}
     >
       {children}

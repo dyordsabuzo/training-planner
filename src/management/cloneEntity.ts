@@ -45,3 +45,44 @@ export const clonePlan = (p: any) => ({
   cycle: p.cycle ?? [],
   open: p.open ?? false,
 });
+
+// "<name> (<suffix>)", or "<name> (<suffix> 2)" ... when that's taken.
+const uniqueName = (name: string, suffix: string, taken: Set<string>) => {
+  const lower = new Set(Array.from(taken).map((n) => n.trim().toLowerCase()));
+  let candidate = `${name} (${suffix})`;
+  for (let i = 2; lower.has(candidate.toLowerCase()); i++) candidate = `${name} (${suffix} ${i})`;
+  taken.add(candidate);
+  return candidate;
+};
+
+// Copies of a plan and its sessions for one client (name form, as the UI
+// uses), so a trainer can tweak them without touching the library originals.
+// Supersets and exercises stay shared. Share settings aren't copied.
+export const personalisePlan = (
+  plan: any,
+  sessions: Record<string, any>,
+  plans: Record<string, any>,
+  client: { uid: string; name: string }
+) => {
+  const takenSessions = new Set(Object.keys(sessions ?? {}));
+  const renamed: Record<string, string> = {};
+  const sessionCopies = toStringArray(plan.sessions)
+    .filter((name) => sessions?.[name])
+    .map((name) => {
+      const { id, previousNames, isShareable, sharedSnapshot, sharedOrder, ...session } = sessions[name];
+      renamed[name] = uniqueName(name, client.name, takenSessions);
+      return { ...session, name: renamed[name] };
+    });
+  const { id, previousNames, createdAt, ...rest } = plan;
+  return {
+    sessions: sessionCopies,
+    plan: {
+      ...rest,
+      // A cached plan may hold a plain { seconds } object here (see clonePlan).
+      ...(plan.startDate && { startDate: toDate(plan.startDate)?.toDate() }),
+      name: uniqueName(plan.name, client.name, new Set(Object.keys(plans ?? {}))),
+      sessions: toStringArray(plan.sessions).map((name) => renamed[name] ?? name),
+      personalisedFor: client.uid,
+    },
+  };
+};
