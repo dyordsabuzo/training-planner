@@ -1,5 +1,6 @@
 import { useContext, useState } from "react";
 import { Button, Modal, Toggle } from "@dyordsabuzo/ui-components";
+import { QRCodeSVG } from "qrcode.react";
 import AuthContext from "../context/AuthContext";
 import { callFunction } from "../common/firebase";
 
@@ -7,10 +8,10 @@ type Props = {
   closeForm: () => void;
 };
 
-// Owner only: creates a single-use invite link, valid for 7 days, that adds
-// whoever opens it to the active org as a client (or trainer).
+// Creates a single-use invite link, valid for 7 days, that adds whoever
+// opens it to the active org as a client. The owner can invite trainers too.
 export const InviteForm = ({ closeForm }: Props) => {
-  const { activeOrgId, activeOrg } = useContext(AuthContext);
+  const { activeOrgId, activeOrg, orgRole } = useContext(AuthContext);
   const [asTrainer, setAsTrainer] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -43,10 +44,12 @@ export const InviteForm = ({ closeForm }: Props) => {
       <div className="flex flex-col gap-4 text-text-light dark:text-text-dark">
         {!link ? (
           <>
-            <div className="flex items-center gap-3">
-              <Toggle label="Invite as trainer" value={asTrainer} toggle={setAsTrainer} />
-              <span className="text-sm font-medium">{asTrainer ? "Trainer" : "Client"}</span>
-            </div>
+            {orgRole === "owner" && (
+              <div className="flex items-center gap-3">
+                <Toggle label="Invite as trainer" value={asTrainer} toggle={setAsTrainer} />
+                <span className="text-sm font-medium">{asTrainer ? "Trainer" : "Client"}</span>
+              </div>
+            )}
             <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
               The link works once and expires in 7 days.
             </p>
@@ -60,7 +63,10 @@ export const InviteForm = ({ closeForm }: Props) => {
           </>
         ) : (
           <>
-            <p className="text-sm">Send this link to the person you're inviting:</p>
+            <p className="text-sm">Send this link to the person you're inviting, or let them scan the code:</p>
+            <div className="self-center rounded-md bg-white p-3">
+              <QRCodeSVG value={link} size={192} aria-label="Invite QR code" />
+            </div>
             <code className="text-xs break-all rounded-md bg-gray-100 dark:bg-gray-800 p-2">{link}</code>
             <Button label={copied ? "Copied" : "Copy link"} className="min-h-11 self-start" onClick={copy} />
           </>

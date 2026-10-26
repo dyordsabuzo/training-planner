@@ -62,11 +62,12 @@ exercises**.
 | `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
 | `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings |
 | `users` | `users/{uid}` | profile and access request |
-| `userdata` | `userdata/{uid}` | logged progress, plus `inProgress` for a run underway |
+| `userdata` | `userdata/{uid}` | `inProgress` for a run underway |
+| `userdata/{uid}/plans` | `plans/{planId}` | `orgId` of the plan, plus that plan's logged progress |
 | `settings` | `settings/app` | admin contact email |
 | `settings` | `settings/platform` | billing guard state: `functionsSuspended`, `costAmount`, `allowedCost` |
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
-| `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `email`, `displayName` |
+| `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `trainerUids[]` (clients), `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
 
 Before orgs, content lived in top-level collections and roles in
@@ -107,15 +108,22 @@ keeps the mapping exact.
 
 ```
 userdata/{uid}
-  {planId}
-    {week}            "Week 1" ... or "Open" for open plans
-      {sessionId}
-        {unitId}      superset id or exercise-group id
-          {exerciseId}
-            {set}     { targetRep, targetWeight, ... }
-        mood, meta { completedAt, startedAt, labels }
   inProgress { plan, week, session, data }
+userdata/{uid}/plans/{planId}
+  orgId               org the plan belongs to (never changes)
+  {week}              "Week 1" ... or "Open" for open plans
+    {sessionId}
+      {unitId}        superset id or exercise-group id
+        {exerciseId}
+          {set}       { targetRep, targetWeight, ... }
+      mood, meta { completedAt, startedAt, labels }
 ```
+
+Each plan's progress is its own doc, tagged with its org, so a trainer can
+read a client's progress for their org only. The app reads the active org's
+plan docs (`where orgId ==`) and `assembleUserdata` (`refs.ts`) joins them
+with `inProgress` into the single-doc shape the screens use. Before Phase 3a
+all of this lived in `userdata/{uid}`; `scripts/split-userdata.ts` moved it.
 
 ## Access model
 
@@ -127,8 +135,14 @@ active org has the `admin` role and a client has `user`
 - Members of the org can read its exercises, supersets and sessions.
 - Trainers see every plan. Clients query plans by `documentId() in` their
   member doc's `assignedPlanIds`.
-- A user reads and writes only their own `userdata/{uid}`. The platform admin
-  can read it for the read-only "View as" troubleshooting mode.
+- A user reads and writes only their own progress. A new plan doc must be
+  tagged with an org they belong to, and its `orgId` can't change.
+- Owners and trainers of an org can read (never write) their clients' plan
+  docs tagged with that org. A list must filter on `orgId`. The root
+  `userdata/{uid}` (`inProgress`) stays private to the user and the platform
+  admin.
+- "View as" shows the app as a member sees it, read-only. It uses the same
+  per-org progress read, so it works for any trainer of the org.
 - Trainers write content. Roles and plan assignments change only through
   Cloud Functions. App settings are for the platform admin.
 - A shared session (`isShareable`) opens without signing in, through its
@@ -150,36 +164,55 @@ How people get into an org:
 
 - **Trainers** start their own from Home ("Start my organisation", which
   calls `createOrg`). Anyone signed in who isn't in an org sees it.
-- **Clients and trainers** join through an invite link the owner makes on the
-  Users screen: `/training-planner/join/{orgId}/{token}` (`acceptInvite`).
+- **Clients and trainers** join through an invite link (with a QR code) made
+  on the Clients screen: `/training-planner/join/{orgId}/{token}`
+  (`acceptInvite`). Trainers can invite clients; only the owner invites
+  trainers.
   A link opened while signed out is remembered, and Home returns to it
   after sign-in or sign-up.
 - **The platform admin** can still add an existing account that asked for
-  access (`addMember`, from the Users screen).
+  access (`addMember`, from the Clients screen).
 
 Rules under `orgs/{orgId}`:
 
 - Members read exercises, supersets and sessions. Owners and trainers write them.
 - Clients read only the plans in their member doc's `assignedPlanIds`.
-- Members and invites are written only by Cloud Functions. Owners invite
-  and change roles. Trainers assign plans. Anyone signed in can create an org.
+- Members and invites are written only by Cloud Functions. Owners change
+  roles and assign trainers to clients. Trainers invite clients and assign
+  plans. Anyone signed in can create an org.
 
 | Callable | Who | Does |
 | --- | --- | --- |
 | `createOrg` | any signed-in user | creates an org, caller becomes `owner` |
-| `createInvite` | owner | invite token for `trainer` or `client` (expiry, max uses) |
+| `createInvite` | owner (any role), trainer (`client` only) | invite token (expiry, max uses) |
 | `acceptInvite` | any signed-in user | joins the org with the invite's role |
 | `addMember` | owner | adds an existing account as `trainer` or `client` (used by the Users screen) |
 | `setMemberRole` | owner | `trainer` ↔ `client` |
 | `removeMember` | owner, or the member themselves | removes the membership |
 | `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |
+| `setClientTrainers` | owner | sets a client's `trainerUids` (each must be a trainer or the owner) |
 | `suspendOrg` | super admin | suspends or reactivates an org |
 
 `billingGuard` isn't callable. It runs on Cloud Billing budget notifications
 and closes the callables to the public once the project starts costing
 money (see [DEPLOYMENT.md](DEPLOYMENT.md#cost-controls)). The app reads
 `settings/platform.functionsSuspended` and shows "temporarily unavailable"
-on the Users screen instead of calling them.
+on the Clients screen instead of calling them.
+
+### Trainers managing clients
+
+- **Clients screen** (`/training-planner/admin`, `UserListing.tsx`): the
+  active org's roster, filtered to Clients (optionally "My clients", from
+  `trainerUids`), Trainers or All. Edit changes role, plans and, for the
+  owner, a client's trainers (`UserForm.tsx`).
+- **Client page** (`/training-planner/admin/clients/{uid}`,
+  `ClientDetailPage.tsx`): assigned plans with progress (done and overdue
+  sessions for open plans, completed sessions otherwise), recent sessions
+  (`HistoryRunList.tsx`, read-only) and a "View as" shortcut. Progress comes
+  from `useClientUserdata` (`SourceDataContext.tsx`), which shares the cache
+  with "View as".
+- Assigning trainers only labels the roster. Every trainer of the org can see
+  every client.
 
 ## Caching and offline use
 
@@ -190,6 +223,8 @@ on the Users screen instead of calling them.
   `orgs/{orgId}.contentVersion`, and clients refetch that org's content only
   when the value changes. This costs no extra reads, since the org doc is
   read at startup anyway.
+- Progress is keyed by user and org (`["sourceData", "userdata", uid, orgId]`)
+  and refetches normally; switching org shows that org's progress only.
 - The last known memberships are kept in localStorage, so a cold start
   offline still opens the right org's cached content.
 - The cache is cleared on sign-out. Bump `CACHE_BUSTER` whenever the cached

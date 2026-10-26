@@ -17,6 +17,7 @@ export type OrgMember = {
   uid: string;
   role: OrgRole;
   assignedPlanIds: string[];
+  trainerUids?: string[];
   email?: string | null;
   displayName?: string | null;
 };

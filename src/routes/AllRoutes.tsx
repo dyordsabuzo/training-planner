@@ -16,6 +16,7 @@ import { Signup } from "../pages/auth/Signup";
 import { Home } from "../pages/Home";
 import { HistoryPage } from "../pages/HistoryPage";
 import { MainPage } from "../pages/MainPage";
+import { ClientDetailPage } from "../management/ClientDetailPage";
 import { useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
 import { getDisplayName } from "../common/utils";
@@ -144,6 +145,19 @@ const AppShell = () => {
                 <Navigate to="/login" />
               ) : userPermission?.role === "admin" ? (
                 <AdminPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/admin/clients/:uid"}
+            element={
+              !user ? (
+                <Navigate to="/login" />
+              ) : userPermission?.role === "admin" ? (
+                <ClientDetailPage />
               ) : (
                 <Navigate to="/" />
               )

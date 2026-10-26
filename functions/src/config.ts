@@ -13,6 +13,7 @@ export const CALLABLES = [
   "setMemberRole",
   "removeMember",
   "setAssignedPlans",
+  "setClientTrainers",
   "suspendOrg",
 ] as const;
 

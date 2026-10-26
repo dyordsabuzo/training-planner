@@ -17,12 +17,18 @@ import { Loading } from "../pages/helpers/Loading";
 import { getDisplayName } from "../common/utils";
 import { useLoadMore } from "../common/useLoadMore";
 import { LoadMore } from "./LoadMore";
-import { DataTable, DataTableColumn, Badge, Button } from "@dyordsabuzo/ui-components";
+import { DataTable, DataTableColumn, Badge, Button, ButtonSelection, Toggle } from "@dyordsabuzo/ui-components";
+import { trainerOptions } from "./ClientDetailPage";
+
+const ROLE_LABELS: Record<string, string> = { owner: "Owner", trainer: "Trainer", client: "Client" };
+const FILTERS = ["Clients", "Trainers", "All"];
 
 const buildColumns = (
   planNameById: Record<string, string>,
+  trainerNameById: Record<string, string>,
   currentUid: string | undefined,
-  onViewAs: (u: AppUser) => void
+  onViewAs: (u: AppUser) => void,
+  onEdit: (u: AppUser) => void
 ): DataTableColumn<AppUser>[] => [
   {
     key: "user",
@@ -54,9 +60,23 @@ const buildColumns = (
     header: "Role",
     render: (u) => (
       <Badge variant={u.role === "admin" ? "primary" : "neutral"}>
-        {u.role === "admin" ? "Admin" : "User"}
+        {u.orgRole ? ROLE_LABELS[u.orgRole] : "Not a member"}
       </Badge>
     ),
+  },
+  {
+    key: "trainers",
+    header: "Trainers",
+    render: (u) =>
+      u.orgRole === "client" && (u.trainerUids ?? []).length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {(u.trainerUids ?? []).map((uid) => (
+            <Badge key={uid} variant="neutral">
+              {trainerNameById[uid] ?? uid}
+            </Badge>
+          ))}
+        </div>
+      ) : null,
   },
   {
     key: "plans",
@@ -77,32 +97,47 @@ const buildColumns = (
   {
     key: "actions",
     header: "",
-    render: (u) =>
-      u.id === currentUid ? null : (
+    render: (u) => (
+      <div className="flex gap-3">
         <button
           type="button"
           onClick={(e) => {
-            // Don't also open the edit form via the row click.
+            // Don't also open the client page via the row click.
             e.stopPropagation();
-            onViewAs(u);
+            onEdit(u);
           }}
           className="text-sm text-primary underline font-semibold whitespace-nowrap rounded
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          View as
+          Edit
         </button>
-      ),
+        {u.id !== currentUid && u.isMember && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewAs(u);
+            }}
+            className="text-sm text-primary underline font-semibold whitespace-nowrap rounded
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            View as
+          </button>
+        )}
+      </div>
+    ),
   },
 ];
 
-// Admin-only listing of everyone who has signed up (a users/{uid} Firestore
-// doc, auto-created on first login — see AuthContext.tsx). There's no "add"
-// action: a user must sign up themselves first, since creating a Firebase
-// Auth account from here would require the Admin SDK this app doesn't have.
+// The active org's roster for its trainers: clients by default, with
+// trainers and (for the platform admin) everyone who has signed up under
+// "All". Opening a member goes to their client page; Edit changes role,
+// plans and (owner) trainers. "Add missing user" is the platform admin's
+// repair path for an account without a users/{uid} doc.
 const PAGE_SIZE = 20;
 
 export const UserListing = () => {
-  const { users, fetchUsers, saveUser, createUser, saveError } = useContext(UserManagementContext);
+  const { users, fetchUsers, saveUser, createUser, saveTrainers, saveError } = useContext(UserManagementContext);
   const { functionsSuspended } = useContext(AppSettingsContext);
   const { user, startImpersonation, orgRole } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -115,6 +150,8 @@ export const UserListing = () => {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [filter, setFilter] = useState("Clients");
+  const [onlyMine, setOnlyMine] = useState(false);
   const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
 
   useEffect(() => {
@@ -130,14 +167,26 @@ export const UserListing = () => {
     return Object.fromEntries(entries.map(([name, plan]) => [plan.id, name]));
   }, [sourceData.plans]);
 
+  const trainers = useMemo(() => trainerOptions(users), [users]);
+  const trainerNameById = useMemo(
+    () => Object.fromEntries(trainers.map((t) => [t.uid, t.name])),
+    [trainers]
+  );
+
   const columns = useMemo(
     () =>
-      buildColumns(planNameById, user?.uid, async (u) => {
-        await startImpersonation(u.id);
-        navigate("/training-planner");
-      }),
+      buildColumns(
+        planNameById,
+        trainerNameById,
+        user?.uid,
+        async (u) => {
+          await startImpersonation(u.id);
+          navigate("/training-planner");
+        },
+        (u) => setEditingUserId(u.id)
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [planNameById, user?.uid]
+    [planNameById, trainerNameById, user?.uid]
   );
 
   // Users waiting on a request float to the top, so an admin sees them first
@@ -146,6 +195,13 @@ export const UserListing = () => {
     () =>
       (users ?? [])
         .filter((u) =>
+          filter === "Clients"
+            ? u.orgRole === "client" && (!onlyMine || (u.trainerUids ?? []).includes(user?.uid ?? ""))
+            : filter === "Trainers"
+              ? u.orgRole === "owner" || u.orgRole === "trainer"
+              : true
+        )
+        .filter((u) =>
           `${u.email} ${u.displayName} ${u.firstName} ${u.lastName}`
             .toLowerCase()
             .includes(search.toLowerCase())
@@ -153,7 +209,7 @@ export const UserListing = () => {
         .sort(
           (a, b) => Number(hasPendingAccessRequest(b)) - Number(hasPendingAccessRequest(a))
         ),
-    [users, search]
+    [users, search, filter, onlyMine, user?.uid]
   );
 
   if (users === null) {
@@ -166,16 +222,26 @@ export const UserListing = () => {
   return (
     <BaseListing>
       <ManageListHeader
-        title="Users"
-        count={users.length}
+        title="Clients"
+        count={entries.length}
         addLabel="Add missing user"
-        searchPlaceholder="Search users..."
+        searchPlaceholder="Search people..."
         search={search}
         onSearchChange={setSearch}
         onAdd={() => setIsAdding(true)}
       />
 
-      {orgRole === "owner" && !functionsSuspended && (
+      <div className="flex flex-wrap items-center gap-4">
+        <ButtonSelection label="Show" options={FILTERS} selection={filter} onSelect={setFilter} />
+        {filter === "Clients" && (
+          <div className="flex items-center gap-2">
+            <Toggle label="My clients" value={onlyMine} toggle={setOnlyMine} />
+            <span className="text-sm font-medium text-text-light dark:text-text-dark">My clients</span>
+          </div>
+        )}
+      </div>
+
+      {(orgRole === "owner" || orgRole === "trainer") && !functionsSuspended && (
         <Button label="Invite someone" className="min-h-11 self-start" onClick={() => setIsInviting(true)} />
       )}
 
@@ -200,8 +266,10 @@ export const UserListing = () => {
         columns={columns}
         rows={entries.slice(0, limit)}
         getRowKey={(u) => u.id}
-        onRowClick={(u) => setEditingUserId(u.id)}
-        emptyMessage={search ? "No users match your search." : "No registered users yet."}
+        onRowClick={(u) =>
+          u.isMember ? navigate(`/training-planner/admin/clients/${u.id}`) : setEditingUserId(u.id)
+        }
+        emptyMessage={search ? "No one matches your search." : `No ${filter.toLowerCase()} yet.`}
       />
 
       <LoadMore shown={limit} total={entries.length} onLoadMore={loadMore} onShowAll={showAll} />
@@ -211,6 +279,8 @@ export const UserListing = () => {
           data={editingUser}
           closeForm={() => setEditingUserId(null)}
           onSave={saveUser}
+          trainers={trainers}
+          onSaveTrainers={saveTrainers}
         />
       )}
 

@@ -210,3 +210,30 @@ it stops without changing anything. Run it only after:
 GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/cleanup-top-level.ts          # dry run
 GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/cleanup-top-level.ts --apply
 ```
+
+### `split-userdata.ts` (progress per plan)
+
+This moves each plan's progress out of `userdata/{uid}` into
+`userdata/{uid}/plans/{planId}`, tagged with the plan's org (looked up from
+`orgs/*/plans`, else `--org-id`, default `default`). The copy fills in only
+runs a plan doc doesn't have yet, so it never overwrites runs the new app has
+saved. `--cleanup` copies once more, then removes the plan entries from
+`userdata/{uid}` and keeps `inProgress`.
+
+```mermaid
+flowchart LR
+  Rules["dragonbeat rules<br/>for userdata/{uid}/plans"] --> Copy["split-userdata.ts --apply"]
+  Copy --> App["Deploy the app"]
+  App --> Cleanup["split-userdata.ts --cleanup --apply"]
+```
+
+```
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/split-userdata.ts                     # dry run
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/split-userdata.ts --apply
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/split-userdata.ts --cleanup --apply   # after the app is live
+```
+
+The copy was applied to production on 2026-10-25 (3 plan docs, all in org
+`default`). Run the cleanup once the new app is confirmed working. A run
+deleted between the copy and the cleanup comes back, since the cleanup copies
+again first.

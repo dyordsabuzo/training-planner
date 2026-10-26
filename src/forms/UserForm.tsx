@@ -14,6 +14,9 @@ type Props = {
   data: AppUser;
   closeForm: () => void;
   onSave: (data: AppUser) => void;
+  // Trainers of the active org, offered to the owner for a client.
+  trainers?: { uid: string; name: string }[];
+  onSaveTrainers?: (uid: string, trainerUids: string[]) => void;
 };
 
 // Admin-only: edit an existing registered user's profile, role, and granted
@@ -23,7 +26,7 @@ type Props = {
 // missing fields (e.g. one created before auto-provisioning existed).
 // There's no "delete" here — removing a Firebase Auth account requires the
 // Admin SDK, which this client-only app doesn't have.
-export const UserForm = ({ data, closeForm, onSave }: Props) => {
+export const UserForm = ({ data, closeForm, onSave, trainers = [], onSaveTrainers }: Props) => {
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
 
@@ -43,8 +46,14 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const [role, setRole] = useState(data.role ?? "user");
   const [planNames, setPlanNames] = useState<string[]>(toPlanNames(data.plans ?? []));
 
+  const trainerUidByName = Object.fromEntries(trainers.map((t) => [t.name, t.uid]));
+  const trainerNameByUid = Object.fromEntries(trainers.map((t) => [t.uid, t.name]));
+  const toTrainerNames = (uids: string[]) => uids.map((uid) => trainerNameByUid[uid] ?? uid);
+  const [trainerNames, setTrainerNames] = useState<string[]>(toTrainerNames(data.trainerUids ?? []));
+
   const authContext = useContext(AuthContext);
   const isSelf = authContext.getUid() === data.id;
+  const canSetTrainers = authContext.orgRole === "owner" && data.orgRole === "client" && !!onSaveTrainers;
 
   const resetFields = () => {
     setEmail(data.email ?? "");
@@ -52,6 +61,7 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
     setLastName(data.lastName ?? "");
     setRole(data.role ?? "user");
     setPlanNames(toPlanNames(data.plans ?? []));
+    setTrainerNames(toTrainerNames(data.trainerUids ?? []));
   };
 
   const { isEditing, setIsEditing, headerAction, handleCancel } = useEntityForm({
@@ -64,6 +74,10 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const planIds = planNames.map((name) => planIdByName[name]).filter(Boolean);
+    const trainerUids = trainerNames.map((name) => trainerUidByName[name] ?? name);
+    if (canSetTrainers && JSON.stringify(trainerUids) !== JSON.stringify(data.trainerUids ?? [])) {
+      onSaveTrainers!(data.id, trainerUids);
+    }
     onSave({
       ...data,
       email,
@@ -111,6 +125,7 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
           <DetailField label="Last name" value={data.lastName} />
           <DetailField label="Role" value={roleLabel} />
           <DetailField label="Granted plans" tags={planNames} />
+          {data.orgRole === "client" && <DetailField label="Trainers" tags={trainerNames} />}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -145,6 +160,16 @@ export const UserForm = ({ data, closeForm, onSave }: Props) => {
             onChange={setPlanNames}
             placeholder="Select plans"
           />
+
+          {canSetTrainers && (
+            <MultiSelect
+              label="Trainers"
+              selected={trainerNames}
+              options={trainers.map((t) => t.name)}
+              onChange={setTrainerNames}
+              placeholder="Select trainers"
+            />
+          )}
 
           <FormButtons onCancel={handleCancel} />
         </form>

@@ -287,9 +287,9 @@ export const Home = () => {
               />
               <ActionCard
                 icon={faUsers}
-                title="Manage users"
-                description="Review registered users, grant plan access, and update roles."
-                buttonLabel="Go to user management"
+                title="Manage clients"
+                description="See how your clients are going, assign plans and trainers, and invite people."
+                buttonLabel="Go to clients"
                 onClick={() => navigate("/training-planner/admin")}
               />
             </div>

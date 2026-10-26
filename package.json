@@ -21,6 +21,7 @@
     "firebase": "^9.22.1",
     "graphql": "^16.6.0",
     "idb-keyval": "^6.3.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-confetti": "^6.2.2",
     "react-countdown-circle-timer": "^3.2.1",

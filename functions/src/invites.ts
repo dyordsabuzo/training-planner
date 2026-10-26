@@ -8,7 +8,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const inviteRef = (orgId: string, token: string) => db().doc(`orgs/${orgId}/invites/${token}`);
 
-// Owner only. The token goes in the join link (/join/:orgId/:token).
+// Owners invite trainers or clients; trainers invite clients only.
+// The token goes in the join link (/join/:orgId/:token).
 export const createInvite = onCall(async (request) => {
   const uid = requireUid(request);
   const { orgId, role, expiresInDays, maxUses } = parse(
@@ -20,7 +21,7 @@ export const createInvite = onCall(async (request) => {
     }),
     request.data
   );
-  await requireRole(orgId, uid, ["owner"]);
+  await requireRole(orgId, uid, role === "client" ? ["owner", "trainer"] : ["owner"]);
 
   const token = randomBytes(16).toString("base64url");
   await inviteRef(orgId, token).create({
