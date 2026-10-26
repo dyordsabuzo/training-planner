@@ -14,4 +14,4 @@ export { suspendOrg } from "./admin";
 export { billingGuard } from "./guard";
 export { acceptInvite, createInvite } from "./invites";
 export { addMember, removeMember, setAssignedPlans, setClientTrainers, setMemberRole } from "./members";
-export { createOrg } from "./orgs";
+export { createOrg, findOrgByCode } from "./orgs";

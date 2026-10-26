@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assembleUserdata,
   contentView,
+  dependenciesOf,
   progressKeys,
   toStoredEntity,
   toStoredUserdata,
@@ -303,5 +304,28 @@ describe("split userdata", () => {
 
   it("takes the plan entries out of a single-doc userdata", () => {
     expect(userdataPlans({ id: "alice", inProgress, pl1: weeks })).toEqual({ pl1: weeks });
+  });
+});
+
+describe("dependenciesOf", () => {
+  const ids = (db: SourceDbReferences, ref: string) =>
+    dependenciesOf(db as any, ref, stored).map((d) => `${d.db}/${d.id}`);
+
+  it("walks a plan down to exercises and alternatives, once each", () => {
+    expect(ids(SourceDbReferences.PLANS, "pl1")).toEqual([
+      "sessions/se1",
+      "supersets/ss1",
+      "exercises/ex1",
+      "exercises/ex2",
+    ]);
+  });
+  it("accepts names (the UI view) and skips back-links", () => {
+    expect(ids(SourceDbReferences.SUPERSETS, "Legs")).toEqual(["exercises/ex1", "exercises/ex2"]);
+  });
+  it("doesn't list the item itself", () => {
+    expect(ids(SourceDbReferences.EXERCISES, "ex1")).toEqual(["exercises/ex2"]);
+  });
+  it("is empty for an unknown item", () => {
+    expect(ids(SourceDbReferences.SESSIONS, "nope")).toEqual([]);
   });
 });

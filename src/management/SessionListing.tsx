@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SourceDataContext from "../context/SourceDataContext";
 import AuthContext from "../context/AuthContext";
 import { SessionForm } from "../forms/SessionForm";
-import { sortObject, toStringArray } from "../common/utils";
+import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
@@ -191,6 +191,7 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
   const renderActions = ({ session, usageCount }: SessionRow, variant?: ActionsVariant) => (
     <EntityActions
       variant={variant}
+      sharing={{ db: SourceDbReferences.SESSIONS, entity: session }}
       onEdit={() => openSession(session)}
       onClone={() => {
         setFormData(cloneSession(session));

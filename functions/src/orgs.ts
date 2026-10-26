@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { refreshClaims } from "./claims";
 import { db, memberRef, newMember, parse, requireUid } from "./common";
@@ -32,4 +32,26 @@ export const createOrg = onCall(async (request) => {
 
   await refreshClaims(uid);
   return { orgId: org.id };
+});
+
+// Sharing library items with a specific org starts from its code: trainers
+// type it in and get back that org's name. There's no search, so orgs can't
+// be browsed. The claim is enough here (a read-only lookup).
+export const findOrgByCode = onCall(async (request) => {
+  requireUid(request);
+  const roles = Object.values((request.auth?.token.orgs ?? {}) as Record<string, string>);
+  if (!roles.some((role) => role === "owner" || role === "trainer")) {
+    throw new HttpsError("permission-denied", "Only trainers can look up organisations.");
+  }
+  const { code } = parse(
+    z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,12}$/) }),
+    request.data
+  );
+
+  const found = await db().collection("orgs").where("code", "==", code).limit(1).get();
+  const org = found.docs[0];
+  if (!org || org.get("status") === "suspended") {
+    throw new HttpsError("not-found", "No organisation has that code.");
+  }
+  return { id: org.id, name: org.get("name") as string, code };
 });

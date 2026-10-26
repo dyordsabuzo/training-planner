@@ -1,21 +1,31 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo } from "react";
-import { deleteDoc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
+import { deleteDoc, getDoc, getDocs, query, setDoc, where, writeBatch } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCollection, getDocumentReference } from "../common/firebase";
+import { database, getCollection, getDocumentReference } from "../common/firebase";
 import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
 import { contentVersionKey } from "../common/queryCache";
 import { personalisePlan } from "../management/cloneEntity";
+import { Sharing, sharingOf, widenSharing } from "../common/sharing";
 import {
   assembleUserdata,
   Collections,
   contentView,
+  dependenciesOf,
   idLookup,
   toStoredEntity,
   userdataPlansPath,
   userdataView,
 } from "../common/refs";
+
+type ContentDb =
+  | SourceDbReferences.EXERCISES
+  | SourceDbReferences.SUPERSETS
+  | SourceDbReferences.SESSIONS
+  | SourceDbReferences.PLANS;
+
+export type Dependency = { db: ContentDb; id: string; name: string };
 
 type SourceData = {
   exercises?: any;
@@ -59,6 +69,10 @@ type SourceDataContextValue = {
   updateWeekPlan: (planName: string, weekData: any) => void;
   // Copies a plan and its sessions for one client; resolves to the new plan's id.
   personalisePlan: (planName: string, client: { uid: string; name: string }) => Promise<string | undefined>;
+  // What an item uses (see dependenciesOf), offered when sharing it.
+  sharingDependencies: (db: ContentDb, name: string) => Dependency[];
+  // Sets an item's visibility; its dependencies only ever get wider access.
+  setSharing: (db: ContentDb, name: string, sharing: Sharing, withDependencies: boolean) => Promise<void>;
 };
 
 const noop = () => {};
@@ -82,6 +96,8 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   deletePlan: noop,
   updateWeekPlan: noop,
   personalisePlan: async () => undefined,
+  sharingDependencies: () => [],
+  setSharing: async () => {},
 });
 
 export default SourceDataContext;
@@ -491,6 +507,53 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     },
   });
 
+  // One batch, so an item is never shared without the dependencies it was
+  // shared with. Only the sharing fields are written.
+  const setSharingMutation = useMutation({
+    onSuccess: markContentChanged,
+    mutationFn: async ({
+      db,
+      name,
+      sharing,
+      withDependencies,
+    }: {
+      db: ContentDb;
+      name: string;
+      sharing: Sharing;
+      withDependencies: boolean;
+    }) => {
+      const stored = getStored();
+      const id = idLookup(stored)(db, name);
+      const entityOf = (target: ContentDb, targetId: string) =>
+        Object.values((stored as any)[target] ?? {}).find((e: any) => e?.id === targetId);
+      const updates = [
+        { db, id, sharing },
+        ...(withDependencies
+          ? dependenciesOf(db, id, stored).map((dep) => ({
+              db: dep.db,
+              id: dep.id,
+              sharing: widenSharing(sharingOf(entityOf(dep.db, dep.id)), sharing),
+            }))
+          : []),
+      ];
+      const batch = writeBatch(database);
+      updates.forEach((u) =>
+        batch.update(getDocumentReference(collectionPath(u.db, activeOrgId), u.id), { ...u.sharing })
+      );
+      await batch.commit();
+      updates.forEach((u) =>
+        queryClient.setQueriesData({ queryKey: contentKey(u.db) }, (prev: any) =>
+          Object.fromEntries(
+            Object.entries(prev ?? {}).map(([key, e]: [string, any]) => [
+              key,
+              e?.id === u.id ? { ...e, ...u.sharing } : e,
+            ])
+          )
+        )
+      );
+    },
+  });
+
   const editPlanMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (plan: any) => {
@@ -573,6 +636,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         deletePlan: deletePlanMutation.mutate,
         updateWeekPlan,
         personalisePlan: (planName, client) => personalisePlanMutation.mutateAsync({ planName, client }),
+        sharingDependencies: (db, name) => dependenciesOf(db, name, getStored()),
+        setSharing: (db, name, sharing, withDependencies) =>
+          setSharingMutation.mutateAsync({ db, name, sharing, withDependencies }),
       }}
     >
       {children}

@@ -3,7 +3,7 @@ import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { WeekForm } from "../forms/WeekForm";
 import { PlanForm } from "../forms/PlanForm";
-import { sortObject, toStringArray } from "../common/utils";
+import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import { toDate, getCurrentWeekNumber } from "../common/planWeek";
 import { Loading } from "../pages/helpers/Loading";
 import { ManageListHeader } from "./ManageListHeader";
@@ -80,6 +80,7 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
   const renderActions = (plan: any, variant?: ActionsVariant) => (
     <EntityActions
       variant={variant}
+      sharing={{ db: SourceDbReferences.PLANS, entity: plan }}
       onEdit={() => {
         setFormData(plan);
         setFormType("edit");
