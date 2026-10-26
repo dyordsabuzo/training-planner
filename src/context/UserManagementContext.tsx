@@ -3,7 +3,7 @@ import { getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { callFunction, getCollection, getDocumentReference } from "../common/firebase";
 import AuthContext from "./AuthContext";
 import AppSettingsContext from "./AppSettingsContext";
-import { isTrainerRole, OrgMember } from "./useOrgMembership";
+import { isTrainerRole, OrgMember, OrgRole } from "./useOrgMembership";
 
 export type AppUser = {
   id: string;
@@ -18,6 +18,10 @@ export type AppUser = {
   // Not a member of the active org yet (e.g. only asked for access).
   isMember?: boolean;
   isOwner?: boolean;
+  // Role in the active org (undefined when not a member).
+  orgRole?: OrgRole;
+  // Trainers assigned to a client (see setClientTrainers).
+  trainerUids?: string[];
   // Set when the user asked for access from the Home page while they had
   // no granted plans. Cleared in UserForm once an admin grants a plan or
   // explicitly dismisses it.
@@ -37,6 +41,7 @@ const UserManagementContext = createContext({
   fetchUsers: () => {},
   saveUser: (user: AppUser) => {},
   createUser: (user: AppUser) => {},
+  saveTrainers: (uid: string, trainerUids: string[]) => {},
   // Last failed save, shown on the Users screen.
   saveError: null as string | null,
 });
@@ -57,6 +62,8 @@ const toAppUser = (id: string, profile: any, member?: OrgMember): AppUser => ({
   plans: member?.assignedPlanIds ?? [],
   isMember: !!member,
   isOwner: member?.role === "owner",
+  orgRole: member?.role,
+  trainerUids: member?.trainerUids ?? [],
   accessRequested: profile?.accessRequested ?? false,
   accessRequestedAt: profile?.accessRequestedAt ?? "",
   accessRequestNote: profile?.accessRequestNote ?? "",
@@ -145,8 +152,23 @@ export const UserManagementContextProvider: React.FC<Props> = ({ children }) => 
   // Admin SDK, which this client-only app doesn't have.
   const createUser = (user: AppUser) => save(user, true);
 
+  const saveTrainers = async (uid: string, trainerUids: string[]) => {
+    setSaveError(null);
+    if (functionsSuspended) {
+      setSaveError("Changing trainers is temporarily unavailable.");
+      return;
+    }
+    try {
+      await callFunction("setClientTrainers", { orgId: activeOrgId, uid, trainerUids });
+      await fetchUsers();
+    } catch (error: any) {
+      console.error("Unable to save trainers", error);
+      setSaveError(error?.message ?? "Unable to save the trainers.");
+    }
+  };
+
   return (
-    <UserManagementContext.Provider value={{ users, fetchUsers, saveUser, createUser, saveError }}>
+    <UserManagementContext.Provider value={{ users, fetchUsers, saveUser, createUser, saveTrainers, saveError }}>
       {children}
     </UserManagementContext.Provider>
   );

@@ -1,5 +1,4 @@
 import { useContext, useMemo, useState } from "react";
-import dayjs from "dayjs";
 import SourceDataContext from "../context/SourceDataContext";
 import SessionContext from "../context/SessionContext";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
@@ -7,7 +6,8 @@ import { Button } from "@dyordsabuzo/ui-components";
 import WrapperPage from "./WrapperPage";
 import { SessionStats } from "./others/SessionStats";
 import { EmptyState } from "../management/EmptyState";
-import { HistoryRun, historyRuns, summariseRun } from "../common/sessionStats";
+import { HistoryRun, historyRuns } from "../common/sessionStats";
+import { HistoryRunList, runKey } from "./HistoryRunList";
 import { sessionOrder } from "./resolveSessionSupersets";
 
 // Every completed session across your plans, most recent first. Opening a run
@@ -20,14 +20,13 @@ export const HistoryPage = () => {
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
   const runs = useMemo(() => historyRuns(userdata), [userdata]);
-  const keyOf = (run: HistoryRun) => `${run.plan}|${run.week}|${run.session}`;
-  const pickedRuns = runs.filter((run) => picked.has(keyOf(run)));
+  const pickedRuns = runs.filter((run) => picked.has(runKey(run)));
 
   const togglePick = (run: HistoryRun) =>
     setPicked((prev) => {
       const next = new Set(prev);
-      if (next.has(keyOf(run))) next.delete(keyOf(run));
-      else next.add(keyOf(run));
+      if (next.has(runKey(run))) next.delete(runKey(run));
+      else next.add(runKey(run));
       return next;
     });
 
@@ -39,11 +38,6 @@ export const HistoryPage = () => {
 
   const deleteMessage = (count: number) =>
     `This permanently removes ${count} completed session${count === 1 ? "" : "s"} and the sets recorded for ${count === 1 ? "it" : "them"}. This can't be undone.`;
-
-  const byPlan = runs.reduce<Record<string, HistoryRun[]>>((groups, run) => {
-    (groups[run.plan] ??= []).push(run);
-    return groups;
-  }, {});
 
   return (
     <WrapperPage className="max-w-[25rem] sm:max-w-2xl">
@@ -66,7 +60,7 @@ export const HistoryPage = () => {
               decoration="cancel"
               className="text-xs"
               onClick={() =>
-                setPicked(picked.size === runs.length ? new Set() : new Set(runs.map(keyOf)))
+                setPicked(picked.size === runs.length ? new Set() : new Set(runs.map(runKey)))
               }
             />
             {pickedRuns.length > 0 && (
@@ -90,61 +84,13 @@ export const HistoryPage = () => {
           </div>
         )}
 
-        {Object.entries(byPlan).map(([plan, planRuns]) => (
-          <section key={plan} className="flex flex-col gap-2">
-            <h2 className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
-              {plan}
-            </h2>
-            {planRuns.map((run) => {
-              const order = sessionOrder(sourceData?.sessions?.[run.session], sourceData);
-              const { totals } = summariseRun(run.logged, order);
-              const { completedAt, startedAt } = run.logged?.meta ?? {};
-              const minutes =
-                completedAt && startedAt
-                  ? Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 60000)
-                  : null;
-              const details = [
-                run.week !== "Open" ? run.week : null,
-                minutes !== null && minutes >= 0 ? `≈ ${minutes < 1 ? "under 1 min" : `${minutes} min`}` : null,
-                totals.sets > 0 ? `${totals.sets} sets` : null,
-              ].filter(Boolean);
-
-              return (
-                <div
-                  key={keyOf(run)}
-                  className="flex items-start gap-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
-                >
-                  <input
-                    type="checkbox"
-                    checked={picked.has(keyOf(run))}
-                    onChange={() => togglePick(run)}
-                    aria-label={`Select ${run.session}`}
-                    className="mt-1 h-4 w-4 accent-primary shrink-0"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setViewing(run)}
-                    className="flex grow min-w-0 items-start justify-between gap-3 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <div className="flex min-w-0 flex-col">
-                      <span className="font-semibold line-clamp-2 break-words" title={run.session}>
-                        {run.session}
-                      </span>
-                      {details.length > 0 && (
-                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                          {details.join(" · ")}
-                        </span>
-                      )}
-                    </div>
-                    <span className="shrink-0 pt-0.5 text-xs text-text-muted-light dark:text-text-muted-dark">
-                      {completedAt ? dayjs(completedAt).format("MMM D, HH:mm") : "No date"}
-                    </span>
-                  </button>
-                </div>
-              );
-            })}
-          </section>
-        ))}
+        <HistoryRunList
+          runs={runs}
+          sourceData={sourceData}
+          onView={setViewing}
+          picked={picked}
+          onTogglePick={togglePick}
+        />
       </div>
 
       {viewing && (

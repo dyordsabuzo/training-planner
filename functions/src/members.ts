@@ -82,3 +82,24 @@ export const setAssignedPlans = onCall(async (request) => {
   await member.ref.update({ assignedPlanIds: [...new Set(planIds)] });
   return { ok: true };
 });
+
+// Owner only: which trainers look after a client. Labels the roster ("My
+// clients"); any trainer of the org can still see every client.
+export const setClientTrainers = onCall(async (request) => {
+  const caller = requireUid(request);
+  const { orgId, uid, trainerUids } = parse(
+    z.object({ orgId: idSchema, uid: idSchema, trainerUids: z.array(idSchema).max(20) }),
+    request.data
+  );
+  await requireRole(orgId, caller, ["owner"]);
+  const member = await targetMember(orgId, uid);
+  if (member.get("role") !== "client") throw new HttpsError("failed-precondition", "Only clients have trainers.");
+  const unique = [...new Set(trainerUids)];
+  const trainers = await Promise.all(unique.map((trainerUid) => memberRef(orgId, trainerUid).get()));
+  if (trainers.some((t) => !["owner", "trainer"].includes(t.get("role")))) {
+    throw new HttpsError("invalid-argument", "Every trainer must be a trainer of this organisation.");
+  }
+
+  await member.ref.update({ trainerUids: unique });
+  return { ok: true };
+});

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo } from "react";
 import { deleteDoc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCollection, getDocumentReference } from "../common/firebase";
@@ -24,8 +24,23 @@ type SourceData = {
   userdata?: any;
 };
 
+// Progress for one user in one org: the plan docs tagged with that orgId
+// (the filter is also what lets a trainer pass the rules), plus inProgress
+// from the root doc, which only the user can read.
+const userdataKey = (uid?: string, orgId?: string) => ["sourceData", SourceDbReferences.USERDATA, uid, orgId];
+
+const fetchUserdata = async (uid: string, orgId: string, withRoot: boolean) => {
+  const [root, plans] = await Promise.all([
+    withRoot ? getDoc(getDocumentReference(SourceDbReferences.USERDATA, uid)) : null,
+    getDocs(query(getCollection(userdataPlansPath(uid)), where("orgId", "==", orgId))),
+  ]);
+  const planDocs = Object.fromEntries(plans.docs.map((doc) => [doc.id, doc.data()]));
+  return { [uid]: assembleUserdata(uid, root?.data(), planDocs) };
+};
+
 type SourceDataContextValue = {
   sourceData: SourceData;
+  viewUserdata: (data: Record<string, any> | undefined) => Record<string, any> | undefined;
   isLoading: boolean;
   error: unknown;
   updateExercise: (exercise: any) => void;
@@ -47,6 +62,7 @@ const noop = () => {};
 
 const SourceDataContext = createContext<SourceDataContextValue>({
   sourceData: {},
+  viewUserdata: (data) => data,
   isLoading: false,
   error: null,
   updateExercise: noop,
@@ -163,16 +179,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   // (the filter is also what lets a trainer's "View as" pass the rules),
   // plus inProgress from the root doc, which only the user can read.
   const userdataQuery = useQuery({
-    queryKey: ["sourceData", SourceDbReferences.USERDATA, effectiveUid, activeOrgId],
-    queryFn: async () => {
-      const uid = effectiveUid!;
-      const [root, plans] = await Promise.all([
-        isImpersonating ? null : getDoc(getDocumentReference(SourceDbReferences.USERDATA, uid)),
-        getDocs(query(getCollection(userdataPlansPath(uid)), where("orgId", "==", activeOrgId))),
-      ]);
-      const planDocs = Object.fromEntries(plans.docs.map((doc) => [doc.id, doc.data()]));
-      return { [uid]: assembleUserdata(uid, root?.data(), planDocs) };
-    },
+    queryKey: userdataKey(effectiveUid, activeOrgId),
+    queryFn: () => fetchUserdata(effectiveUid!, activeOrgId!, !isImpersonating),
     enabled: contentEnabled,
   });
 
@@ -188,24 +196,21 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       }),
     [exercisesQuery.data, supersetsQuery.data, sessionsQuery.data, plansQuery.data]
   );
-  const userdata = useMemo(() => {
-    if (!userdataQuery.data) return userdataQuery.data;
-    const stored = {
-      exercises: exercisesQuery.data,
-      supersets: supersetsQuery.data,
-      sessions: sessionsQuery.data,
-      plans: plansQuery.data,
-    };
-    return Object.fromEntries(
-      Object.entries(userdataQuery.data).map(([uid, doc]) => [uid, userdataView(doc, stored)])
-    );
-  }, [
-    userdataQuery.data,
-    exercisesQuery.data,
-    supersetsQuery.data,
-    sessionsQuery.data,
-    plansQuery.data,
-  ]);
+  // Stored progress (id keys) -> the name view the UI reads.
+  const viewUserdata = useCallback(
+    (data: Record<string, any> | undefined) => {
+      if (!data) return data;
+      const stored = {
+        exercises: exercisesQuery.data,
+        supersets: supersetsQuery.data,
+        sessions: sessionsQuery.data,
+        plans: plansQuery.data,
+      };
+      return Object.fromEntries(Object.entries(data).map(([uid, doc]) => [uid, userdataView(doc, stored)]));
+    },
+    [exercisesQuery.data, supersetsQuery.data, sessionsQuery.data, plansQuery.data]
+  );
+  const userdata = useMemo(() => viewUserdata(userdataQuery.data), [viewUserdata, userdataQuery.data]);
 
   const sourceData: SourceData = { ...contentData, userdata };
 
@@ -532,6 +537,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     <SourceDataContext.Provider
       value={{
         sourceData,
+        viewUserdata,
         isLoading,
         error,
         addExercise: addExerciseMutation.mutate,
@@ -552,4 +558,17 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       {children}
     </SourceDataContext.Provider>
   );
+};
+
+// A client's progress in the active org, for their trainer (read-only).
+export const useClientUserdata = (uid: string | undefined) => {
+  const { activeOrgId } = useContext(AuthContext);
+  const { viewUserdata } = useContext(SourceDataContext);
+  const { data, isLoading } = useQuery({
+    queryKey: userdataKey(uid, activeOrgId),
+    queryFn: () => fetchUserdata(uid!, activeOrgId!, false),
+    enabled: !!uid && !!activeOrgId,
+  });
+  const viewed = useMemo(() => viewUserdata(data), [viewUserdata, data]);
+  return { userdata: uid ? viewed?.[uid] : undefined, isLoading };
 };

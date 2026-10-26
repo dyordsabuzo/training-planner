@@ -44,7 +44,7 @@ export const MainPage = ({ listing }: Props) => {
         {userPermission?.role === "admin" && (
           <Button
             className="py-6 px-4"
-            label="Manage Users"
+            label="Manage Clients"
             onClick={() => {
               navigate("/training-planner/admin");
             }}
