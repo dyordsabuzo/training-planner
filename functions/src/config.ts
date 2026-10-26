@@ -7,6 +7,7 @@ export const REGION = "australia-southeast1";
 // access to these, so keep this list in sync when adding one.
 export const CALLABLES = [
   "createOrg",
+  "findOrgByCode",
   "createInvite",
   "acceptInvite",
   "addMember",

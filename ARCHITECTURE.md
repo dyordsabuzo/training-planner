@@ -61,6 +61,11 @@ exercises**.
 | `orgs/{orgId}/supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
 | `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
 | `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings, `personalisedFor` (client uid, on a personalised copy) |
+
+All four content collections also carry the sharing fields `visibility`
+(`private` / `orgs` / `public`, missing means private), `sharedWithOrgIds[]`
+and `sharedWithOrgs[]` (`{id, name, code}`, for display). See
+[Sharing library items](#sharing-library-items).
 | `users` | `users/{uid}` | profile and access request |
 | `userdata` | `userdata/{uid}` | `inProgress` for a run underway |
 | `userdata/{uid}/plans` | `plans/{planId}` | `orgId` of the plan, plus that plan's logged progress |
@@ -145,6 +150,8 @@ active org has the `admin` role and a client has `user`
   per-org progress read, so it works for any trainer of the org.
 - Trainers write content. Roles and plan assignments change only through
   Cloud Functions. App settings are for the platform admin.
+- Content shared beyond the org is read-only to others: public items to
+  anyone signed in, `orgs` items to every member of the listed orgs.
 - A shared session (`isShareable`) opens without signing in, through its
   self-contained `sharedSnapshot`. Share links are
   `/training-planner/share/{orgId}/{sessionId}`. Older links without an org
@@ -186,6 +193,7 @@ Rules under `orgs/{orgId}`:
 | Callable | Who | Does |
 | --- | --- | --- |
 | `createOrg` | any signed-in user | creates an org, caller becomes `owner` |
+| `findOrgByCode` | owner or trainer of any org | `{id, name, code}` of the active org with that code, to share with it |
 | `createInvite` | owner (any role), trainer (`client` only) | invite token (expiry, max uses) |
 | `acceptInvite` | any signed-in user | joins the org with the invite's role |
 | `addMember` | owner | adds an existing account as `trainer` or `client` (used by the Users screen) |
@@ -220,6 +228,30 @@ on the Clients screen instead of calling them.
   exercises stay shared. Sessions already logged stay with the original plan.
 - Assigning trainers only labels the roster. Every trainer of the org can see
   every client.
+
+### Sharing library items
+
+Phase 4a of the multi-tenant plan: an item's owners and trainers choose who
+else can see it, from **Visibility…** in its ⋮ menu (`VisibilityModal.tsx`,
+via `EntityActions`). Shared items show a globe (public) or group icon.
+
+- **Private** (default): only the org.
+- **Specific orgs**: added by their org code (`findOrgByCode`). There is no
+  directory of orgs.
+- **Public**: any signed-in user, for the marketplace.
+- "Also share the N items it uses" applies the same setting to everything the
+  item depends on (`dependenciesOf` in `refs.ts`: plan → sessions →
+  supersets and group exercises → exercises → alternatives). A dependency's
+  access is only ever widened (`widenSharing` in `common/sharing.ts`).
+- `setSharing` (`SourceDataContext`) writes only the sharing fields, in one
+  batch, and bumps the org's `contentVersion`.
+- A plan personalised for a client (`personalisedFor`) is never shared. The
+  menu hides the action and the rules reject it.
+- Rules (dragonbeat `tpSharedRead` / `tpValidSharing`) allow direct reads of
+  shared items and the collection-group "marketplace" query
+  (`visibility == "public"`). They can't prove a "shared with my orgs" list
+  query, so that list will come from a Cloud Function.
+- The public share page (`isShareable`) is separate and unchanged.
 
 ## Caching and offline use
 

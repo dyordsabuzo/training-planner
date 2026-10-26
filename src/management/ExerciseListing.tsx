@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { ExerciseForm } from "../forms/ExerciseForm";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
-import { sortObject, toStringArray } from "../common/utils";
+import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import { useLoadMore } from "../common/useLoadMore";
 import { useMediaQuery } from "../common/useMediaQuery";
 import BaseListing from "./BaseListing";
@@ -134,6 +134,7 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
   const renderActions = ({ exercise, usageCount }: ExerciseRow, variant?: ActionsVariant) => (
     <EntityActions
       variant={variant}
+      sharing={{ db: SourceDbReferences.EXERCISES, entity: exercise }}
       onEdit={() => openExercise(exercise)}
       onClone={() => {
         setFormData(cloneExercise(exercise));

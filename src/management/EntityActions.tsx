@@ -4,11 +4,17 @@ import {
   IconDefinition,
   faCopy,
   faEllipsisVertical,
+  faEye,
+  faGlobe,
   faPen,
   faTrash,
+  faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
+import { canShare, sharingOf, VISIBILITY_LABELS } from "../common/sharing";
+import { Dependency } from "../context/SourceDataContext";
+import { VisibilityModal } from "./VisibilityModal";
 
 export type ActionItem = {
   label: string;
@@ -26,6 +32,8 @@ type Props = {
   deleteImpactMessage?: string;
   extraActions?: ActionItem[];
   variant?: ActionsVariant;
+  // Library item whose visibility can be set from the menu (Phase 4).
+  sharing?: { db: Dependency["db"]; entity: any };
 };
 
 const menuItemClass = `w-full min-h-11 px-3 flex items-center gap-3 text-left text-sm
@@ -188,7 +196,22 @@ const ActionMenu = ({
   );
 };
 
-// Action set per entity: a single ⋮ menu (Edit, Clone, extras, Delete).
+// Shown next to the menu when an item is shared beyond its org.
+const SharingIcon = ({ entity }: { entity: any }) => {
+  const { visibility, sharedWithOrgs } = sharingOf(entity);
+  if (visibility === "private") return null;
+  const title =
+    visibility === "public"
+      ? VISIBILITY_LABELS.public
+      : `Shared with ${sharedWithOrgs.map((o) => o.name).join(", ") || "other orgs"}`;
+  return (
+    <span title={title} aria-label={title} className="px-1 text-primary dark:text-primary-200">
+      <FontAwesomeIcon icon={visibility === "public" ? faGlobe : faUserGroup} />
+    </span>
+  );
+};
+
+// Action set per entity: a single ⋮ menu (Edit, Clone, extras, Visibility, Delete).
 // The wrapper stops clicks reaching the card or row.
 export const EntityActions = ({
   onEdit,
@@ -196,16 +219,24 @@ export const EntityActions = ({
   onDelete,
   deleteImpactMessage,
   extraActions = [],
+  sharing,
 }: Props) => {
+  const [settingVisibility, setSettingVisibility] = useState(false);
+  const shareable = !!sharing && canShare(sharing.entity);
   const menuItems: ActionItem[] = [
     { label: "Edit", icon: faPen, onClick: onEdit },
     { label: "Clone", icon: faCopy, onClick: onClone },
     ...extraActions,
+    ...(shareable ? [{ label: "Visibility…", icon: faEye, onClick: () => setSettingVisibility(true) }] : []),
   ];
 
   return (
     <div className="flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+      {sharing && <SharingIcon entity={sharing.entity} />}
       <ActionMenu items={menuItems} onDelete={onDelete} deleteImpactMessage={deleteImpactMessage} />
+      {shareable && settingVisibility && (
+        <VisibilityModal db={sharing.db} entity={sharing.entity} onClose={() => setSettingVisibility(false)} />
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { SupersetForm } from "../forms/SupersetForm";
-import { sortObject, toStringArray } from "../common/utils";
+import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
@@ -117,6 +117,7 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
   const renderActions = ({ superset, sessions, usageCount }: SupersetRow, variant?: ActionsVariant) => (
     <EntityActions
       variant={variant}
+      sharing={{ db: SourceDbReferences.SUPERSETS, entity: superset }}
       onEdit={() => openSuperset(superset, sessions)}
       onClone={() => {
         setFormData(cloneSuperset(superset, sessions));

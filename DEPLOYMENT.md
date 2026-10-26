@@ -157,6 +157,17 @@ flowchart LR
   Check --> Apply["... --apply<br/>(backup, then write)"]
 ```
 
+### `check-org-codes.ts` (read-only)
+
+Lists every org's code and flags duplicates or missing codes. Orgs are found
+by code when sharing library items (`findOrgByCode`), so each code must be
+unique. Writes nothing. On 2026-10-26 production had one org (`default`,
+code `DEFAUL`) and no problems.
+
+```
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/check-org-codes.ts
+```
+
 ### `migrate-ids.ts` (id references)
 
 This converts content references and progress keys from names to doc ids,

@@ -114,6 +114,43 @@ export const idLookup = (collections: Collections) => {
   return (db: ContentDb, ref: string): string => find(db, ref)?.id ?? ref;
 };
 
+// Everything an item uses, so it can be shared along with it: plan ->
+// sessions -> supersets and group exercises -> exercises -> alternatives.
+// Back-links (superset.sessions, exercise.supersets) aren't dependencies.
+// Works on stored or viewed collections; returns each dependency once.
+export const dependenciesOf = (db: ContentDb, ref: string, collections: Collections) => {
+  const find = entityFinder(collections);
+  const root = find(db, ref);
+  const found = new Map<string, { db: ContentDb; id: string; name: string }>();
+  const visit = (target: ContentDb, ref: string) => {
+    const entity = find(target, ref);
+    const key = `${target}/${entity?.id}`;
+    if (!entity?.id || entity === root || found.has(key)) return;
+    found.set(key, { db: target, id: entity.id, name: entity.name });
+    walk(target, entity);
+  };
+  const walk = (target: ContentDb, entity: any) => {
+    const each = (value: unknown, next: ContentDb) =>
+      toStringArray(value).forEach((ref) => visit(next, ref));
+    switch (target) {
+      case PLANS:
+        return each(entity.sessions, SESSIONS);
+      case SESSIONS:
+        each(entity.supersets, SUPERSETS);
+        (Array.isArray(entity.groups) ? entity.groups : []).forEach((group: any) =>
+          each(group?.exercises, EXERCISES)
+        );
+        return;
+      case SUPERSETS:
+        return each(entity.exercises, EXERCISES);
+      case EXERCISES:
+        return each(entity.alternatives, EXERCISES);
+    }
+  };
+  if (root) walk(db, root);
+  return Array.from(found.values());
+};
+
 // A session's exercise groups with their unit keys (see groupKeys) and ids.
 const sessionGroups = (session: any, find: Finder) => {
   const groups: SessionGroup[] = Array.isArray(session?.groups) ? session.groups : [];
