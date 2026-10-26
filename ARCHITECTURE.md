@@ -61,11 +61,6 @@ exercises**.
 | `orgs/{orgId}/supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
 | `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
 | `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings, `personalisedFor` (client uid, on a personalised copy) |
-
-All four content collections also carry the sharing fields `visibility`
-(`private` / `orgs` / `public`, missing means private), `sharedWithOrgIds[]`
-and `sharedWithOrgs[]` (`{id, name, code}`, for display). See
-[Sharing library items](#sharing-library-items).
 | `users` | `users/{uid}` | profile and access request |
 | `userdata` | `userdata/{uid}` | `inProgress` for a run underway |
 | `userdata/{uid}/plans` | `plans/{planId}` | `orgId` of the plan, plus that plan's logged progress |
@@ -74,6 +69,15 @@ and `sharedWithOrgs[]` (`{id, name, code}`, for display). See
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `trainerUids[]` (clients), `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
+| `orgs/{orgId}/public` | `public/profile` | `name`, `contentVersion`, readable by anyone signed in (for orgs linking to this org's items) |
+| `orgs/{orgId}/links` | `links/{linkId}` | `srcOrgId`, `collection`, `srcId`, `linkedAt`, `linkedBy`: a live link to another org's item |
+
+All four content collections also carry the sharing fields `visibility`
+(`private` / `orgs` / `public`, missing means private), `sharedWithOrgIds[]`
+and `sharedWithOrgs[]` (`{id, name, code}`, for display), and, once shared:
+`source` (`{orgId, id, mode, copiedAt}` on a copy), `linkCount` (how many
+other orgs link to it, kept by Cloud Functions) and `archived`. See
+[Sharing library items](#sharing-library-items).
 
 Before orgs, content lived in top-level collections and roles in
 `users/{uid}.role` / `plans[]`. `scripts/migrate-orgs.ts` copied it all into
@@ -152,6 +156,10 @@ active org has the `admin` role and a client has `user`
   Cloud Functions. App settings are for the platform admin.
 - Content shared beyond the org is read-only to others: public items to
   anyone signed in, `orgs` items to every member of the listed orgs.
+- An item other orgs link to (`linkCount > 0`) can't be deleted, only
+  archived, and only Cloud Functions change `linkCount`. Members read their
+  org's `links`; only Cloud Functions write them. Any signed-in user reads an
+  org's `public/profile`, and its trainers bump only its `contentVersion`.
 - A shared session (`isShareable`) opens without signing in, through its
   self-contained `sharedSnapshot`. Share links are
   `/training-planner/share/{orgId}/{sessionId}`. Older links without an org
@@ -196,6 +204,9 @@ Rules under `orgs/{orgId}`:
 | `findOrgByCode` | owner or trainer of any org | `{id, name, code}` of the active org with that code, to share with it |
 | `listLibrary` | owner, trainer | items shared with the org, or public ones, with their owner org's name |
 | `copyToOrg` | owner, trainer of the target org | copies a shared item and everything it uses into the org |
+| `linkToOrg` | owner, trainer of the target org | links a shared exercise, superset or session, and everything it uses |
+| `convertLinkToCopy` | owner, trainer | replaces a link (and links to what it uses) with copies under the same ids |
+| `unlink` | owner, trainer | removes a link that nothing in the org uses |
 | `createInvite` | owner (any role), trainer (`client` only) | invite token (expiry, max uses) |
 | `acceptInvite` | any signed-in user | joins the org with the invite's role |
 | `addMember` | owner | adds an existing account as `trainer` or `client` (used by the Users screen) |
@@ -282,6 +293,45 @@ helpers in `functions/src/sharing.ts`):
   The app then refetches its content (`reloadContent`).
 - Editing a copy never touches the original.
 
+### Live links
+
+**Link** in the Library (`linkToOrg`) uses another org's exercise, superset
+or session read-only, following its owner's edits. Plans can only be copied,
+because clients are assigned plans by id.
+
+- Linking an item links everything it uses too. Each linked item gets a
+  link doc `orgs/{orgId}/links/{linkId}`, and its source item's `linkCount`
+  goes up. The link id is the id a copy would get (`copyId`), and the org's
+  own sessions and plans reference that id.
+- Everything it uses must be shared with the org, because its members (and
+  their clients) read the items directly from the owner's org. Otherwise the
+  call names what's missing: "Ask Org A to also share: …".
+- **In the app** (`SourceDataContext`): the org's links are loaded with its
+  content. For each source org, the app reads its `public/profile`, then
+  each linked doc (rules can't prove a shared list query). The result is
+  cached under the profile's `contentVersion`, so linked items are re-read
+  only after their owner edits something. `withLinked` (`refs.ts`) merges
+  them into the org's collections under their link ids, named "Squat · Org A"
+  and marked `linked: {orgId, ownerName, srcId, name}`. References to items
+  the org hasn't linked are dropped. Resolvers, pickers and progress keys
+  then work unchanged.
+- Linked items are read-only. They don't open a form, and their ⋮ menu
+  (`EntityActions`, `LinkedItemModal.tsx`) has Details, **Convert to copy**
+  and **Unlink**. `save` refuses them, and the back-link updates skip them.
+- **Convert to copy** (`convertLinkToCopy`) copies the item and everything it
+  uses under the link ids, so sessions, plans and clients' progress (keyed
+  by id) don't change. The copied items' links are removed.
+- **Unlink** is refused while any of the org's own items, or another linked
+  item, still uses it.
+- **For the owner:** an item other orgs link to shows "Used by N orgs".
+  Deleting it archives it instead (`archived: true`). Archived items are
+  hidden from the owner's listings (`isListed` in `common/sharing.ts`) and
+  the Library, but keep working for the orgs linking them.
+- Every content change bumps both `orgs/{orgId}.contentVersion` and
+  `public/profile.contentVersion` (`markContentChanged`, and
+  `bumpContentVersion` in the functions). Link changes bump the owner's too,
+  so its link counts stay current.
+
 ## Caching and offline use
 
 - React Query keeps fetched data in IndexedDB for up to 7 days
@@ -291,6 +341,10 @@ helpers in `functions/src/sharing.ts`):
   `orgs/{orgId}.contentVersion`, and clients refetch that org's content only
   when the value changes. This costs no extra reads, since the org doc is
   read at startup anyway.
+- Links are org content (`["sourceData", "links", orgId]`). Linked items are
+  cached per source org under its public `contentVersion`
+  (`["linked", srcOrgId, version, linkIds]`), and its profile is rechecked
+  every 5 minutes.
 - Progress is keyed by user and org (`["sourceData", "userdata", uid, orgId]`)
   and refetches normally; switching org shows that org's progress only.
 - The last known memberships are kept in localStorage, so a cold start

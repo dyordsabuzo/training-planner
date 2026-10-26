@@ -332,8 +332,11 @@ export const sortObject = (data: any) => {
 export const collectionPath = (sourceDb: SourceDbReferences, orgId?: string) =>
   sourceDb === SourceDbReferences.USERDATA ? sourceDb : `orgs/${orgId}/${sourceDb}`;
 
-export const saveToDB = async (sourceDb: SourceDbReferences, data: any, orgId?: string) => {
+export const saveToDB = async (sourceDb: SourceDbReferences, entity: any, orgId?: string) => {
   const path = collectionPath(sourceDb, orgId);
+  // linkCount is kept by Cloud Functions (the rules refuse changes), and a
+  // cached value may be stale; `linked` only exists in the app's view.
+  const { linkCount, linked, ...data } = entity ?? {};
   const collection = getCollection(path);
 
   if (!(data.id ?? "")) {
@@ -351,7 +354,8 @@ export const saveToDB = async (sourceDb: SourceDbReferences, data: any, orgId?: 
       const { id, ...plaindata } = data;
       const docRef = doc(database, path, id);
       await setDoc(docRef, plaindata, { merge: true });
-      return data;
+      // The cache keeps the count (deletes check it).
+      return linkCount === undefined ? data : { ...data, linkCount };
     } catch (error) {
       console.error(`Unable to update db: ${sourceDb}`, error);
     }

@@ -157,6 +157,22 @@ flowchart LR
   Check --> Apply["... --apply<br/>(backup, then write)"]
 ```
 
+### `backfill-org-profiles.ts` (public org profiles)
+
+This gives every org its `orgs/{orgId}/public/profile` (`name`,
+`contentVersion`), which orgs linking to its library items read. `createOrg`
+writes it for new orgs. It writes only missing or out-of-date profiles, so
+it's safe to re-run, and it needs no backup. Run it once the dragonbeat
+rules for `public/profile` are deployed.
+
+```
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/backfill-org-profiles.ts          # dry run
+GOOGLE_CLOUD_QUOTA_PROJECT=training-planner-387200 npx tsx scripts/backfill-org-profiles.ts --apply
+```
+
+On 2026-10-27 the dry run against production showed one profile to create
+(`default`).
+
 ### `check-org-codes.ts` (read-only)
 
 Lists every org's code and flags duplicates or missing codes. Orgs are found

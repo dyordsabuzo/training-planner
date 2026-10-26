@@ -1,14 +1,16 @@
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, WriteBatch } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { db, idSchema, orgRef, parse, requireRole, requireUid } from "./common";
+import { bumpContentVersion, db, idSchema, linkRef, orgRef, parse, requireRole, requireUid } from "./common";
 import {
   BACK_LINKS,
   CONTENT,
   Content,
   copyId,
   dependencyRefs,
+  isOfferedTo,
   isSharedWith,
+  LINKABLE,
   Ref,
   remapForCopy,
   uniqueCopyName,
@@ -48,7 +50,7 @@ export const listLibrary = onCall(async (request) => {
   const found = snaps.flatMap((snap, i) =>
     snap.docs
       .map((doc) => ({ doc, ownerId: doc.ref.parent.parent?.id, isOrgContent: doc.ref.parent.parent?.parent.id === "orgs" }))
-      .filter(({ doc, ownerId, isOrgContent }) => isOrgContent && ownerId !== orgId && isSharedWith(doc.data(), orgId))
+      .filter(({ doc, ownerId, isOrgContent }) => isOrgContent && ownerId !== orgId && isOfferedTo(doc.data(), orgId))
       .map(({ doc, ownerId }) => {
         const data = doc.data();
         const uses = dependencyRefs(CONTENT[i], data).length;
@@ -87,32 +89,20 @@ const loadWithDependencies = async (srcOrgId: string, root: Ref, rootData: any) 
   return Array.from(docs.values());
 };
 
-// Copies a shared item, and everything it uses, into the caller's org.
-// Copies get deterministic ids (copyId), so anything copied from the same
-// source before is reused rather than duplicated; references are remapped
-// to the copies, and each copy records where it came from in `source`.
-// Dependencies are copied even if their owner left them private: the shared
-// item is unusable without them.
-export const copyToOrg = onCall({ timeoutSeconds: 60 }, async (request) => {
-  const uid = requireUid(request);
-  const { srcOrgId, collection, id, targetOrgId } = parse(
-    z.object({ srcOrgId: idSchema, collection: z.enum(CONTENT), id: idSchema, targetOrgId: idSchema }),
-    request.data
-  );
-  if (srcOrgId === targetOrgId) {
-    throw new HttpsError("invalid-argument", "That item is already in your organisation.");
-  }
-  await requireRole(targetOrgId, uid, TRAINERS);
+type Loaded = Ref & { data: any };
 
-  const [srcOrg, rootSnap] = await Promise.all([
-    orgRef(srcOrgId).get(),
-    orgRef(srcOrgId).collection(collection).doc(id).get(),
-  ]);
-  if (!srcOrg.exists || srcOrg.get("status") === "suspended" || !isSharedWith(rootSnap.data(), targetOrgId)) {
-    throw new HttpsError("not-found", "That item isn't shared with your organisation.");
-  }
-
-  const items = await loadWithDependencies(srcOrgId, { collection, id }, rootSnap.data());
+// Adds copies of `items` (an item and everything it uses, from srcOrgId) to
+// the batch. Copies get deterministic ids (copyId), so anything copied from
+// the same source before is reused rather than duplicated; references are
+// remapped to the copies, and each copy records where it came from in
+// `source`. Returns how many are new.
+const addCopies = async (
+  batch: WriteBatch,
+  srcOrgId: string,
+  items: Loaded[],
+  targetOrgId: string,
+  now: Date
+) => {
   const copied = new Map(items.map((item) => [key(item), copyId(srcOrgId, item.id)]));
   const idOf = (target: Content, sourceId: string) => copied.get(`${target}/${sourceId}`);
   const target = (item: Ref) => orgRef(targetOrgId).collection(item.collection).doc(copyId(srcOrgId, item.id));
@@ -120,10 +110,6 @@ export const copyToOrg = onCall({ timeoutSeconds: 60 }, async (request) => {
   const existing = await db().getAll(...items.map(target));
   const isNew = new Set(items.filter((_, i) => !existing[i].exists).map(key));
   const toCreate = items.filter((item) => isNew.has(key(item)));
-  // One batch (max 500 writes) keeps the copy all-or-nothing.
-  if (items.length > 450) {
-    throw new HttpsError("failed-precondition", "That item uses too many others to copy in one go.");
-  }
 
   const takenNames = new Map<Content, Set<string>>();
   for (const c of new Set(toCreate.map((item) => item.collection))) {
@@ -131,8 +117,6 @@ export const copyToOrg = onCall({ timeoutSeconds: 60 }, async (request) => {
     takenNames.set(c, new Set(names.docs.map((d) => d.get("name"))));
   }
 
-  const now = new Date();
-  const batch = db().batch();
   toCreate.forEach((item) => {
     const taken = takenNames.get(item.collection)!;
     const name = uniqueCopyName(String(item.data.name ?? item.id), taken);
@@ -156,8 +140,183 @@ export const copyToOrg = onCall({ timeoutSeconds: 60 }, async (request) => {
       )[back.field] as string[];
       if (added.length) batch.update(target(item), { [back.field]: FieldValue.arrayUnion(...added) });
     });
-  if (toCreate.length) batch.update(orgRef(targetOrgId), { contentVersion: now.toISOString() });
-  await batch.commit();
+  return { created: toCreate.length, skipped: items.length - toCreate.length };
+};
 
-  return { id: copyId(srcOrgId, id), created: toCreate.length, skipped: items.length - toCreate.length };
+// One batch (max 500 writes) keeps each call all-or-nothing; a link or
+// conversion takes up to three writes per item.
+const requireBatchSize = (items: Loaded[], writesEach: number) => {
+  if (items.length * writesEach > 450) {
+    throw new HttpsError("failed-precondition", "That item uses too many others to do this in one go.");
+  }
+};
+
+const itemSchema = { srcOrgId: idSchema, id: idSchema, targetOrgId: idSchema };
+
+// The source org and item a caller wants to copy or link, if it's offered to them.
+const offeredItem = async (srcOrgId: string, collection: Content, id: string, targetOrgId: string) => {
+  if (srcOrgId === targetOrgId) {
+    throw new HttpsError("invalid-argument", "That item is already in your organisation.");
+  }
+  const [srcOrg, rootSnap] = await Promise.all([
+    orgRef(srcOrgId).get(),
+    orgRef(srcOrgId).collection(collection).doc(id).get(),
+  ]);
+  if (!srcOrg.exists || srcOrg.get("status") === "suspended" || !isOfferedTo(rootSnap.data(), targetOrgId)) {
+    throw new HttpsError("not-found", "That item isn't shared with your organisation.");
+  }
+  return { srcOrgName: String(srcOrg.get("name")), data: rootSnap.data()! };
+};
+
+// Copies a shared item, and everything it uses, into the caller's org.
+// Dependencies are copied even if their owner left them private: the shared
+// item is unusable without them.
+export const copyToOrg = onCall({ timeoutSeconds: 60 }, async (request) => {
+  const uid = requireUid(request);
+  const { srcOrgId, collection, id, targetOrgId } = parse(
+    z.object({ ...itemSchema, collection: z.enum(CONTENT) }),
+    request.data
+  );
+  await requireRole(targetOrgId, uid, TRAINERS);
+  const { data } = await offeredItem(srcOrgId, collection, id, targetOrgId);
+
+  const items = await loadWithDependencies(srcOrgId, { collection, id }, data);
+  requireBatchSize(items, 1);
+  const now = new Date();
+  const batch = db().batch();
+  const result = await addCopies(batch, srcOrgId, items, targetOrgId, now);
+  if (result.created) bumpContentVersion(batch, targetOrgId, now.toISOString());
+  await batch.commit();
+  return { id: copyId(srcOrgId, id), ...result };
+});
+
+const srcItemRef = (srcOrgId: string, item: Ref) => orgRef(srcOrgId).collection(item.collection).doc(item.id);
+
+// Live link: the caller's org uses another org's item, read-only, and sees
+// the owner's edits. Each linked item (and everything it uses, which must be
+// shared too, since the caller's members read them directly) gets a link doc
+// orgs/{orgId}/links/{copyId}; references hold that id. The source counts
+// its links (linkCount): a linked item is archived, not deleted.
+export const linkToOrg = onCall({ timeoutSeconds: 60 }, async (request) => {
+  const uid = requireUid(request);
+  const { srcOrgId, collection, id, targetOrgId } = parse(
+    z.object({ ...itemSchema, collection: z.enum(LINKABLE) }),
+    request.data
+  );
+  await requireRole(targetOrgId, uid, TRAINERS);
+  const { srcOrgName, data } = await offeredItem(srcOrgId, collection, id, targetOrgId);
+
+  const items = await loadWithDependencies(srcOrgId, { collection, id }, data);
+  requireBatchSize(items, 2);
+  const unshared = items.filter((item) => !isSharedWith(item.data, targetOrgId));
+  if (unshared.length) {
+    const names = unshared.map((item) => item.data.name ?? item.id).join(", ");
+    throw new HttpsError("failed-precondition", `Ask ${srcOrgName} to also share: ${names}.`);
+  }
+
+  // Already linked, or already copied (the copy wins): nothing to do.
+  const ids = items.map((item) => copyId(srcOrgId, item.id));
+  const [links, copies] = await Promise.all([
+    db().getAll(...ids.map((lid) => linkRef(targetOrgId, lid))),
+    db().getAll(...items.map((item, i) => orgRef(targetOrgId).collection(item.collection).doc(ids[i]))),
+  ]);
+  const toLink = items.filter((_, i) => !links[i].exists && !copies[i].exists);
+
+  const now = new Date();
+  const batch = db().batch();
+  toLink.forEach((item) => {
+    batch.create(linkRef(targetOrgId, copyId(srcOrgId, item.id)), {
+      srcOrgId,
+      collection: item.collection,
+      srcId: item.id,
+      linkedAt: now,
+      linkedBy: uid,
+    });
+    batch.update(srcItemRef(srcOrgId, item), { linkCount: FieldValue.increment(1) });
+  });
+  if (toLink.length) {
+    // The owner's cache refreshes too, so its link counts are current.
+    bumpContentVersion(batch, targetOrgId, now.toISOString());
+    bumpContentVersion(batch, srcOrgId, now.toISOString());
+  }
+  await batch.commit();
+  return { id: copyId(srcOrgId, id), linked: toLink.length, skipped: items.length - toLink.length };
+});
+
+const linkSchema = z.object({ orgId: idSchema, linkId: idSchema });
+
+const readLink = async (orgId: string, linkId: string) => {
+  const link = await linkRef(orgId, linkId).get();
+  if (!link.exists) throw new HttpsError("not-found", "That link no longer exists.");
+  return link.data() as { srcOrgId: string; collection: Content; srcId: string };
+};
+
+// Replaces a link with a copy under the same id, so references to it (and
+// clients' progress, keyed by id) don't change. Everything it uses is copied
+// too, and links to those items are replaced as well.
+export const convertLinkToCopy = onCall({ timeoutSeconds: 60 }, async (request) => {
+  const uid = requireUid(request);
+  const { orgId, linkId } = parse(linkSchema, request.data);
+  await requireRole(orgId, uid, TRAINERS);
+  const { srcOrgId, collection, srcId } = await readLink(orgId, linkId);
+
+  const root = await orgRef(srcOrgId).collection(collection).doc(srcId).get();
+  if (!isSharedWith(root.data(), orgId)) {
+    throw new HttpsError("failed-precondition", "Its owner no longer shares it, so it can't be copied.");
+  }
+  const items = await loadWithDependencies(srcOrgId, { collection, id: srcId }, root.data());
+  requireBatchSize(items, 3);
+
+  const now = new Date();
+  const batch = db().batch();
+  const result = await addCopies(batch, srcOrgId, items, orgId, now);
+  const links = await db().getAll(...items.map((item) => linkRef(orgId, copyId(srcOrgId, item.id))));
+  links.forEach((link, i) => {
+    if (!link.exists) return;
+    batch.delete(link.ref);
+    batch.update(srcItemRef(srcOrgId, items[i]), { linkCount: FieldValue.increment(-1) });
+  });
+  bumpContentVersion(batch, orgId, now.toISOString());
+  bumpContentVersion(batch, srcOrgId, now.toISOString());
+  await batch.commit();
+  return { id: linkId, ...result };
+});
+
+// Removes a link nothing else in the org uses: neither the org's own items
+// nor other linked items (whose references to it would silently vanish).
+export const unlink = onCall(async (request) => {
+  const uid = requireUid(request);
+  const { orgId, linkId } = parse(linkSchema, request.data);
+  await requireRole(orgId, uid, TRAINERS);
+  const { srcOrgId, collection, srcId } = await readLink(orgId, linkId);
+
+  const [own, otherLinks] = await Promise.all([
+    Promise.all(CONTENT.map((c) => orgRef(orgId).collection(c).get())),
+    orgRef(orgId).collection("links").where("srcOrgId", "==", srcOrgId).get(),
+  ]);
+  const usedByOwn = own.flatMap((snap, i) =>
+    snap.docs.filter((d) => dependencyRefs(CONTENT[i], d.data()).some((r) => r.collection === collection && r.id === linkId))
+  );
+  const others = otherLinks.docs.filter((d) => d.id !== linkId);
+  const otherSources = others.length
+    ? await db().getAll(...others.map((d) => srcItemRef(srcOrgId, { collection: d.get("collection"), id: d.get("srcId") })))
+    : [];
+  const usedByLinked = otherSources.filter(
+    (snap, i) =>
+      snap.exists &&
+      dependencyRefs(others[i].get("collection"), snap.data()!).some((r) => r.collection === collection && r.id === srcId)
+  );
+  const users = [...usedByOwn.map((d) => d.get("name")), ...usedByLinked.map((d) => d.get("name"))];
+  if (users.length) {
+    throw new HttpsError("failed-precondition", `Still used by: ${users.join(", ")}.`);
+  }
+
+  const now = new Date().toISOString();
+  const batch = db().batch();
+  batch.delete(linkRef(orgId, linkId));
+  batch.update(srcItemRef(srcOrgId, { collection, id: srcId }), { linkCount: FieldValue.increment(-1) });
+  bumpContentVersion(batch, orgId, now);
+  bumpContentVersion(batch, srcOrgId, now);
+  await batch.commit();
+  return { id: linkId };
 });

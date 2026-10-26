@@ -12,6 +12,7 @@ import { EmptyState } from "./EmptyState";
 import { EntityCard } from "./EntityCard";
 import { LoadMore } from "./LoadMore";
 import { useLoadMore } from "../common/useLoadMore";
+import { isListed } from "../common/sharing";
 import { EntityActions, ActionsVariant } from "./EntityActions";
 import { cloneSession } from "./cloneEntity";
 import { resolveSession, sessionUnitKeys, sessionUnitNames } from "../pages/resolveSessionSupersets";
@@ -104,8 +105,8 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
   const sessions = sortObject(sourceData.sessions ?? {});
   const entries = useMemo(
     () =>
-      Object.entries(sessions).filter(([key]) =>
-        key.toLowerCase().includes(search.toLowerCase())
+      Object.entries(sessions).filter(
+        ([key, value]) => isListed(value) && key.toLowerCase().includes(search.toLowerCase())
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessions, search]
@@ -150,7 +151,9 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
       return { title: section.title, count: section.rows.length, isOpen, rows: shown };
     });
 
+  // Linked items are read-only (their ⋮ menu has Details).
   const openSession = (session: any) => {
+    if (session.linked) return;
     setFormData({ ...session, supersets: toStringArray(session.supersets) });
     setFormType("edit");
   };

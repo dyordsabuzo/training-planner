@@ -41,3 +41,7 @@ export const widenSharing = (current: Sharing, next: Sharing): Sharing => {
   const ids = Array.from(new Set([...current.sharedWithOrgIds, ...next.sharedWithOrgIds]));
   return { visibility: "orgs", sharedWithOrgIds: ids, sharedWithOrgs: orgs };
 };
+
+// Listings hide items their org archived (deleted while other orgs link to
+// them); items linked from an org that archived them stay listed.
+export const isListed = (entity: any) => !entity?.archived || !!entity?.linked;

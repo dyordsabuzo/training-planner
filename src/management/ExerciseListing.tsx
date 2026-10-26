@@ -10,6 +10,7 @@ import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
 import { EntityCard, usageText } from "./EntityCard";
 import { LoadMore } from "./LoadMore";
+import { isListed } from "../common/sharing";
 import { EntityActions, ActionsVariant } from "./EntityActions";
 import { cloneExercise } from "./cloneEntity";
 import {
@@ -73,7 +74,9 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
 
   const allRows: ExerciseRow[] = useMemo(
     () =>
-      Object.entries(sortObject(exercises)).map(([key, value]) => ({
+      Object.entries(sortObject(exercises))
+        .filter(([, value]) => isListed(value))
+        .map(([key, value]) => ({
         key,
         exercise: value,
         usageCount: getDirectReferencers(nodeId("exercise", key), graph.edges).length,
@@ -126,7 +129,9 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
       return next;
     });
 
+  // Linked items are read-only (their ⋮ menu has Details).
   const openExercise = (exercise: any) => {
+    if (exercise.linked) return;
     setFormData({ ...exercise, supersets: supersetsOf(exercise) });
     setFormType("edit");
   };
