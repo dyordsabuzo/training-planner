@@ -8,6 +8,8 @@ export const REGION = "australia-southeast1";
 export const CALLABLES = [
   "createOrg",
   "findOrgByCode",
+  "listLibrary",
+  "copyToOrg",
   "createInvite",
   "acceptInvite",
   "addMember",

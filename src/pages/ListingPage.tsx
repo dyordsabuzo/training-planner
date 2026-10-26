@@ -7,11 +7,12 @@ import {SupersetListing} from "../management/SupersetListing";
 import {SessionListing} from "../management/SessionListing";
 import {PlanListing} from "../management/PlanListing";
 import {RelationshipMap} from "../management/RelationshipMap";
+import {LibraryBrowser} from "../management/LibraryBrowser";
 
 import WrapperPage from "./WrapperPage";
 import { Tabs } from "@dyordsabuzo/ui-components";
 
-const categories = ["Exercises", "Supersets", "Sessions", "Plans", "Relationships"];
+const categories = ["Exercises", "Supersets", "Sessions", "Plans", "Library", "Relationships"];
 
 const categoryToSlug = (category: string) => category.toLowerCase();
 
@@ -45,7 +46,7 @@ const ListingPage: React.FC = () => {
                     <Tabs tabs={categories} activeTab={activeTab} onChange={tabClicked} ariaLabel="Manage sections" />
                 </div>
 
-                {activeTab !== "Relationships" && (
+                {activeTab !== "Relationships" && activeTab !== "Library" && (
                     <div className="flex justify-end px-2">
                         <div
                             role="radiogroup"
@@ -94,6 +95,7 @@ const ListingPage: React.FC = () => {
                     {activeTab === "Supersets" && <SupersetListing viewMode={viewMode}/>}
                     {activeTab === "Sessions" && <SessionListing viewMode={viewMode}/>}
                     {activeTab === "Plans" && <PlanListing viewMode={viewMode}/>}
+                    {activeTab === "Library" && <LibraryBrowser/>}
                     {activeTab === "Relationships" && <RelationshipMap/>}
                 </div>
             </div>
