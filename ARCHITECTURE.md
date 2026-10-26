@@ -60,7 +60,7 @@ exercises**.
 | `orgs/{orgId}/exercises` | one per exercise | `name`, `supersets[]`, `alternatives[]`, targets |
 | `orgs/{orgId}/supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
 | `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
-| `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings |
+| `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings, `personalisedFor` (client uid, on a personalised copy) |
 | `users` | `users/{uid}` | profile and access request |
 | `userdata` | `userdata/{uid}` | `inProgress` for a run underway |
 | `userdata/{uid}/plans` | `plans/{planId}` | `orgId` of the plan, plus that plan's logged progress |
@@ -158,6 +158,8 @@ rebuilding it from the user's member docs whenever a membership changes.
 Suspended orgs are left out. The app reads the claim on sign-in, refreshing
 the token once if it has no orgs yet. It remembers the active org on the
 device, and the profile menu offers a switcher when there is more than one.
+Home also shows which org's plans are on screen, with one-tap buttons for
+the others.
 Under `orgs/{orgId}`:
 
 How people get into an org:
@@ -211,6 +213,11 @@ on the Clients screen instead of calling them.
   (`HistoryRunList.tsx`, read-only) and a "View as" shortcut. Progress comes
   from `useClientUserdata` (`SourceDataContext.tsx`), which shares the cache
   with "View as".
+- **Personalise** (client page): copies an assigned plan and its sessions
+  for that client (`personalisePlan` in `cloneEntity.ts`, saved by
+  `SourceDataContext`), names them "… (Client)", tags the plan copy with
+  `personalisedFor`, and assigns it in place of the original. Supersets and
+  exercises stay shared. Sessions already logged stay with the original plan.
 - Assigning trainers only labels the roster. Every trainer of the org can see
   every client.
 

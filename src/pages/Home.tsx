@@ -96,6 +96,33 @@ const ActionCard = ({
 
 const PLAN_PAGE_SIZE = 6;
 
+// For someone in more than one org: which org's plans they're looking at,
+// and a one-tap switch to the others (same as the profile menu switcher).
+const OrgHint = () => {
+  const { orgs, activeOrg, switchOrg } = useContext(AuthContext);
+  if (orgs.length < 2) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+      <span>
+        Training with <strong className="text-text-light dark:text-text-dark">{activeOrg?.name}</strong>. Also in:
+      </span>
+      {orgs
+        .filter((org) => org.id !== activeOrg?.id)
+        .map((org) => (
+          <button
+            key={org.id}
+            type="button"
+            onClick={() => switchOrg(org.id)}
+            className="min-h-11 px-3 rounded-full border border-primary-200 dark:border-primary-700 text-primary font-semibold
+              hover:bg-primary-50 dark:hover:bg-primary-800/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {org.name}
+          </button>
+        ))}
+    </div>
+  );
+};
+
 export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
@@ -315,6 +342,8 @@ export const Home = () => {
               )}`
             : "Welcome to Training Planner"}
         </h1>
+
+        {user && <OrgHint />}
 
         {user && grantedPlans.length === 0 && (
           <Card className="flex flex-col gap-3">

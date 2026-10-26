@@ -1,7 +1,8 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import dayjs from "dayjs";
-import { Badge, Button } from "@dyordsabuzo/ui-components";
+import { Badge, Button, Modal } from "@dyordsabuzo/ui-components";
+import AppSettingsContext from "../context/AppSettingsContext";
 import AuthContext from "../context/AuthContext";
 import SourceDataContext, { useClientUserdata } from "../context/SourceDataContext";
 import UserManagementContext, { AppUser } from "../context/UserManagementContext";
@@ -39,16 +40,20 @@ const planProgress = (plan: any, planName: string, userdata: any, sessions: any)
 };
 
 // A trainer's view of one client in the active org: assigned plans and how
-// they're going, recent sessions, and shortcuts to edit or "View as".
+// they're going, recent sessions, and shortcuts to edit, personalise a plan
+// or "View as".
 export const ClientDetailPage = () => {
   const { uid } = useParams();
   const navigate = useNavigate();
   const { user, startImpersonation } = useContext(AuthContext);
-  const sourceData: any = useContext(SourceDataContext).sourceData;
+  const { sourceData, personalisePlan }: any = useContext(SourceDataContext);
+  const { functionsSuspended } = useContext(AppSettingsContext);
   const { users, fetchUsers, saveUser, saveTrainers, saveError } = useContext(UserManagementContext);
   const { userdata, isLoading } = useClientUserdata(uid);
   const [viewing, setViewing] = useState<HistoryRun | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [personalising, setPersonalising] = useState<[string, any] | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
 
   useEffect(() => {
     if (users === null) fetchUsers();
@@ -64,6 +69,24 @@ export const ClientDetailPage = () => {
   const trainerNames = (client?.trainerUids ?? []).map(
     (trainerUid) => trainers.find((t) => t.uid === trainerUid)?.name ?? trainerUid
   );
+
+  // Copies the plan and its sessions for this client, then assigns the copy
+  // in place of the original. Progress logged so far stays on the original.
+  const personalise = async ([planName, plan]: [string, any]) => {
+    if (!client) return;
+    setIsCopying(true);
+    try {
+      const shortName =
+        client.firstName || client.displayName?.split(" ")[0] || client.email?.split("@")[0] || "client";
+      const copyId = await personalisePlan(planName, { uid: client.id, name: shortName });
+      if (copyId) {
+        await saveUser({ ...client, plans: client.plans.map((id) => (id === plan.id ? copyId : id)) });
+      }
+    } finally {
+      setIsCopying(false);
+      setPersonalising(null);
+    }
+  };
 
   if (users === null || isLoading) return <Loading />;
   if (!client) {
@@ -135,7 +158,22 @@ export const ClientDetailPage = () => {
                 key={plan.id}
                 className="flex items-center justify-between gap-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
               >
-                <span className="font-semibold break-words min-w-0">{planName}</span>
+                <span className="flex flex-col items-start gap-1 min-w-0">
+                  <span className="font-semibold break-words">{planName}</span>
+                  {plan.personalisedFor === client.id ? (
+                    <Badge variant="primary">Personalised</Badge>
+                  ) : (
+                    !functionsSuspended && (
+                      <button
+                        type="button"
+                        onClick={() => setPersonalising([planName, plan])}
+                        className="text-xs text-primary underline font-semibold rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        Personalise
+                      </button>
+                    )
+                  )}
+                </span>
                 <span className="flex items-center gap-2 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
                   {summary}
                   {overdue > 0 && <Badge variant="danger">{overdue} overdue</Badge>}
@@ -173,6 +211,36 @@ export const ClientDetailPage = () => {
           order={sessionOrder(sourceData?.sessions?.[viewing.session], sourceData)}
           onClose={() => setViewing(null)}
         />
+      )}
+
+      {personalising && (
+        <Modal title={`Personalise ${personalising[0]}`} isOpen={true} onClose={() => setPersonalising(null)}>
+          <div className="flex flex-col gap-4 text-sm text-text-light dark:text-text-dark">
+            <p>
+              This copies the plan and its {toStringArray(personalising[1].sessions).length} sessions for{" "}
+              {getDisplayName(client.firstName, client.lastName, client.email)}, and assigns the copy instead of
+              the original. Edit the copies in the library to tailor them; supersets and exercises stay shared.
+            </p>
+            <p className="text-text-muted-light dark:text-text-muted-dark">
+              Sessions already logged stay with the original plan.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                label={isCopying ? "Copying…" : "Personalise"}
+                className="min-h-11"
+                disabled={isCopying}
+                onClick={() => personalise(personalising)}
+              />
+              <Button
+                label="Cancel"
+                decoration="cancel"
+                className="min-h-11"
+                disabled={isCopying}
+                onClick={() => setPersonalising(null)}
+              />
+            </div>
+          </div>
+        </Modal>
       )}
 
       {isEditing && (
