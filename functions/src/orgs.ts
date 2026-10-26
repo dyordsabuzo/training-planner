@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { refreshClaims } from "./claims";
-import { db, memberRef, newMember, parse, requireUid } from "./common";
+import { db, memberRef, newMember, parse, profileRef, requireUid } from "./common";
 
 // Short public code used to find an org when sharing (Phase 4).
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -18,15 +18,17 @@ export const createOrg = onCall(async (request) => {
   const { name } = parse(z.object({ name: z.string().trim().min(2).max(80) }), request.data);
 
   const org = db().collection("orgs").doc();
+  const contentVersion = new Date().toISOString();
   const batch = db().batch();
   batch.create(org, {
     name,
     code: await uniqueCode(),
     ownerUid: uid,
     status: "active",
-    contentVersion: new Date().toISOString(),
+    contentVersion,
     createdAt: new Date(),
   });
+  batch.create(profileRef(org.id), { name, contentVersion });
   batch.create(memberRef(org.id, uid), newMember(request, "owner"));
   await batch.commit();
 

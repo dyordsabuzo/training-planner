@@ -32,7 +32,8 @@ type ContentDb =
   | SourceDbReferences.SESSIONS
   | SourceDbReferences.PLANS;
 
-type MapRef = (target: ContentDb, ref: string) => string;
+// Undefined drops the reference (see withLinked).
+type MapRef = (target: ContentDb, ref: string) => string | undefined;
 
 const { EXERCISES, SUPERSETS, SESSIONS, PLANS } = SourceDbReferences;
 
@@ -40,7 +41,9 @@ const { EXERCISES, SUPERSETS, SESSIONS, PLANS } = SourceDbReferences;
 const mapEntityRefs = (db: ContentDb, entity: any, mapRef: MapRef) => {
   if (!entity) return entity;
   const list = (value: unknown, target: ContentDb) =>
-    toStringArray(value).map((ref) => mapRef(target, ref));
+    toStringArray(value)
+      .map((ref) => mapRef(target, ref))
+      .filter((ref): ref is string => ref !== undefined);
   const has = (field: string) => field in entity;
 
   switch (db) {
@@ -75,6 +78,66 @@ const mapEntityRefs = (db: ContentDb, entity: any, mapRef: MapRef) => {
         ...(has("sessions") && { sessions: list(entity.sessions, SESSIONS) }),
       };
   }
+};
+
+// --- Live links to other orgs' items (Phase 4c) ---
+// orgs/{orgId}/links/{id} = { srcOrgId, collection, srcId }. References to a
+// linked item hold the link id, which is also the id a copy of it gets
+// (copyId in functions/src/sharing.ts), so "Convert to copy" changes nothing.
+export type Link = { id: string; srcOrgId: string; collection: ContentDb; srcId: string };
+// One source org's linked items as stored there: collection -> srcId -> doc.
+export type LinkedSource = { ownerName: string; docs: Partial<Record<ContentDb, Record<string, any>>> };
+
+const NOT_LINKED_FIELDS = [
+  "previousNames",
+  "visibility",
+  "sharedWithOrgIds",
+  "sharedWithOrgs",
+  "linkCount",
+  "isShareable",
+  "sharedSnapshot",
+  "sharedOrder",
+];
+
+// Own collections plus linked items, each under its link id with a name
+// unique in the org ("Squat · Org A") and `linked: {orgId, ownerName, srcId,
+// name}`. A linked item's references are remapped to link ids; ones to items
+// this org hasn't linked are dropped, so resolvers never meet them. An own
+// doc with a link's id (a converted copy) wins.
+export const withLinked = (
+  own: Collections,
+  links: Link[],
+  sources: Record<string, LinkedSource | undefined>
+): Collections => {
+  if (!links.length) return own;
+  const linkIds = new Map(links.map((l) => [`${l.srcOrgId}/${l.collection}/${l.srcId}`, l.id]));
+  const result: Record<string, Record<string, any>> = Object.fromEntries(
+    ([EXERCISES, SUPERSETS, SESSIONS, PLANS] as ContentDb[]).map((db) => [db, { ...collectionOf(own, db) }])
+  );
+  const ownIds = new Set(
+    Object.values(result).flatMap((byName) => Object.values(byName).map((e: any) => e?.id))
+  );
+
+  links.forEach((link) => {
+    const source = sources[link.srcOrgId];
+    const data = source?.docs[link.collection]?.[link.srcId];
+    if (!data || ownIds.has(link.id)) return;
+    const mapped = mapEntityRefs(link.collection, data, (target, ref) =>
+      linkIds.get(`${link.srcOrgId}/${target}/${ref}`)
+    );
+    const entity = Object.fromEntries(Object.entries(mapped).filter(([key]) => !NOT_LINKED_FIELDS.includes(key)));
+    const byName = result[link.collection];
+    const base = `${data.name ?? link.srcId} · ${source!.ownerName}`;
+    let name = base;
+    for (let n = 2; name in byName; n++) name = `${base} (${n})`;
+    byName[name] = {
+      ...entity,
+      id: link.id,
+      name,
+      linked: { orgId: link.srcOrgId, ownerName: source!.ownerName, srcId: link.srcId, name: data.name },
+    };
+  });
+  return result as Collections;
 };
 
 const collectionOf = (collections: Collections, db: ContentDb) =>

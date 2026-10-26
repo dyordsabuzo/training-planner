@@ -1,4 +1,4 @@
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, WriteBatch } from "firebase-admin/firestore";
 import { CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 
@@ -9,6 +9,16 @@ export const db = () => getFirestore();
 
 export const orgRef = (orgId: string) => db().doc(`orgs/${orgId}`);
 export const memberRef = (orgId: string, uid: string) => db().doc(`orgs/${orgId}/members/${uid}`);
+// Readable by anyone signed in: what orgs linking to this org's items need.
+export const profileRef = (orgId: string) => db().doc(`orgs/${orgId}/public/profile`);
+export const linkRef = (orgId: string, linkId: string) => db().doc(`orgs/${orgId}/links/${linkId}`);
+
+// Content changed outside the app: bumps the version members compare (org
+// doc) and the one orgs linking to its items compare (public profile).
+export const bumpContentVersion = (batch: WriteBatch, orgId: string, version: string) => {
+  batch.update(orgRef(orgId), { contentVersion: version });
+  batch.set(profileRef(orgId), { contentVersion: version }, { merge: true });
+};
 
 export const idSchema = z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
 

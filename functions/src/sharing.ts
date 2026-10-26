@@ -24,6 +24,14 @@ export const isSharedWith = (data: Doc | undefined, orgId: string) =>
   (data.visibility === "public" ||
     (data.visibility === "orgs" && list(data.sharedWithOrgIds).includes(orgId)));
 
+// Offered to another org (Library, new copies and links): shared with it and
+// not archived. An archived item stays readable for orgs already linking it.
+export const isOfferedTo = (data: Doc | undefined, orgId: string) => isSharedWith(data, orgId) && !data?.archived;
+
+// Only these can be linked; plans are assigned to clients by id, so another
+// org's plan can't be. Plans are copied instead.
+export const LINKABLE = ["exercises", "supersets", "sessions"] as const;
+
 // What an item uses, copied along with it: plan -> sessions -> supersets and
 // group exercises -> exercises -> alternatives. Mirrors dependenciesOf in
 // src/common/refs.ts (the app's copy, which this can't import).

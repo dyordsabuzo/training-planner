@@ -8,6 +8,7 @@ import { EmptyState } from "./EmptyState";
 import { EntityCard } from "./EntityCard";
 import { LoadMore } from "./LoadMore";
 import { useLoadMore } from "../common/useLoadMore";
+import { isListed } from "../common/sharing";
 import { EntityActions, ActionsVariant } from "./EntityActions";
 import { cloneSuperset } from "./cloneEntity";
 
@@ -90,8 +91,8 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
   const supersets = sortObject(sourceData.supersets ?? {});
   const entries = useMemo(
     () =>
-      Object.entries(supersets).filter(([key]) =>
-        key.toLowerCase().includes(search.toLowerCase())
+      Object.entries(supersets).filter(
+        ([key, value]) => isListed(value) && key.toLowerCase().includes(search.toLowerCase())
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [supersets, search]
@@ -109,7 +110,9 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
     };
   });
 
+  // Linked items are read-only (their ⋮ menu has Details).
   const openSuperset = (superset: any, sessions: string[]) => {
+    if (superset.linked) return;
     setFormData({ ...superset, sessions });
     setFormType("edit");
   };

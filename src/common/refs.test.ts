@@ -8,6 +8,7 @@ import {
   toStoredUserdata,
   userdataPlans,
   userdataView,
+  withLinked,
 } from "./refs";
 import { SourceDbReferences } from "./utils";
 
@@ -327,5 +328,50 @@ describe("dependenciesOf", () => {
   });
   it("is empty for an unknown item", () => {
     expect(ids(SourceDbReferences.SESSIONS, "nope")).toEqual([]);
+  });
+});
+
+describe("withLinked", () => {
+  const S = SourceDbReferences;
+  const links = [
+    { id: "x_A_ssA", srcOrgId: "A", collection: S.SUPERSETS, srcId: "ssA" },
+    { id: "x_A_exA", srcOrgId: "A", collection: S.EXERCISES, srcId: "exA" },
+  ] as any;
+  const sources = {
+    A: {
+      ownerName: "Org A",
+      docs: {
+        supersets: { ssA: { name: "Legs", exercises: ["exA", "notLinked"], sessions: ["seA"], linkCount: 3, visibility: "public" } },
+        exercises: { exA: { name: "Squat", supersets: ["ssA"], alternatives: [] } },
+      },
+    },
+  };
+  const merged = withLinked(stored, links, sources);
+
+  it("adds linked items under their link id with a unique name", () => {
+    expect(merged.supersets?.["Legs · Org A"]).toEqual({
+      name: "Legs · Org A",
+      id: "x_A_ssA",
+      exercises: ["x_A_exA"],
+      sessions: [],
+      linked: { orgId: "A", ownerName: "Org A", srcId: "ssA", name: "Legs" },
+    });
+    expect(merged.exercises?.Squat.id).toBe("ex1");
+    expect(merged.exercises?.["Squat · Org A"].supersets).toEqual(["x_A_ssA"]);
+  });
+  it("lets the UI and saves use linked items by name", () => {
+    const view = contentView(merged);
+    expect(view.supersets?.["Legs · Org A"].exercises).toEqual(["Squat · Org A"]);
+    const session = toStoredEntity(S.SESSIONS, { name: "Mine", supersets: ["Legs · Org A", "Legs"] }, merged);
+    expect(session.supersets).toEqual(["x_A_ssA", "ss1"]);
+  });
+  it("prefers an own copy with the link's id, and skips sources not loaded", () => {
+    const own = { ...stored, exercises: { ...stored.exercises, Mine: { id: "x_A_exA", name: "Mine" } } };
+    const result = withLinked(own, links, sources);
+    expect(Object.keys(result.exercises ?? {})).toEqual(["Squat", "Lunge", "Mine"]);
+    expect(withLinked(stored, links, {}).supersets).toEqual(stored.supersets);
+  });
+  it("is a no-op without links", () => {
+    expect(withLinked(stored, [], sources)).toBe(stored);
   });
 });

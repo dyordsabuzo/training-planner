@@ -22,6 +22,10 @@ type LibraryItem = {
 };
 type CopyResult = { id: string; created: number; skipped: number };
 
+// Exercises, supersets and sessions can be linked; plans only copied (they're
+// assigned to clients by id).
+const LINKABLE: LibraryItem["collection"][] = ["exercises", "supersets", "sessions"];
+
 const VIEWS = { "Shared with me": "shared", Marketplace: "public" } as const;
 type ViewLabel = keyof typeof VIEWS;
 
@@ -33,6 +37,9 @@ const TYPE_LABELS: Record<LibraryItem["collection"], string> = {
 };
 const ALL_TYPES = "All types";
 
+const messageOf = (error: unknown, fallback: string) =>
+  (error as { message?: string })?.message || fallback;
+
 const copyMessage = ({ created, skipped }: CopyResult) =>
   created === 0
     ? "Already in your library."
@@ -40,11 +47,12 @@ const copyMessage = ({ created, skipped }: CopyResult) =>
 
 // Manage → Library: items other orgs share with this org, and the public
 // marketplace. "Copy to my org" runs copyToOrg, which copies the item and
-// everything it uses.
+// everything it uses; "Link" (linkToOrg) uses it read-only, following the
+// owner's edits.
 export const LibraryBrowser = () => {
   const { activeOrgId } = useContext(AuthContext);
   const { functionsSuspended } = useContext(AppSettingsContext);
-  const { reloadContent } = useContext(SourceDataContext);
+  const { sourceData, reloadContent, linkItem } = useContext(SourceDataContext);
   const [viewLabel, setViewLabel] = useState<ViewLabel>("Shared with me");
   const [search, setSearch] = useState("");
   const [type, setType] = useState(ALL_TYPES);
@@ -75,6 +83,36 @@ export const LibraryBrowser = () => {
 
   const keyOf = (item: LibraryItem) => `${item.orgId}/${item.collection}/${item.id}`;
 
+  // Already linked or copied here, by source (an item and its copies).
+  const inLibrary = useMemo(() => {
+    const found = new Map<string, "Linked" | "Copied">();
+    Object.entries(sourceData)
+      .filter(([db]) => db !== "userdata")
+      .forEach(([db, byName]) =>
+        Object.values(byName ?? {}).forEach((e: any) => {
+          if (e?.linked) found.set(`${e.linked.orgId}/${db}/${e.linked.srcId}`, "Linked");
+          else if (e?.source?.orgId) found.set(`${e.source.orgId}/${db}/${e.source.id}`, "Copied");
+        })
+      );
+    return found;
+  }, [sourceData]);
+
+  const link = async (item: LibraryItem) => {
+    const key = keyOf(item);
+    setCopying(key);
+    try {
+      const { linked } = await linkItem(item.orgId, item.collection, item.id);
+      setResults((prev) => ({
+        ...prev,
+        [key]: linked ? `Linked${linked > 1 ? ` with ${linked - 1} item${linked === 2 ? "" : "s"} it uses` : ""}.` : "Already in your library.",
+      }));
+    } catch (e) {
+      setResults((prev) => ({ ...prev, [key]: messageOf(e, "Couldn't link it. Try again.") }));
+    } finally {
+      setCopying(null);
+    }
+  };
+
   const copy = async (item: LibraryItem) => {
     const key = keyOf(item);
     setCopying(key);
@@ -87,8 +125,8 @@ export const LibraryBrowser = () => {
       });
       if (result.created > 0) await reloadContent();
       setResults((prev) => ({ ...prev, [key]: copyMessage(result) }));
-    } catch {
-      setResults((prev) => ({ ...prev, [key]: "Couldn't copy it. Try again." }));
+    } catch (e) {
+      setResults((prev) => ({ ...prev, [key]: messageOf(e, "Couldn't copy it. Try again.") }));
     } finally {
       setCopying(null);
     }
@@ -143,7 +181,10 @@ export const LibraryBrowser = () => {
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-bold break-words">{item.name}</span>
-                  <Badge variant="neutral">{TYPE_LABELS[item.collection]}</Badge>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {inLibrary.has(key) && <Badge variant="success">{inLibrary.get(key)}</Badge>}
+                    <Badge variant="neutral">{TYPE_LABELS[item.collection]}</Badge>
+                  </div>
                 </div>
                 <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
                   By {item.orgName}
@@ -158,13 +199,22 @@ export const LibraryBrowser = () => {
                     ))}
                   </div>
                 )}
-                <div className="mt-auto flex items-center gap-2">
+                <div className="mt-auto flex flex-wrap items-center gap-2">
                   <Button
-                    label={copying === key ? "Copying…" : "Copy to my org"}
+                    label={copying === key ? "Working…" : "Copy to my org"}
                     className="min-h-11 text-xs"
                     disabled={copying !== null}
                     onClick={() => copy(item)}
                   />
+                  {LINKABLE.includes(item.collection) && (
+                    <Button
+                      label="Link"
+                      decoration="cancel"
+                      className="min-h-11 text-xs"
+                      disabled={copying !== null || inLibrary.get(key) === "Linked"}
+                      onClick={() => link(item)}
+                    />
+                  )}
                   {results[key] && <span className="text-xs">{results[key]}</span>}
                 </div>
               </div>

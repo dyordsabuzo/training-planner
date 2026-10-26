@@ -1,7 +1,7 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo } from "react";
-import { deleteDoc, getDoc, getDocs, query, setDoc, where, writeBatch } from "firebase/firestore";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { database, getCollection, getDocumentReference } from "../common/firebase";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { deleteDoc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { callFunction, database, getCollection, getDocumentReference } from "../common/firebase";
 import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
@@ -14,9 +14,12 @@ import {
   contentView,
   dependenciesOf,
   idLookup,
+  Link,
+  LinkedSource,
   toStoredEntity,
   userdataPlansPath,
   userdataView,
+  withLinked,
 } from "../common/refs";
 
 type ContentDb =
@@ -75,6 +78,11 @@ type SourceDataContextValue = {
   setSharing: (db: ContentDb, name: string, sharing: Sharing, withDependencies: boolean) => Promise<void>;
   // Refetches the active org's content after a server-side change (copyToOrg).
   reloadContent: () => Promise<void>;
+  // Live links (Phase 4c): use another org's item read-only, replace a link
+  // with a copy under the same id, or drop it. Each calls a Cloud Function.
+  linkItem: (srcOrgId: string, collection: string, id: string) => Promise<{ linked: number; skipped: number }>;
+  convertLinkToCopy: (linkId: string) => Promise<void>;
+  unlinkItem: (linkId: string) => Promise<void>;
 };
 
 const noop = () => {};
@@ -101,6 +109,9 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   sharingDependencies: () => [],
   setSharing: async () => {},
   reloadContent: async () => {},
+  linkItem: async () => ({ linked: 0, skipped: 0 }),
+  convertLinkToCopy: async () => {},
+  unlinkItem: async () => {},
 });
 
 export default SourceDataContext;
@@ -160,6 +171,22 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     localStorage.setItem(contentVersionKey(activeOrgId), version);
     setOrgContentVersion(version);
     setDoc(getDocumentReference("orgs", activeOrgId), { contentVersion: version }, { merge: true });
+    // Orgs linking to this org's items compare this one. Missing until the
+    // org's profile exists (createOrg, scripts/backfill-org-profiles.ts).
+    updateDoc(getDocumentReference(`orgs/${activeOrgId}/public`, "profile"), { contentVersion: version }).catch(() => {});
+  };
+
+  // A Cloud Function changed this org's content (and bumped its version):
+  // refetch it, and record the new version as seen.
+  const afterServerChange = async () => {
+    if (!activeOrgId) return;
+    const org = await getDoc(getDocumentReference("orgs", activeOrgId));
+    const version = org.data()?.contentVersion;
+    if (version) {
+      localStorage.setItem(contentVersionKey(activeOrgId), version);
+      setOrgContentVersion(version);
+    }
+    await invalidateOrgContent(activeOrgId);
   };
 
   const exercisesQuery = useQuery({
@@ -209,31 +236,86 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     enabled: contentEnabled,
   });
 
-  // The caches hold content as stored (references by id, see refs.ts); the
-  // UI reads a view with names in their place.
-  const contentData = useMemo(
-    () =>
-      contentView({
-        exercises: exercisesQuery.data,
-        supersets: supersetsQuery.data,
-        sessions: sessionsQuery.data,
-        plans: plansQuery.data,
-      }),
-    [exercisesQuery.data, supersetsQuery.data, sessionsQuery.data, plansQuery.data]
+  // Live links to other orgs' items (refs.ts withLinked). The links are
+  // org content (same key and invalidation). Each source org's linked items
+  // are fetched one by one (rules can't prove a shared list query) and cached
+  // under that org's public contentVersion, so they're re-read only after
+  // its owner edits something. Nothing is read for orgs without links.
+  const linksQuery = useQuery({
+    queryKey: ["sourceData", "links", activeOrgId],
+    queryFn: async (): Promise<Link[]> =>
+      (await getDocs(getCollection(`orgs/${activeOrgId}/links`))).docs.map(
+        (d) => ({ id: d.id, ...d.data() }) as Link
+      ),
+    enabled: contentEnabled,
+    staleTime: Infinity,
+  });
+  const links = useMemo(() => linksQuery.data ?? [], [linksQuery.data]);
+  const srcOrgIds = useMemo(() => Array.from(new Set(links.map((l) => l.srcOrgId))).sort(), [links]);
+  const profileQueries = useQueries({
+    queries: srcOrgIds.map((orgId) => ({
+      queryKey: ["orgProfile", orgId],
+      queryFn: async () => (await getDoc(getDocumentReference(`orgs/${orgId}/public`, "profile"))).data() ?? {},
+      staleTime: 5 * 60_000,
+    })),
+  });
+  const linkedQueries = useQueries({
+    queries: srcOrgIds.map((orgId, i) => {
+      const own = links.filter((l) => l.srcOrgId === orgId);
+      const profile: any = profileQueries[i]?.data;
+      return {
+        queryKey: ["linked", orgId, profile?.contentVersion ?? "", own.map((l) => l.id).sort().join(",")],
+        queryFn: async (): Promise<LinkedSource> => {
+          const docs: LinkedSource["docs"] = {};
+          await Promise.all(
+            own.map(async (link) => {
+              // Unreadable (no longer shared) or deleted: left out.
+              const snap = await getDoc(getDocumentReference(collectionPath(link.collection, orgId), link.srcId)).catch(
+                () => null
+              );
+              if (snap?.exists()) docs[link.collection] = { ...docs[link.collection], [link.srcId]: snap.data() };
+            })
+          );
+          return { ownerName: profile?.name ?? "another organisation", docs };
+        },
+        enabled: !!profile,
+        staleTime: Infinity,
+      };
+    }),
+  });
+  const linkedSources = useMemo(
+    () => Object.fromEntries(srcOrgIds.map((orgId, i) => [orgId, linkedQueries[i]?.data])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [srcOrgIds, ...linkedQueries.map((q) => q.data)]
   );
+  // Read by getStored at call time, like the caches.
+  const linkedRef = useRef({ links, linkedSources });
+  linkedRef.current = { links, linkedSources };
+
+  // The caches hold content as stored (references by id, see refs.ts), with
+  // linked items merged in; the UI reads a view with names in their place.
+  const merged = useMemo(
+    () =>
+      withLinked(
+        {
+          exercises: exercisesQuery.data,
+          supersets: supersetsQuery.data,
+          sessions: sessionsQuery.data,
+          plans: plansQuery.data,
+        },
+        links,
+        linkedSources
+      ),
+    [exercisesQuery.data, supersetsQuery.data, sessionsQuery.data, plansQuery.data, links, linkedSources]
+  );
+  const contentData = useMemo(() => contentView(merged), [merged]);
   // Stored progress (id keys) -> the name view the UI reads.
   const viewUserdata = useCallback(
     (data: Record<string, any> | undefined) => {
       if (!data) return data;
-      const stored = {
-        exercises: exercisesQuery.data,
-        supersets: supersetsQuery.data,
-        sessions: sessionsQuery.data,
-        plans: plansQuery.data,
-      };
-      return Object.fromEntries(Object.entries(data).map(([uid, doc]) => [uid, userdataView(doc, stored)]));
+      return Object.fromEntries(Object.entries(data).map(([uid, doc]) => [uid, userdataView(doc, merged)]));
     },
-    [exercisesQuery.data, supersetsQuery.data, sessionsQuery.data, plansQuery.data]
+    [merged]
   );
   const userdata = useMemo(() => viewUserdata(userdataQuery.data), [viewUserdata, userdataQuery.data]);
 
@@ -242,14 +324,21 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   // Latest stored content, read from the cache at call time rather than this
   // render's closure — mutations save several entities in a row, and later
   // saves must see ids assigned by earlier ones.
-  const getStored = (): Collections => ({
-    exercises: queryClient.getQueryData(contentKey(SourceDbReferences.EXERCISES)),
-    supersets: queryClient.getQueryData(contentKey(SourceDbReferences.SUPERSETS)),
-    sessions: queryClient.getQueryData(contentKey(SourceDbReferences.SESSIONS)),
-    plans: queryClient.getQueryData(plansQueryKey),
-  });
+  const getStored = (): Collections =>
+    withLinked(
+      {
+        exercises: queryClient.getQueryData(contentKey(SourceDbReferences.EXERCISES)),
+        supersets: queryClient.getQueryData(contentKey(SourceDbReferences.SUPERSETS)),
+        sessions: queryClient.getQueryData(contentKey(SourceDbReferences.SESSIONS)),
+        plans: queryClient.getQueryData(plansQueryKey),
+      },
+      linkedRef.current.links,
+      linkedRef.current.linkedSources
+    );
 
-  // Saves an entity from the UI (name references) in its stored form.
+  // Saves an entity from the UI (name references) in its stored form. A
+  // linked item belongs to another org and is never written here (a copy of
+  // one, without its id, is a new item of this org).
   const save = (
     sourceDb:
       | SourceDbReferences.EXERCISES
@@ -257,7 +346,11 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       | SourceDbReferences.SESSIONS
       | SourceDbReferences.PLANS,
     entity: any
-  ) => saveToDB(sourceDb, toStoredEntity(sourceDb, entity, getStored()), activeOrgId);
+  ) => {
+    if (entity?.linked && entity.id) throw new Error("Linked items are read-only.");
+    const { linked, ...own } = entity ?? {};
+    return saveToDB(sourceDb, toStoredEntity(sourceDb, own, getStored()), activeOrgId);
+  };
 
   // Without an org there's no content to wait for (the queries are disabled).
   const isLoading =
@@ -265,7 +358,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       (exercisesQuery.isPending ||
         supersetsQuery.isPending ||
         sessionsQuery.isPending ||
-        plansQuery.isPending)) ||
+        plansQuery.isPending ||
+        linksQuery.isPending ||
+        profileQueries.some((q) => q.isPending) ||
+        linkedQueries.some((q) => q.isPending && q.fetchStatus !== "idle"))) ||
     userdataQuery.isPending;
 
   const error =
@@ -276,8 +372,20 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     userdataQuery.error ||
     null;
 
+  // An item other orgs link to is archived instead (the rules refuse the
+  // delete), so their sessions and plans keep working; listings hide it.
   const deleteFromDB = async (sourceDb: SourceDbReferences, data: any) => {
-    await deleteDoc(getDocumentReference(collectionPath(sourceDb, activeOrgId), data.id));
+    if (data.linked) return;
+    const ref = getDocumentReference(collectionPath(sourceDb, activeOrgId), data.id);
+    if ((data.linkCount ?? 0) > 0) {
+      await updateDoc(ref, { archived: true });
+      queryClient.setQueriesData({ queryKey: contentKey(sourceDb) }, (prev: any) => ({
+        ...(prev ?? {}),
+        [data.name]: { ...prev?.[data.name], archived: true },
+      }));
+      return;
+    }
+    await deleteDoc(ref);
     queryClient.setQueriesData({ queryKey: contentKey(sourceDb) }, (prev: any) => {
       const sourceDataElement = { ...(prev ?? {}) };
       delete sourceDataElement[data.name];
@@ -298,6 +406,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     );
 
     Object.values(stored.supersets ?? {}).forEach(async (supersetValue: any) => {
+      if (supersetValue?.linked) return;
       const exerciseList = toStringArray(supersetValue?.exercises);
       const isSelected = selectedIds.includes(supersetValue.id);
       const isLinked = exerciseList.includes(exerciseId);
@@ -328,7 +437,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         // for a name that doesn't match anything (e.g. a typo/stray value
         // typed into the "Linked sessions" tag field). Sessions should only
         // be created via the Add Session button.
-        if (!sessionObject) {
+        if (!sessionObject || sessionObject.linked) {
           return;
         }
 
@@ -534,7 +643,9 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       const updates = [
         { db, id, sharing },
         ...(withDependencies
-          ? dependenciesOf(db, id, stored).map((dep) => ({
+          ? dependenciesOf(db, id, stored)
+              .filter((dep) => !(entityOf(dep.db, dep.id) as any)?.linked)
+              .map((dep) => ({
               db: dep.db,
               id: dep.id,
               sharing: widenSharing(sharingOf(entityOf(dep.db, dep.id)), sharing),
@@ -641,11 +752,35 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         deletePlan: deletePlanMutation.mutate,
         updateWeekPlan,
         personalisePlan: (planName, client) => personalisePlanMutation.mutateAsync({ planName, client }),
-        sharingDependencies: (db, name) => dependenciesOf(db, name, getStored()),
+        sharingDependencies: (db, name) => {
+          const stored = getStored();
+          const linkedIds = new Set(
+            Object.values(stored).flatMap((byName) =>
+              Object.values(byName ?? {}).filter((e: any) => e?.linked).map((e: any) => e.id)
+            )
+          );
+          return dependenciesOf(db, name, stored).filter((dep) => !linkedIds.has(dep.id));
+        },
         setSharing: (db, name, sharing, withDependencies) =>
           setSharingMutation.mutateAsync({ db, name, sharing, withDependencies }),
-        reloadContent: async () => {
-          if (activeOrgId) await invalidateOrgContent(activeOrgId);
+        reloadContent: afterServerChange,
+        linkItem: async (srcOrgId, collection, id) => {
+          const result = await callFunction<{ linked: number; skipped: number }>("linkToOrg", {
+            srcOrgId,
+            collection,
+            id,
+            targetOrgId: activeOrgId,
+          });
+          await afterServerChange();
+          return result;
+        },
+        convertLinkToCopy: async (linkId) => {
+          await callFunction("convertLinkToCopy", { orgId: activeOrgId, linkId });
+          await afterServerChange();
+        },
+        unlinkItem: async (linkId) => {
+          await callFunction("unlink", { orgId: activeOrgId, linkId });
+          await afterServerChange();
         },
       }}
     >

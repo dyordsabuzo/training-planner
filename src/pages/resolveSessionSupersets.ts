@@ -80,6 +80,8 @@ export const resolveSessionSupersets = (
   let supersets: Record<string, any> = {};
 
   supersetNames.forEach((s: string) => {
+    // Gone, or a linked superset its owner no longer shares: skipped.
+    if (!sourceData.supersets?.[s]) return;
     let { targetRep, targetSet, annotation } = seed;
     let { sessions, rest, tags, ...superset } = sourceData.supersets[s];
     let exercises = superset.exercises
