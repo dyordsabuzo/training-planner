@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ReactNode, useEffect, useState } from "react";
 import { MemoryRouter } from "react-router";
+import dayjs from "dayjs";
 import { Home } from "./Home";
 import { OPEN_WEEK } from "../common/planCycle";
 import AuthContext from "../context/AuthContext";
@@ -35,7 +36,8 @@ const weeksOf = (count: number) =>
   Object.fromEntries(Array.from({ length: count }, (_, i) => [`Week ${i + 1}`, {}]));
 
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-const dateAgo = (days: number) => daysAgo(days).toISOString().slice(0, 10);
+// Local date, matching how the app compares session dates.
+const dateAgo = (days: number) => dayjs().subtract(days, "day").format("YYYY-MM-DD");
 const timeAgo = (days: number, hour: number) => {
   const date = daysAgo(days);
   date.setHours(hour, 15, 0, 0);
@@ -184,73 +186,97 @@ export const PlansWithNoHistoryYet: StoryObj<typeof Home> = {
   ],
 };
 
+const richSourceData = {
+  plans: {
+    "Strength Plan": {
+      id: "plan-1",
+      name: "Strength Plan",
+      startDate: daysAgo(21),
+      weeks: weeksOf(8),
+    },
+    "Mobility Plan": {
+      id: "plan-2",
+      name: "Mobility Plan",
+      open: true,
+      sessions: ["Hip Flow", "Shoulder Flow", "Full Body Stretch"],
+      weeks: {},
+    },
+  },
+  // One session done, one due today and one overdue, so the day strip
+  // shows each dot colour.
+  sessions: {
+    "Hip Flow": { date: dateAgo(2) },
+    "Shoulder Flow": { date: dateAgo(1) },
+    "Full Body Stretch": { date: dateAgo(0) },
+  },
+  userdata: {
+    "uid-user-1": {
+      "Strength Plan": {
+        "Week 1": {
+          "Upper Body": {
+            mood: { before: { rating: 3 }, after: { rating: 4 } },
+            meta: { completedAt: timeAgo(14, 7) },
+          },
+        },
+        "Week 2": {
+          "Upper Body": {
+            mood: { before: { rating: 4 }, after: { rating: 4 } },
+            meta: { completedAt: timeAgo(7, 7) },
+          },
+        },
+        "Week 3": {
+          "Upper Body": {
+            mood: { before: { rating: 4 }, after: { rating: 5 } },
+            meta: { completedAt: timeAgo(0, 7) },
+          },
+        },
+      },
+      "Mobility Plan": {
+        [OPEN_WEEK]: {
+          "Hip Flow": { meta: { completedAt: timeAgo(2, 18) } },
+        },
+      },
+    },
+  },
+};
+
+const richHistoryAuth = withMockAuthContext({
+  user: { email: "sam@trainingplanner.com" },
+  userPermission: {
+    role: "user",
+    plans: ["plan-1", "plan-2"],
+    firstName: "Sam",
+    lastName: "Trainee",
+  },
+  isLoading: false,
+});
+
 export const PlansWithRichHistory: StoryObj<typeof Home> = {
   name: "Plans granted, with session/mood history",
   decorators: [
-    withMockAuthContext({
-      user: { email: "sam@trainingplanner.com" },
-      userPermission: {
-        role: "user",
-        plans: ["plan-1", "plan-2"],
-        firstName: "Sam",
-        lastName: "Trainee",
-      },
-      isLoading: false,
-    }),
+    richHistoryAuth,
     withMockSourceDataContext({
-      sourceData: {
-        plans: {
-          "Strength Plan": {
-            id: "plan-1",
-            name: "Strength Plan",
-            startDate: daysAgo(21),
-            weeks: weeksOf(8),
-          },
-          "Mobility Plan": {
-            id: "plan-2",
-            name: "Mobility Plan",
-            open: true,
-            sessions: ["Hip Flow", "Shoulder Flow", "Full Body Stretch"],
-            weeks: {},
-          },
-        },
-        // One session done, one due today and one overdue, so the day strip
-        // shows each dot colour.
-        sessions: {
-          "Hip Flow": { date: dateAgo(2) },
-          "Shoulder Flow": { date: dateAgo(1) },
-          "Full Body Stretch": { date: dateAgo(0) },
-        },
-        userdata: {
-          "uid-user-1": {
-            "Strength Plan": {
-              "Week 1": {
-                "Upper Body": {
-                  mood: { before: { rating: 3 }, after: { rating: 4 } },
-                  meta: { completedAt: timeAgo(14, 7) },
-                },
-              },
-              "Week 2": {
-                "Upper Body": {
-                  mood: { before: { rating: 4 }, after: { rating: 4 } },
-                  meta: { completedAt: timeAgo(7, 7) },
-                },
-              },
-              "Week 3": {
-                "Upper Body": {
-                  mood: { before: { rating: 4 }, after: { rating: 5 } },
-                  meta: { completedAt: timeAgo(0, 7) },
-                },
-              },
-            },
-            "Mobility Plan": {
-              [OPEN_WEEK]: {
-                "Hip Flow": { meta: { completedAt: timeAgo(2, 18) } },
-              },
-            },
-          },
-        },
+      sourceData: richSourceData,
+      checkins: {},
+      saveCheckin: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+// Today's check-in is saved (the card shows its summary); yesterday's shows
+// in the agenda when that day is selected.
+export const WithCheckIns: StoryObj<typeof Home> = {
+  name: "Plans granted, with daily check-ins",
+  decorators: [
+    richHistoryAuth,
+    withMockSourceDataContext({
+      sourceData: richSourceData,
+      checkins: {
+        [dateAgo(0)]: { mood: 4, sleepHours: 7.5, sleepQuality: 4, energy: 4, soreness: 2 },
+        [dateAgo(1)]: { mood: 2, sleepHours: 5, energy: 2, soreness: 4 },
       },
+      saveCheckin: async () => {},
       initialise: () => {},
     }),
   ],

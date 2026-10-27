@@ -127,6 +127,9 @@ userdata/{uid}/plans/{planId}
         {exerciseId}
           {set}       { targetRep, targetWeight, ... }
       mood, meta { completedAt, startedAt, labels, incomplete? }
+userdata/{uid}/checkins/{YYYY-MM-DD}
+  orgId, updatedAt    org it was saved in
+  mood?, sleepHours?, sleepQuality?, energy?, soreness?   ratings 1-5
 ```
 
 `meta.incomplete` marks a run ended early from the between-unit summary
@@ -138,7 +141,18 @@ from 768px up) with today selected.
 Tapping a day lists the plan sessions whose `date` falls on it and the runs
 whose `meta.completedAt` does (`DayAgendaCard.tsx`). `src/common/dayAgenda.ts`
 derives this from the same data, so nothing extra is stored; sessions without
-a date don't appear on the strip.
+a date don't appear on the strip. When today is selected, the card also lists
+every missed session (dated before today and not done).
+
+Above the strip sits an optional daily check-in (`DailyCheckInCard.tsx`), a
+slim row that expands into the questions when tapped:
+mood, hours slept, sleep quality, energy and soreness, all optional, validated
+with Zod (`src/common/checkins.ts`). Only today's can be edited. The client
+page shows the last 14 days to the client's assigned trainers
+(`members.trainerUids`), with warnings from `readinessFlags` (short on sleep,
+low energy, very sore over the last 3 days). The dragonbeat rules let nobody
+else read them, not even org owners, and an assigned trainer's list query
+must filter on `orgId`.
 
 Each plan's progress is its own doc, tagged with its org, so a trainer can
 read a client's progress for their org only. The app reads the active org's

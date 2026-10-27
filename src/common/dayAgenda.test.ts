@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import dayjs from "dayjs";
-import { dayAgenda, dayStatus, weekDays } from "./dayAgenda";
+import { dayAgenda, dayStatus, missedSessions, weekDays } from "./dayAgenda";
 import { OPEN_WEEK } from "./planCycle";
 
 describe("weekDays", () => {
@@ -61,6 +61,19 @@ describe("dayAgenda", () => {
     expect(dayAgenda(dayjs(lastWeek), ctx).scheduled).toEqual([
       { plan: "Open", session: "Done", done: true, overdue: false },
       { plan: "Weekly", session: "Legs", done: true, overdue: false },
+    ]);
+  });
+
+  it("lists missed sessions across plans, oldest first", () => {
+    const older = dayjs().subtract(3, "day").format("YYYY-MM-DD");
+    const withOlder = {
+      ...ctx,
+      plans: { ...plans, Weekly: { sessions: ["Legs", "Arms"] } },
+      sessions: { ...sessions, Arms: { date: older } },
+    };
+    expect(missedSessions(withOlder)).toEqual([
+      { plan: "Weekly", session: "Arms", date: older, done: false, overdue: true },
+      { plan: "Open", session: "Missed", date: yesterday, done: false, overdue: true },
     ]);
   });
 

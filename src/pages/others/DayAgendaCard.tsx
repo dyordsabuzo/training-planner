@@ -1,16 +1,29 @@
 import dayjs, { Dayjs } from "dayjs";
 import { useNavigate } from "react-router";
 import { Badge, Button, Card } from "@dyordsabuzo/ui-components";
-import { DayAgenda } from "../../common/dayAgenda";
+import { DayAgenda, MissedSession } from "../../common/dayAgenda";
+import { Checkin, checkinSummary } from "../../common/checkins";
 
 const ROW = "flex items-center justify-between gap-3 min-h-11";
 
 // What's scheduled and what was done on the day picked in the DayStrip.
-export const DayAgendaCard = ({ day, agenda }: { day: Dayjs; agenda: DayAgenda }) => {
+// Today also lists every missed session; past days show their check-in.
+export const DayAgendaCard = ({
+  day,
+  agenda,
+  missed = [],
+  checkin,
+}: {
+  day: Dayjs;
+  agenda: DayAgenda;
+  missed?: MissedSession[];
+  checkin?: Checkin;
+}) => {
   const navigate = useNavigate();
   const isToday = day.isSame(dayjs(), "day");
   const { scheduled, completed } = agenda;
-  const hasUndone = scheduled.some((s) => !s.done);
+  const hasUndone = scheduled.some((s) => !s.done) || (isToday && missed.length > 0);
+  const checkinParts = isToday ? [] : checkinSummary(checkin);
 
   return (
     <Card className="flex flex-col gap-2">
@@ -54,6 +67,38 @@ export const DayAgendaCard = ({ day, agenda }: { day: Dayjs; agenda: DayAgenda }
             </button>
           ))}
         </>
+      )}
+
+      {isToday && missed.length > 0 && (
+        <section
+          aria-label="Missed sessions"
+          className="flex flex-col gap-1 rounded-md bg-amber-50 dark:bg-amber-700/20 px-3 py-2"
+        >
+          <h4 className="text-sm font-bold text-amber-800 dark:text-amber-300">
+            {missed.length === 1 ? "1 missed session" : `${missed.length} missed sessions`}
+          </h4>
+          <span className="text-xs text-amber-800 dark:text-amber-300">
+            These were scheduled earlier and haven't been done yet.
+          </span>
+          {missed.map(({ plan, session, date }) => (
+            <div key={`${plan}/${session}`} className={ROW}>
+              <div className="flex flex-col">
+                <span className="font-semibold text-text-light dark:text-text-dark">{session}</span>
+                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{plan}</span>
+              </div>
+              <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                {dayjs(date).format("ddd, MMM D")}
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {checkinParts.length > 0 && (
+        <p className="text-sm text-text-muted-light dark:text-text-muted-dark border-t border-gray-200 dark:border-gray-700 pt-2">
+          <span className="font-semibold text-text-light dark:text-text-dark">Check-in: </span>
+          {checkinParts.join(" · ")}
+        </p>
       )}
 
       {isToday && hasUndone && (

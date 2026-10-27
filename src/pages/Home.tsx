@@ -12,7 +12,9 @@ import { PlanProgressCard } from "./others/PlanProgressCard";
 import { StartOrgForm } from "./others/StartOrgForm";
 import { DayStrip } from "./others/DayStrip";
 import { DayAgendaCard } from "./others/DayAgendaCard";
-import { dayAgenda, dayStatus } from "../common/dayAgenda";
+import { dayAgenda, dayStatus, missedSessions } from "../common/dayAgenda";
+import { checkinId } from "../common/checkins";
+import { DailyCheckInCard } from "./others/DailyCheckInCard";
 import dayjs, { Dayjs } from "dayjs";
 import { PENDING_INVITE_KEY } from "./JoinPage";
 
@@ -159,8 +161,8 @@ export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
   const userManagementContext = useContext(UserManagementContext);
-  const { user, userPermission, isLoading, requestAccess, orgs } = authContext;
-  const { sourceData } = sourceDataContext;
+  const { user, userPermission, isLoading, requestAccess, orgs, isImpersonating } = authContext;
+  const { sourceData, checkins = {}, saveCheckin } = sourceDataContext;
   const { users, fetchUsers } = userManagementContext;
   const { adminEmail } = useContext(AppSettingsContext);
   const { role, plans: grantedPlans = [] } = userPermission || {};
@@ -200,6 +202,10 @@ export const Home = () => {
 
   const agendaFor = (day: Dayjs) =>
     dayAgenda(day, { plans: sourceData?.plans, sessions: sourceData?.sessions, userdata });
+  const missed = useMemo(
+    () => missedSessions({ plans: sourceData?.plans, sessions: sourceData?.sessions, userdata }),
+    [sourceData?.plans, sourceData?.sessions, userdata]
+  );
 
   const planStats: PlanStats[] = useMemo(() => {
     const plans = sourceData?.plans ?? {};
@@ -451,13 +457,22 @@ export const Home = () => {
 
         {user && grantedPlans.length > 0 && (
           <>
+            {!isImpersonating && (
+              <DailyCheckInCard checkin={checkins[checkinId(dayjs())]} onSave={saveCheckin} />
+            )}
+
             <div className="flex flex-col gap-3">
               <DayStrip
                 selected={selectedDay}
                 onSelect={setSelectedDay}
                 statusFor={(day) => dayStatus(agendaFor(day))}
               />
-              <DayAgendaCard day={selectedDay} agenda={agendaFor(selectedDay)} />
+              <DayAgendaCard
+                day={selectedDay}
+                agenda={agendaFor(selectedDay)}
+                missed={missed}
+                checkin={checkins[checkinId(selectedDay)]}
+              />
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
