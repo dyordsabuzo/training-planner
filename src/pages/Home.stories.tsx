@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ReactNode, useEffect, useState } from "react";
 import { MemoryRouter } from "react-router";
 import { Home } from "./Home";
+import { OPEN_WEEK } from "../common/planCycle";
 import AuthContext from "../context/AuthContext";
 import UserManagementContext from "../context/UserManagementContext";
 import {
@@ -34,6 +35,12 @@ const weeksOf = (count: number) =>
   Object.fromEntries(Array.from({ length: count }, (_, i) => [`Week ${i + 1}`, {}]));
 
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+const dateAgo = (days: number) => daysAgo(days).toISOString().slice(0, 10);
+const timeAgo = (days: number, hour: number) => {
+  const date = daysAgo(days);
+  date.setHours(hour, 15, 0, 0);
+  return date.toISOString();
+};
 
 export const AsAdmin: StoryObj<typeof Home> = {
   name: "Admin",
@@ -202,21 +209,43 @@ export const PlansWithRichHistory: StoryObj<typeof Home> = {
           "Mobility Plan": {
             id: "plan-2",
             name: "Mobility Plan",
-            startDate: daysAgo(3),
-            weeks: weeksOf(4),
+            open: true,
+            sessions: ["Hip Flow", "Shoulder Flow", "Full Body Stretch"],
+            weeks: {},
           },
+        },
+        // One session done, one due today and one overdue, so the day strip
+        // shows each dot colour.
+        sessions: {
+          "Hip Flow": { date: dateAgo(2) },
+          "Shoulder Flow": { date: dateAgo(1) },
+          "Full Body Stretch": { date: dateAgo(0) },
         },
         userdata: {
           "uid-user-1": {
             "Strength Plan": {
               "Week 1": {
-                "Upper Body": { mood: { before: { rating: 3 }, after: { rating: 4 } } },
+                "Upper Body": {
+                  mood: { before: { rating: 3 }, after: { rating: 4 } },
+                  meta: { completedAt: timeAgo(14, 7) },
+                },
               },
               "Week 2": {
-                "Upper Body": { mood: { before: { rating: 4 }, after: { rating: 4 } } },
+                "Upper Body": {
+                  mood: { before: { rating: 4 }, after: { rating: 4 } },
+                  meta: { completedAt: timeAgo(7, 7) },
+                },
               },
               "Week 3": {
-                "Upper Body": { mood: { before: { rating: 4 }, after: { rating: 5 } } },
+                "Upper Body": {
+                  mood: { before: { rating: 4 }, after: { rating: 5 } },
+                  meta: { completedAt: timeAgo(0, 7) },
+                },
+              },
+            },
+            "Mobility Plan": {
+              [OPEN_WEEK]: {
+                "Hip Flow": { meta: { completedAt: timeAgo(2, 18) } },
               },
             },
           },
