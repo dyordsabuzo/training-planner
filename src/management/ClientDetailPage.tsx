@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { Badge, Button, Modal } from "@dyordsabuzo/ui-components";
 import AppSettingsContext from "../context/AppSettingsContext";
 import AuthContext from "../context/AuthContext";
-import SourceDataContext, { useClientUserdata } from "../context/SourceDataContext";
+import SourceDataContext, { useClientCheckins, useClientUserdata } from "../context/SourceDataContext";
 import UserManagementContext, { AppUser } from "../context/UserManagementContext";
 import { UserForm } from "../forms/UserForm";
 import WrapperPage from "../pages/WrapperPage";
@@ -16,6 +16,7 @@ import { EmptyState } from "./EmptyState";
 import { getDisplayName, toStringArray } from "../common/utils";
 import { completedRuns, HistoryRun, historyRuns } from "../common/sessionStats";
 import { openPlanDoneSessions, sessionDueStatus } from "../common/planSessions";
+import { checkinSummary, readinessFlags } from "../common/checkins";
 
 const RECENT_RUNS = 20;
 
@@ -61,6 +62,11 @@ export const ClientDetailPage = () => {
   }, []);
 
   const client = users?.find((u) => u.id === uid);
+  // Check-ins are readable by the client's assigned trainers only (rules).
+  const isAssignedTrainer = !!user && !!client?.trainerUids?.includes(user.uid);
+  const { checkins } = useClientCheckins(uid, isAssignedTrainer);
+  const checkinDays = Object.keys(checkins).sort().reverse();
+  const flags = readinessFlags(checkins, dayjs());
   const runs = useMemo(() => historyRuns(userdata).slice(0, RECENT_RUNS), [userdata]);
   const plans = Object.entries(sourceData.plans ?? {}).filter(([, plan]: [string, any]) =>
     client?.plans.includes(plan.id)
@@ -181,6 +187,40 @@ export const ClientDetailPage = () => {
               </div>
             );
           })}
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Check-ins</h2>
+          {!isAssignedTrainer ? (
+            <EmptyState message="Only the client's assigned trainers can see their check-ins." />
+          ) : checkinDays.length === 0 ? (
+            <EmptyState message="No check-ins in the last 14 days." />
+          ) : (
+            <>
+              {flags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {flags.map((flag) => (
+                    <Badge key={flag} variant="warning">
+                      {flag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {checkinDays.map((day) => (
+                <div
+                  key={day}
+                  className="flex flex-col gap-0.5 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
+                >
+                  <span className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">
+                    {dayjs(day).format("ddd, MMM D")}
+                  </span>
+                  <span className="text-sm text-text-light dark:text-text-dark">
+                    {checkinSummary(checkins[day]).join(" · ") || "—"}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
         </section>
 
         <section className="flex flex-col gap-2">

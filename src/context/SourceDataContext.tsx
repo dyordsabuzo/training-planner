@@ -1,5 +1,16 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef } from "react";
-import { deleteDoc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
+import {
+  deleteDoc,
+  documentId,
+  getDoc,
+  getDocs,
+  query,
+  QueryConstraint,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { callFunction, database, getCollection, getDocumentReference } from "../common/firebase";
 import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
@@ -8,6 +19,8 @@ import AuthContext from "./AuthContext";
 import { contentVersionKey } from "../common/queryCache";
 import { personalisePlan } from "../management/cloneEntity";
 import { isBlocked, Sharing, sharingOf, widenSharing } from "../common/sharing";
+import { Checkin, checkinId, cleanCheckin } from "../common/checkins";
+import dayjs from "dayjs";
 import {
   assembleUserdata,
   Collections,
@@ -52,6 +65,24 @@ const fetchUserdata = async (uid: string, orgId: string, withRoot: boolean) => {
   return { [uid]: assembleUserdata(uid, root?.data(), planDocs) };
 };
 
+// Daily check-ins between two days (YYYY-MM-DD, inclusive), keyed by day.
+// Only the client lists theirs without a filter; anyone else (an assigned
+// trainer, or "View as") must filter on the org they were saved in.
+const checkinsKey = (uid?: string, orgId?: string) => ["checkins", uid, orgId ?? "own"];
+const CHECKIN_DAYS = 14;
+
+const fetchCheckins = async (uid: string, from: string, to: string, orgId?: string) => {
+  const constraints: QueryConstraint[] = [where(documentId(), ">=", from), where(documentId(), "<=", to)];
+  if (orgId) constraints.unshift(where("orgId", "==", orgId));
+  const snapshot = await getDocs(query(getCollection(`userdata/${uid}/checkins`), ...constraints));
+  return Object.fromEntries(snapshot.docs.map((d) => [d.id, d.data() as Checkin]));
+};
+
+const recentRange = () => [
+  checkinId(dayjs().subtract(CHECKIN_DAYS - 1, "day")),
+  checkinId(dayjs()),
+];
+
 type SourceDataContextValue = {
   sourceData: SourceData;
   viewUserdata: (data: Record<string, any> | undefined) => Record<string, any> | undefined;
@@ -83,6 +114,10 @@ type SourceDataContextValue = {
   linkItem: (srcOrgId: string, collection: string, id: string) => Promise<{ linked: number; skipped: number }>;
   convertLinkToCopy: (linkId: string) => Promise<void>;
   unlinkItem: (linkId: string) => Promise<void>;
+  // The signed-in (or viewed) user's check-ins for the last 14 days, by day.
+  checkins: Record<string, Checkin>;
+  // Saves today's check-in for the signed-in user, tagged with the active org.
+  saveCheckin: (checkin: Checkin) => Promise<void>;
 };
 
 const noop = () => {};
@@ -112,6 +147,8 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   linkItem: async () => ({ linked: 0, skipped: 0 }),
   convertLinkToCopy: async () => {},
   unlinkItem: async () => {},
+  checkins: {},
+  saveCheckin: async () => {},
 });
 
 export default SourceDataContext;
@@ -318,6 +355,27 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     [merged]
   );
   const userdata = useMemo(() => viewUserdata(userdataQuery.data), [viewUserdata, userdataQuery.data]);
+
+  const checkinsOrgFilter = isImpersonating ? activeOrgId : undefined;
+  const checkinsQuery = useQuery({
+    queryKey: checkinsKey(effectiveUid, checkinsOrgFilter),
+    queryFn: () => {
+      const [from, to] = recentRange();
+      return fetchCheckins(effectiveUid!, from, to, checkinsOrgFilter);
+    },
+    enabled: contentEnabled && !!effectiveUid,
+  });
+
+  const saveCheckin = async (checkin: Checkin) => {
+    if (!user || isImpersonating || !activeOrgId) return;
+    const day = checkinId(dayjs());
+    const data = { ...cleanCheckin(checkin), orgId: activeOrgId, updatedAt: new Date().toISOString() };
+    await setDoc(getDocumentReference(`userdata/${user.uid}/checkins`, day), data);
+    queryClient.setQueryData(checkinsKey(user.uid), (previous: Record<string, Checkin> | undefined) => ({
+      ...previous,
+      [day]: data,
+    }));
+  };
 
   const sourceData: SourceData = { ...contentData, userdata };
 
@@ -736,6 +794,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       value={{
         sourceData,
         viewUserdata,
+        checkins: checkinsQuery.data ?? {},
+        saveCheckin,
         isLoading,
         error,
         addExercise: addExerciseMutation.mutate,
@@ -800,4 +860,19 @@ export const useClientUserdata = (uid: string | undefined) => {
   });
   const viewed = useMemo(() => viewUserdata(data), [viewUserdata, data]);
   return { userdata: uid ? viewed?.[uid] : undefined, isLoading };
+};
+
+// A client's last 14 days of check-ins in the active org, for their assigned
+// trainers (the rules refuse anyone else, so callers check first).
+export const useClientCheckins = (uid: string | undefined, enabled: boolean) => {
+  const { activeOrgId } = useContext(AuthContext);
+  const { data, isLoading } = useQuery({
+    queryKey: checkinsKey(uid, activeOrgId),
+    queryFn: () => {
+      const [from, to] = recentRange();
+      return fetchCheckins(uid!, from, to, activeOrgId);
+    },
+    enabled: enabled && !!uid && !!activeOrgId,
+  });
+  return { checkins: data ?? {}, isLoading };
 };

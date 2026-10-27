@@ -19,27 +19,38 @@ const isDone = (userdata: any, planName: string, plan: any, session: string) =>
     ? openPlanDoneSessions(userdata, planName).includes(session)
     : Object.values(userdata?.[planName] ?? {}).some((week: any) => !!week?.[session]);
 
-// Dated sessions falling on `day`, and runs completed that day.
-export const dayAgenda = (
-  day: Dayjs,
-  { plans, sessions, userdata }: { plans: any; sessions: any; userdata: any }
-): DayAgenda => {
-  const scheduled = Object.entries(plans ?? {}).flatMap(([planName, plan]: [string, any]) =>
+type AgendaSources = { plans: any; sessions: any; userdata: any };
+
+// Every dated session across the user's plans, with its done/overdue state.
+const datedSessions = ({ plans, sessions, userdata }: AgendaSources) =>
+  Object.entries(plans ?? {}).flatMap(([planName, plan]: [string, any]) =>
     ((plan?.sessions ?? []) as string[])
-      .filter((session) => {
-        const date = sessions?.[session]?.date;
-        return !!date && dayjs(date).isSame(day, "day");
-      })
+      .filter((session) => !!sessions?.[session]?.date)
       .map((session) => {
-        const status = sessionDueStatus(sessions[session].date, isDone(userdata, planName, plan, session));
-        return { plan: planName, session, done: status === "done", overdue: status === "overdue" };
+        const date: string = sessions[session].date;
+        const status = sessionDueStatus(date, isDone(userdata, planName, plan, session));
+        return { plan: planName, session, date, done: status === "done", overdue: status === "overdue" };
       })
   );
-  const completed = historyRuns(userdata).filter(
+
+// Dated sessions falling on `day`, and runs completed that day.
+export const dayAgenda = (day: Dayjs, sources: AgendaSources): DayAgenda => {
+  const scheduled = datedSessions(sources)
+    .filter(({ date }) => dayjs(date).isSame(day, "day"))
+    .map(({ plan, session, done, overdue }) => ({ plan, session, done, overdue }));
+  const completed = historyRuns(sources.userdata).filter(
     (run) => !!run.completedAt && dayjs(run.completedAt).isSame(day, "day")
   );
   return { scheduled, completed };
 };
+
+export type MissedSession = ScheduledSession & { date: string };
+
+// Sessions whose date has passed without being done, oldest first.
+export const missedSessions = (sources: AgendaSources): MissedSession[] =>
+  datedSessions(sources)
+    .filter((s) => s.overdue)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.session.localeCompare(b.session));
 
 // Overdue wins, then anything still planned, then done.
 export const dayStatus = ({ scheduled, completed }: DayAgenda): DayStatus => {
