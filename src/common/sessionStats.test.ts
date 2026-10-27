@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completedRuns, exerciseOccurrences, formatSet, historyRuns, progressVsPrevious, summariseRun } from "./sessionStats";
+import { completedRuns, exerciseOccurrences, formatSet, historyRuns, isIncomplete, progressVsPrevious, summariseRun } from "./sessionStats";
 
 const logged = {
   Legs: {
@@ -96,5 +96,13 @@ describe("progressVsPrevious", () => {
   it("is empty without a previous run or with no change", () => {
     expect(progressVsPrevious([{ set: 1, weight: 100, reps: 8 }])).toEqual([]);
     expect(progressVsPrevious([{ set: 1, weight: 100, reps: 8 }], [{ set: 1, weight: 100, reps: 8 }])).toEqual([]);
+  });
+});
+
+describe("isIncomplete", () => {
+  it("is true only for runs flagged incomplete", () => {
+    expect(isIncomplete({ meta: { incomplete: true } })).toBe(true);
+    expect(isIncomplete({ meta: { completedAt: "2026-10-27" } })).toBe(false);
+    expect(isIncomplete(undefined)).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import { Modal } from "@dyordsabuzo/ui-components";
 import {
   exerciseOccurrences,
   formatSet,
+  isIncomplete,
   progressVsPrevious,
   SetStat,
   summariseRun,
@@ -69,9 +70,10 @@ export const SessionStats = ({ title, planName, week, session, logged, userdata,
   return (
     <Modal title={title} isOpen={true} onClose={onClose}>
       <div className="flex max-h-[70dvh] flex-col gap-5 overflow-y-auto pr-1">
-        {(completedAt || (week && week !== "Open")) && (
+        {(completedAt || (week && week !== "Open") || isIncomplete(logged)) && (
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 break-words text-sm text-text-muted-light dark:text-text-muted-dark">
             {week && week !== "Open" && <span>{week}</span>}
+            {isIncomplete(logged) && <span title="Ended before all units were done">Incomplete</span>}
             {completedAt && <span>{dayjs(completedAt).format("ddd, MMM D YYYY · HH:mm")}</span>}
             {completedAt && minutes !== null && minutes >= 0 && (
               <span title="Approximate: from starting the session to finishing it">

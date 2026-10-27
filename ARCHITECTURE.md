@@ -125,8 +125,12 @@ userdata/{uid}/plans/{planId}
       {unitId}        superset id or exercise-group id
         {exerciseId}
           {set}       { targetRep, targetWeight, ... }
-      mood, meta { completedAt, startedAt, labels }
+      mood, meta { completedAt, startedAt, labels, incomplete? }
 ```
+
+`meta.incomplete` marks a run ended early from the between-unit summary
+("End session"): the sets logged so far are kept and the run still counts
+as done; history shows it as "Incomplete".
 
 Each plan's progress is its own doc, tagged with its org, so a trainer can
 read a client's progress for their org only. The app reads the active org's
