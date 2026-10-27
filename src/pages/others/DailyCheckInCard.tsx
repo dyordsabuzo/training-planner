@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { Button, Card } from "@dyordsabuzo/ui-components";
+import {
+  faChevronDown,
+  faCircleCheck,
+  faHeartPulse,
+  faMinus,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
+import { Button } from "@dyordsabuzo/ui-components";
 import { RATINGS } from "../../components/others/MoodCheckIn";
 import {
   Checkin,
@@ -121,8 +127,9 @@ const SleepStepper = ({
 const FACES = RATINGS.map(({ value, icon, label }) => ({ value, icon, label }));
 const SORENESS = SORENESS_LABELS.map((label, i) => ({ value: i + 1, label }));
 
-// "How are you today?": a quick daily check-in on Home. Today only; once saved
-// it shrinks to a summary with an Edit button.
+// "How are you today?": an optional daily check-in on Home. It stays a slim
+// row (with today's answers once saved) until tapped, then expands the
+// questions in place. Today only.
 export const DailyCheckInCard = ({
   checkin,
   onSave,
@@ -131,99 +138,119 @@ export const DailyCheckInCard = ({
   onSave: (checkin: Checkin) => Promise<void>;
 }) => {
   const saved = hasAnswers(checkin);
-  // Unset until the user chooses; until then the card follows whether a
-  // check-in has loaded.
-  const [editing, setIsEditing] = useState<boolean | null>(null);
-  const isEditing = editing ?? !saved;
-  const [draft, setDraft] = useState<Checkin>(checkin ?? {});
+  const [isOpen, setIsOpen] = useState(false);
+  const [draft, setDraft] = useState<Checkin>({});
   const [isSaving, setIsSaving] = useState(false);
   const set = (key: keyof Checkin) => (value?: number) =>
     setDraft((d) => ({ ...d, [key]: value }));
-
-  if (saved && !isEditing) {
-    return (
-      <Card className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-sm font-bold text-text-light dark:text-text-dark">
-            Today's check-in
-          </span>
-          <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
-            {checkinSummary(checkin).join(" · ")}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(checkin ?? {});
-            setIsEditing(true);
-          }}
-          className={`min-h-11 px-4 shrink-0 rounded-full bg-primary-50 dark:bg-primary-800/30 text-sm text-primary dark:text-primary-300 font-semibold ${FOCUS}`}
-        >
-          Edit
-        </button>
-      </Card>
-    );
-  }
+  const open = () => {
+    setDraft(checkin ?? {});
+    setIsOpen(true);
+  };
 
   return (
-    <Card className="flex flex-col gap-4">
-      <div className="flex flex-col gap-0.5">
-        <h2 className="text-base font-bold text-text-light dark:text-text-dark">
-          How are you today?
-        </h2>
-        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-          Answer any you like. Your assigned trainers can see this.
+    <div
+      className={`rounded-2xl border transition-colors ${
+        isOpen
+          ? "border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark shadow-sm"
+          : "border-dashed border-gray-300 dark:border-gray-600"
+      }`}
+    >
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        aria-controls="daily-checkin-questions"
+        onClick={() => (isOpen ? setIsOpen(false) : open())}
+        className={`w-full min-h-11 flex items-center gap-3 px-4 py-2.5 rounded-2xl text-left
+          hover:bg-primary-50/60 dark:hover:bg-primary-800/20 transition-colors ${FOCUS}`}
+      >
+        <span
+          className={`flex items-center justify-center w-8 h-8 shrink-0 rounded-full ${
+            saved
+              ? "bg-success-50 dark:bg-success-700/20 text-success-700 dark:text-success-500"
+              : "bg-primary-50 dark:bg-primary-800/30 text-primary dark:text-primary-300"
+          }`}
+        >
+          <FontAwesomeIcon icon={saved ? faCircleCheck : faHeartPulse} />
         </span>
-      </div>
-      <RatingRow
-        label="Mood"
-        value={draft.mood}
-        onChange={set("mood")}
-        options={FACES}
-      />
-      <SleepStepper value={draft.sleepHours} onChange={set("sleepHours")} />
-      <RatingRow
-        label="Sleep quality"
-        value={draft.sleepQuality}
-        onChange={set("sleepQuality")}
-        options={FACES}
-      />
-      <RatingRow
-        label="Energy"
-        value={draft.energy}
-        onChange={set("energy")}
-        options={FACES}
-      />
-      <RatingRow
-        label="Soreness"
-        value={draft.soreness}
-        onChange={set("soreness")}
-        options={SORENESS}
-      />
-      <div className="flex gap-2">
-        <Button
-          label={isSaving ? "Saving…" : "Save check-in"}
-          className="min-h-11"
-          disabled={isSaving || !hasAnswers(draft)}
-          onClick={async () => {
-            setIsSaving(true);
-            try {
-              await onSave(draft);
-              setIsEditing(false);
-            } finally {
-              setIsSaving(false);
-            }
-          }}
+        <span className="flex flex-col min-w-0 grow">
+          <span className="text-sm font-semibold text-text-light dark:text-text-dark">
+            {saved ? "Today's check-in" : "How are you today?"}
+          </span>
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark truncate">
+            {saved
+              ? checkinSummary(checkin).join(" · ")
+              : "Optional · takes a few seconds"}
+          </span>
+        </span>
+        <span className="text-xs font-semibold text-primary dark:text-primary-300 shrink-0">
+          {isOpen ? "Close" : saved ? "Edit" : "Check in"}
+        </span>
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`text-xs text-text-muted-light dark:text-text-muted-dark transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
         />
-        {saved && (
-          <Button
-            label="Cancel"
-            decoration="cancel"
-            className="min-h-11"
-            onClick={() => setIsEditing(false)}
+      </button>
+
+      {isOpen && (
+        <div
+          id="daily-checkin-questions"
+          className="flex flex-col gap-4 px-4 pb-4 pt-1"
+        >
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+            Answer any you like. Your assigned trainers can see this.
+          </span>
+          <RatingRow
+            label="Mood"
+            value={draft.mood}
+            onChange={set("mood")}
+            options={FACES}
           />
-        )}
-      </div>
-    </Card>
+          <SleepStepper value={draft.sleepHours} onChange={set("sleepHours")} />
+          <RatingRow
+            label="Sleep quality"
+            value={draft.sleepQuality}
+            onChange={set("sleepQuality")}
+            options={FACES}
+          />
+          <RatingRow
+            label="Energy"
+            value={draft.energy}
+            onChange={set("energy")}
+            options={FACES}
+          />
+          <RatingRow
+            label="Soreness"
+            value={draft.soreness}
+            onChange={set("soreness")}
+            options={SORENESS}
+          />
+          <div className="flex gap-2">
+            <Button
+              label={isSaving ? "Saving…" : "Save check-in"}
+              className="min-h-11"
+              disabled={isSaving || !hasAnswers(draft)}
+              onClick={async () => {
+                setIsSaving(true);
+                try {
+                  await onSave(draft);
+                  setIsOpen(false);
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+            />
+            <Button
+              label="Not now"
+              decoration="cancel"
+              className="min-h-11"
+              onClick={() => setIsOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

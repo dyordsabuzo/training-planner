@@ -144,7 +144,8 @@ derives this from the same data, so nothing extra is stored; sessions without
 a date don't appear on the strip. When today is selected, the card also lists
 every missed session (dated before today and not done).
 
-Above the strip, clients fill in a daily check-in (`DailyCheckInCard.tsx`):
+Above the strip sits an optional daily check-in (`DailyCheckInCard.tsx`), a
+slim row that expands into the questions when tapped:
 mood, hours slept, sleep quality, energy and soreness, all optional, validated
 with Zod (`src/common/checkins.ts`). Only today's can be edited. The client
 page shows the last 14 days to the client's assigned trainers
