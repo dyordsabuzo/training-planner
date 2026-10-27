@@ -13,6 +13,6 @@ setGlobalOptions({ region: REGION, maxInstances: 1, cpu: "gcf_gen1", memory: "25
 export { listOrgs, suspendOrg } from "./admin";
 export { billingGuard } from "./guard";
 export { acceptInvite, createInvite } from "./invites";
-export { convertLinkToCopy, copyToOrg, linkToOrg, listLibrary, unlink } from "./library";
+export { convertLinkToCopy, copyToOrg, linkToOrg, listLibrary, listMarketplace, moderateItem, unlink } from "./library";
 export { addMember, removeMember, setAssignedPlans, setClientTrainers, setMemberRole } from "./members";
 export { createOrg, findOrgByCode } from "./orgs";

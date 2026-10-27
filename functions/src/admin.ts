@@ -1,16 +1,11 @@
-import { CallableRequest, HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { refreshClaims } from "./claims";
-import { db, idSchema, memberRef, ORG_ROLES, orgRef, parse, profileRef, requireUid } from "./common";
+import { db, idSchema, memberRef, ORG_ROLES, orgRef, parse, profileRef, requireSuperAdmin } from "./common";
 import { CONTENT } from "./sharing";
 
 // Plenty for now; each org costs a dozen aggregation reads.
 const LIST_ORGS_LIMIT = 200;
-
-const requireSuperAdmin = (request: CallableRequest) => {
-  requireUid(request);
-  if (request.auth!.token.superAdmin !== true) throw new HttpsError("permission-denied", "Super admins only.");
-};
 
 const countOf = async (query: FirebaseFirestore.Query) => (await query.count().get()).data().count;
 

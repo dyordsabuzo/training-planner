@@ -34,6 +34,12 @@ export const requireUid = (request: CallableRequest) => {
   return uid;
 };
 
+export const requireSuperAdmin = (request: CallableRequest) => {
+  const uid = requireUid(request);
+  if (request.auth!.token.superAdmin !== true) throw new HttpsError("permission-denied", "Super admins only.");
+  return uid;
+};
+
 // Checks the member doc rather than the claim, which can be up to an hour stale.
 export const requireRole = async (orgId: string, uid: string, allowed: readonly OrgRole[]) => {
   const [org, member] = await Promise.all([orgRef(orgId).get(), memberRef(orgId, uid).get()]);

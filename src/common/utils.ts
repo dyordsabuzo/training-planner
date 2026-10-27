@@ -334,9 +334,10 @@ export const collectionPath = (sourceDb: SourceDbReferences, orgId?: string) =>
 
 export const saveToDB = async (sourceDb: SourceDbReferences, entity: any, orgId?: string) => {
   const path = collectionPath(sourceDb, orgId);
-  // linkCount is kept by Cloud Functions (the rules refuse changes), and a
-  // cached value may be stale; `linked` only exists in the app's view.
-  const { linkCount, linked, ...data } = entity ?? {};
+  // linkCount and moderation are kept by Cloud Functions (the rules refuse
+  // changes), and a cached value may be stale; `linked` only exists in the
+  // app's view.
+  const { linkCount, moderation, linked, ...data } = entity ?? {};
   const collection = getCollection(path);
 
   if (!(data.id ?? "")) {
@@ -354,8 +355,12 @@ export const saveToDB = async (sourceDb: SourceDbReferences, entity: any, orgId?
       const { id, ...plaindata } = data;
       const docRef = doc(database, path, id);
       await setDoc(docRef, plaindata, { merge: true });
-      // The cache keeps the count (deletes check it).
-      return linkCount === undefined ? data : { ...data, linkCount };
+      // The cache keeps them (deletes check the count, Visibility the block).
+      return {
+        ...data,
+        ...(linkCount !== undefined && { linkCount }),
+        ...(moderation !== undefined && { moderation }),
+      };
     } catch (error) {
       console.error(`Unable to update db: ${sourceDb}`, error);
     }

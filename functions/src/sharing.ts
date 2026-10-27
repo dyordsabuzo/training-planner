@@ -75,6 +75,7 @@ const NOT_COPIED = [
   "personalisedFor",
   "archived",
   "linkCount",
+  "moderation",
   "source",
 ];
 

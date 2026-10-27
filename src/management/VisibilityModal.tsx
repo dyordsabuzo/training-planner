@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { Badge, Button, ButtonSelection, Input, Modal, Toggle } from "@dyordsabuzo/ui-components";
 import { callFunction } from "../common/firebase";
 import {
+  isBlocked,
   SharedOrg,
   Sharing,
   sharingOf,
@@ -34,6 +35,9 @@ export const VisibilityModal = ({ db, entity, onClose }: Props) => {
   const { activeOrgId } = useContext(AuthContext);
   const { sharingDependencies, setSharing } = useContext(SourceDataContext);
   const initial = sharingOf(entity);
+  // The platform admin blocked it from the marketplace (the rules refuse Public).
+  const blocked = isBlocked(entity);
+  const options = VISIBILITIES.filter((v) => !blocked || v !== "public");
   const [visibility, setVisibility] = useState<Visibility>(initial.visibility);
   const [orgs, setOrgs] = useState<SharedOrg[]>(initial.sharedWithOrgs);
   const [code, setCode] = useState("");
@@ -86,11 +90,17 @@ export const VisibilityModal = ({ db, entity, onClose }: Props) => {
     <Modal title={`Visibility: ${entity.name}`} isOpen={true} onClose={onClose}>
       <div className="flex flex-col gap-4 text-sm text-text-light dark:text-text-dark">
         <ButtonSelection
-          options={VISIBILITIES.map(labelOf)}
+          options={options.map(labelOf)}
           selection={labelOf(visibility)}
           onSelect={(label) => setVisibility(visibilityOf(label))}
         />
         <p className="text-text-muted-light dark:text-text-muted-dark">{HINTS[visibility]}</p>
+        {blocked && (
+          <p className="text-danger">
+            Blocked from the marketplace by the platform admin
+            {entity.moderation?.reason ? `: ${entity.moderation.reason}` : ""}. It can't be made public.
+          </p>
+        )}
 
         {visibility === "orgs" && (
           <div className="flex flex-col gap-2">

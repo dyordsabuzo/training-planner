@@ -76,7 +76,8 @@ All four content collections also carry the sharing fields `visibility`
 (`private` / `orgs` / `public`, missing means private), `sharedWithOrgIds[]`
 and `sharedWithOrgs[]` (`{id, name, code}`, for display), and, once shared:
 `source` (`{orgId, id, mode, copiedAt}` on a copy), `linkCount` (how many
-other orgs link to it, kept by Cloud Functions) and `archived`. See
+other orgs link to it, kept by Cloud Functions), `archived`, and
+`moderation` (`{blocked, reason, at, by}`, set by the platform admin). See
 [Sharing library items](#sharing-library-items).
 
 Before orgs, content lived in top-level collections and roles in
@@ -160,6 +161,8 @@ active org has the `admin` role and a client has `user`
   Cloud Functions. App settings are for the platform admin.
 - Content shared beyond the org is read-only to others: public items to
   anyone signed in, `orgs` items to every member of the listed orgs.
+- Only Cloud Functions change `moderation`, and an item with
+  `moderation.blocked` can't be made public.
 - An item other orgs link to (`linkCount > 0`) can't be deleted, only
   archived, and only Cloud Functions change `linkCount`. Members read their
   org's `links`; only Cloud Functions write them. Any signed-in user reads an
@@ -191,7 +194,13 @@ for super admins, whatever their role in the active org, and isn't hidden by
 preview or "View as". Its Organisations tab lists every org (`listOrgs`) with
 member and item counts, and suspends or reactivates them. Its Requests tab
 lists accounts that asked for access (`users` where `accessRequested`), to
-dismiss or add to any active org with a role. Its Settings tab
+dismiss or add to any active org with a role. Its Marketplace tab lists every
+public item and every blocked one (`listMarketplace`, paged), to block (with
+a reason) or unblock. Blocking makes the item private and keeps it out of the
+marketplace until it's unblocked; who it's shared with stays as it was. The
+org sees "Blocked from marketplace" on the item, and Visibility offers no
+Public. Sharing a session or plan publicly with its dependencies leaves a
+blocked dependency as it was. Its Settings tab
 edits the admin contact email.
 Under `orgs/{orgId}`:
 
@@ -233,6 +242,8 @@ Rules under `orgs/{orgId}`:
 | `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |
 | `setClientTrainers` | owner | sets a client's `trainerUids` (each must be a trainer or the owner) |
 | `listOrgs` | super admin | every org (up to 200) with owner email, members by role, items per collection, public items and links |
+| `listMarketplace` | super admin | every public item (paged, suspended orgs' included) and every blocked one, with owner names |
+| `moderateItem` | super admin | blocks an item from the marketplace (private, with a reason) or unblocks it |
 | `suspendOrg` | super admin | suspends or reactivates an org, and writes the status to its public profile |
 
 `billingGuard` isn't callable. It runs on Cloud Billing budget notifications
