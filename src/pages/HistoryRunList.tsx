@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
-import { HistoryRun, summariseRun } from "../common/sessionStats";
+import { Badge } from "@dyordsabuzo/ui-components";
+import { HistoryRun, isIncomplete, summariseRun } from "../common/sessionStats";
 import { sessionOrder } from "./resolveSessionSupersets";
 
 export const runKey = (run: HistoryRun) => `${run.plan}|${run.week}|${run.session}`;
@@ -64,6 +65,9 @@ export const HistoryRunList = ({ runs, sourceData, onView, picked, onTogglePick 
                     <span className="font-semibold line-clamp-2 break-words" title={run.session}>
                       {run.session}
                     </span>
+                    {isIncomplete(run.logged) && (
+                      <Badge variant="neutral" className="self-start">Incomplete</Badge>
+                    )}
                     {details.length > 0 && (
                       <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
                         {details.join(" · ")}

@@ -4,12 +4,13 @@ import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faChevronDown, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
 
 import { isTrainSessionPath } from "../routes/trainRoutes";
 import { Button } from "@dyordsabuzo/ui-components";
+import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { playApplauseSound, playVoiceClip } from "../common/utils";
 import { pluralUnit, unitName, UnitKind } from "./resolveSessionSupersets";
@@ -104,6 +105,13 @@ export const SummaryPage = ({
     }
   };
 
+  // Ends the run between units: what was logged is saved, flagged incomplete.
+  const handleEndSession = async () => {
+    await saveRun?.(actualSupersetData ?? {}, { incomplete: true });
+    wrapSession();
+    navigate(exitPath);
+  };
+
   const supersets = Object.values((sessionData as any).supersets) || [];
   const subtitle = [(sessionData as any).week, (sessionData as any).annotation]
     .filter((s: string) => typeof s === "string" && s.trim() !== "")
@@ -189,6 +197,20 @@ export const SummaryPage = ({
           onClick={handleButtonClick}
           className="min-h-11 w-full uppercase py-4 text-xl"
         />
+
+        {currentSuperset && nextSuperset && (
+          <div className="flex justify-center">
+            <ConfirmDeleteButton
+              label="End session"
+              icon={faCircleXmark}
+              decoration="text-danger"
+              useModal
+              scrollToTopOnClose
+              impactMessage="End the session now? Sets you've logged so far are saved and the session is marked incomplete."
+              onDelete={handleEndSession}
+            />
+          </div>
+        )}
       </div>
     </WrapperPage>
   );

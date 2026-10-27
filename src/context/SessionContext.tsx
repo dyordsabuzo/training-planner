@@ -25,7 +25,7 @@ const SessionContext = createContext({
   setSessionData: (data: any) => {},
   updateUserData: (data: any) => {},
   saveProgress: (data: any) => {},
-  saveRun: (data: any) => {},
+  saveRun: (data: any, options?: { incomplete?: boolean }) => {},
   deleteRuns: (runs: any[]) => {},
   // Marks a session as skipped (see isSkipped); undone with deleteRuns.
   skipSession: async (session: { plan: string; week: string; session: string }) => {},
@@ -145,7 +145,8 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
 
   // Saves a finished run. Its units replace the earlier run's units for this
   // session (so a re-run doesn't keep stale sets) while mood check-ins stay.
-  const saveRun = async (rawData: any) => {
+  // An incomplete run (ended early) is flagged in meta but still counts.
+  const saveRun = async (rawData: any, options?: { incomplete?: boolean }) => {
     if (!user || !sessionData) return;
     const keys = progressKeys(storedContent());
     const named = toFirestoreData(rawData);
@@ -158,6 +159,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     const meta = {
       completedAt: new Date().toISOString(),
       ...(sessionData.startedAt && { startedAt: sessionData.startedAt }),
+      ...(options?.incomplete && { incomplete: true }),
       // Keeps history readable after anything here is renamed or deleted.
       labels: keys.labels({ plan: sessionData.plan, session: sessionData.session, run: named }),
     };

@@ -77,6 +77,9 @@ export const summariseRun = (
 // counts as handled (Up next moves on) but isn't a workout.
 export const isSkipped = (logged: any) => logged?.meta?.skipped === true;
 
+// A run ended early from the summary page: saved with what was logged.
+export const isIncomplete = (logged: any) => logged?.meta?.incomplete === true;
+
 export type CompletedRun = { week: string; session: string; logged: any };
 
 // Every finished session of a plan, newest week first.
