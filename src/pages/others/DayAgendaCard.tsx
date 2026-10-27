@@ -1,187 +1,230 @@
 import dayjs, { Dayjs } from "dayjs";
+import { ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { Badge, Button, Card } from "@dyordsabuzo/ui-components";
-import { DayAgenda, MissedSession } from "../../common/dayAgenda";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBed,
+  faCheck,
+  faChevronRight,
+  faDumbbell,
+  faPlay,
+  faTriangleExclamation,
+} from "@fortawesome/free-solid-svg-icons";
+import { Badge, Card } from "@dyordsabuzo/ui-components";
+import { DayAgenda, MissedSession, ScheduledSession } from "../../common/dayAgenda";
 import { Checkin, checkinSummary } from "../../common/checkins";
-import { Attendance, RecurringEvent } from "../../common/recurringEvents";
+import { HistoryRun } from "../../common/sessionStats";
+import { EventOccurrence } from "../../common/recurringEvents";
+import { AgendaRow, FOCUS, SectionLabel } from "./AgendaRow";
 
-const ROW = "flex items-center justify-between gap-3 min-h-11";
+const START_PILL = `flex items-center gap-1.5 min-h-11 px-4 rounded-full bg-primary text-white text-sm font-semibold
+  shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
 
-// What's scheduled and what was done on the day picked in the DayStrip.
-// Today also lists every missed session; past days show their check-in.
-// Recurring events on today or a past day can be confirmed when the
-// handlers are given (left out in read-only "View as").
+// Day progress as a ring; turns green once everything is done.
+const ProgressRing = ({ done, total }: { done: number; total: number }) => {
+  const r = 22;
+  const circumference = 2 * Math.PI * r;
+  const complete = done >= total;
+  return (
+    <div className="relative w-14 h-14 shrink-0" role="img" aria-label={`${done} of ${total} done`}>
+      <svg viewBox="0 0 56 56" className="w-14 h-14 -rotate-90">
+        <circle cx="28" cy="28" r={r} fill="none" strokeWidth="6" className="stroke-gray-200 dark:stroke-gray-700" />
+        <circle
+          cx="28"
+          cy="28"
+          r={r}
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - done / total)}
+          className={`transition-[stroke-dashoffset] duration-500 ${complete ? "stroke-success-500" : "stroke-primary"}`}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-text-light dark:text-text-dark">
+        {complete ? <FontAwesomeIcon icon={faCheck} className="text-success-500" /> : `${done}/${total}`}
+      </span>
+    </div>
+  );
+};
+
+// The day picked in the DayStrip: a progress ring over training and events,
+// a past day's check-in, today's next session as a hero with Start, the rest
+// of the training (done last), today's catch-up list and the children (e.g.
+// the events section). Without an agenda (no plans) training is left out.
 export const DayAgendaCard = ({
   day,
   agenda,
+  events = [],
   missed = [],
   checkin,
-  onAttendance,
-  onEditEvent,
-  onAddEvent,
+  children,
 }: {
   day: Dayjs;
-  agenda: DayAgenda;
+  agenda?: DayAgenda;
+  events?: EventOccurrence[];
   missed?: MissedSession[];
   checkin?: Checkin;
-  onAttendance?: (eventId: string, value: Attendance | null) => void;
-  onEditEvent?: (event: RecurringEvent) => void;
-  onAddEvent?: () => void;
+  children?: ReactNode;
 }) => {
   const navigate = useNavigate();
   const isToday = day.isSame(dayjs(), "day");
-  const { scheduled, completed, events } = agenda;
-  const hasUndone = scheduled.some((s) => !s.done) || (isToday && missed.length > 0);
+  const { scheduled, completed: runs } = agenda ?? { scheduled: [], completed: [] };
+  const isRun = (s: ScheduledSession) => (run: HistoryRun) => run.plan === s.plan && run.session === s.session;
+  const todo = scheduled.filter((s) => !s.done);
+  // Today's first session to do becomes the "Up next" hero.
+  const next = isToday ? todo[0] : undefined;
+  const rest = next ? todo.slice(1) : todo;
+  // Scheduled sessions done (with that day's run time, if any), then runs of
+  // sessions not scheduled on this day.
+  const done = [
+    ...scheduled
+      .filter((s) => s.done)
+      .map((s) => ({ key: `${s.plan}/${s.session}`, ...s, at: runs.find(isRun(s))?.completedAt })),
+    ...runs
+      .filter((run) => !scheduled.some((s) => isRun(s)(run)))
+      .map((run) => ({ key: `${run.plan}/${run.week}/${run.session}`, ...run, at: run.completedAt })),
+  ];
+  // Undone optional sessions don't count against the day; a missed event is
+  // handled, so it counts as done.
+  const total = scheduled.filter((s) => !s.optional || s.done).length + events.length;
+  const doneCount =
+    scheduled.filter((s) => s.done).length +
+    events.filter((e) => e.status === "attended" || e.status === "missed").length;
+  const summary =
+    total === 0 ? "Nothing planned" : doneCount >= total ? "All done — great work" : `${total - doneCount} to go`;
   const checkinParts = isToday ? [] : checkinSummary(checkin);
+  const showCatchUp = isToday && missed.length > 0;
+  const start = () => navigate("/training-planner/train");
+  const startPill = (
+    <button type="button" onClick={start} className={START_PILL}>
+      <FontAwesomeIcon icon={faPlay} className="text-xs" />
+      Start
+    </button>
+  );
 
   return (
-    <Card className="flex flex-col gap-2">
-      <h3 className="text-base font-bold text-text-light dark:text-text-dark">
-        {isToday ? "Today" : day.format("ddd, MMM D")}
-      </h3>
-
-      {scheduled.length === 0 && completed.length === 0 && events.length === 0 && (
-        <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Rest day — nothing scheduled.</p>
-      )}
-
-      {scheduled.map(({ plan, session, done, overdue, optional }) => (
-        <div key={`${plan}/${session}`} className={ROW}>
-          <div className="flex flex-col">
-            <span className="font-semibold text-text-light dark:text-text-dark">{session}</span>
-            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{plan}</span>
-          </div>
-          <span className="flex items-center gap-1 shrink-0">
-            {optional && <Badge variant="neutral">Optional</Badge>}
-            {done && <Badge variant="success">Done</Badge>}
-            {overdue && <Badge variant="warning">Overdue</Badge>}
-          </span>
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <div className="flex flex-col flex-1 min-w-0">
+          <h3 className="text-xl font-bold text-text-light dark:text-text-dark">
+            {isToday ? "Today" : day.format("dddd, MMM D")}
+          </h3>
+          <span className="text-sm text-text-muted-light dark:text-text-muted-dark">{summary}</span>
         </div>
-      ))}
+        {total > 0 && <ProgressRing done={doneCount} total={total} />}
+      </div>
 
-      {events.length > 0 && (
-        <>
-          <h4 className="text-sm font-bold text-text-muted-light dark:text-text-muted-dark pt-1">Events</h4>
-          {events.map(({ event, status }) => {
-            const details = [event.startTime, event.location].filter(Boolean).join(" · ");
-            const label = (
-              <div className="flex flex-col">
-                <span className="font-semibold text-text-light dark:text-text-dark">{event.name}</span>
-                {details && <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{details}</span>}
-              </div>
-            );
-            return (
-              <div key={event.id} className={ROW}>
-                {onEditEvent ? (
-                  <button
-                    type="button"
-                    onClick={() => onEditEvent(event)}
-                    className="min-h-11 text-left rounded-md hover:bg-primary-50 dark:hover:bg-primary-800/20
-                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    {label}
-                  </button>
-                ) : (
-                  label
-                )}
-                <span className="flex items-center gap-1 shrink-0">
-                  {(status === "pending" || status === "overdue") &&
-                    (onAttendance ? (
-                      <>
-                        <Button label="Attended" className="min-h-11" onClick={() => onAttendance(event.id, "attended")} />
-                        <Button
-                          label="Missed"
-                          decoration="cancel"
-                          className="min-h-11"
-                          onClick={() => onAttendance(event.id, "missed")}
-                        />
-                      </>
-                    ) : (
-                      status === "overdue" && <Badge variant="warning">Unconfirmed</Badge>
-                    ))}
-                  {status === "attended" && <Badge variant="success">Attended</Badge>}
-                  {status === "missed" && <Badge variant="neutral">Missed</Badge>}
-                  {(status === "attended" || status === "missed") && onAttendance && (
-                    <button
-                      type="button"
-                      onClick={() => onAttendance(event.id, null)}
-                      className="min-h-11 px-2 text-xs underline text-text-muted-light dark:text-text-muted-dark
-                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
-                    >
-                      Undo
-                    </button>
-                  )}
-                </span>
-              </div>
-            );
-          })}
-        </>
-      )}
-
-      {completed.length > 0 && (
-        <>
-          <h4 className="text-sm font-bold text-text-muted-light dark:text-text-muted-dark pt-1">Completed</h4>
-          {completed.map((run) => (
-            <button
-              key={`${run.plan}/${run.week}/${run.session}`}
-              type="button"
-              onClick={() => navigate("/training-planner/history")}
-              className={`${ROW} text-left rounded-md hover:bg-primary-50 dark:hover:bg-primary-800/20
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+      {checkinParts.length > 0 && (
+        <ul aria-label="Check-in" className="flex flex-wrap gap-1.5">
+          {checkinParts.map((part) => (
+            <li
+              key={part}
+              className="px-3 py-1 rounded-full bg-primary-50 dark:bg-primary-800/30 text-xs font-semibold text-primary dark:text-primary-300"
             >
-              <div className="flex flex-col">
-                <span className="font-semibold text-text-light dark:text-text-dark">{run.session}</span>
-                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{run.plan}</span>
-              </div>
-              <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                {dayjs(run.completedAt).format("HH:mm")}
-              </span>
-            </button>
+              {part}
+            </li>
           ))}
-        </>
+        </ul>
       )}
 
-      {isToday && missed.length > 0 && (
-        <section
-          aria-label="Missed sessions"
-          className="flex flex-col gap-1 rounded-md bg-amber-50 dark:bg-amber-700/20 px-3 py-2"
+      {next && (
+        <div
+          className="flex items-center gap-4 rounded-2xl p-4 text-white bg-gradient-to-br from-primary to-primary-400
+            shadow-lg shadow-primary/30"
         >
-          <h4 className="text-sm font-bold text-amber-800 dark:text-amber-300">
-            {missed.length === 1 ? "1 missed session" : `${missed.length} missed sessions`}
-          </h4>
-          <span className="text-xs text-amber-800 dark:text-amber-300">
-            These were scheduled earlier and haven't been done yet.
-          </span>
-          {missed.map(({ plan, session, date }) => (
-            <div key={`${plan}/${session}`} className={ROW}>
-              <div className="flex flex-col">
-                <span className="font-semibold text-text-light dark:text-text-dark">{session}</span>
-                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{plan}</span>
-              </div>
-              <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                {dayjs(date).format("ddd, MMM D")}
-              </span>
-            </div>
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="text-xs font-bold uppercase tracking-wider text-white/70">Up next</span>
+            <span className="text-lg font-bold truncate">{next.session}</span>
+            <span className="text-sm text-white/80 truncate">
+              {[next.plan, next.optional && "Optional", next.overdue && "Overdue"].filter(Boolean).join(" · ")}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={start}
+            className="flex items-center gap-2 min-h-12 px-5 rounded-full bg-white text-primary font-bold shadow-md
+              hover:bg-primary-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <FontAwesomeIcon icon={faPlay} />
+            Start
+          </button>
+        </div>
+      )}
+
+      {agenda && (rest.length > 0 || done.length > 0 || !next) && (
+        <section aria-label="Training" className="flex flex-col gap-2">
+          <SectionLabel>Training</SectionLabel>
+
+          {!next && todo.length === 0 && done.length === 0 && (
+            <AgendaRow
+              icon={faBed}
+              tone="neutral"
+              title={showCatchUp ? "Nothing scheduled today" : "Rest day"}
+              subtitle={showCatchUp ? "A good time to catch up below." : "No training scheduled — recover and recharge."}
+            />
+          )}
+
+          {rest.map(({ plan, session, overdue, optional }) => (
+            <AgendaRow
+              key={`${plan}/${session}`}
+              icon={faDumbbell}
+              tone={overdue ? "warning" : "primary"}
+              title={session}
+              subtitle={plan}
+              trailing={
+                <>
+                  {optional && <Badge variant="neutral">Optional</Badge>}
+                  {overdue && <Badge variant="warning">Overdue</Badge>}
+                  {(isToday || overdue) && startPill}
+                </>
+              }
+            />
+          ))}
+
+          {done.map(({ key, plan, session, at }) => (
+            <AgendaRow
+              key={key}
+              icon={faCheck}
+              tone="success"
+              title={session}
+              subtitle={plan}
+              dimmed
+              onClick={() => navigate("/training-planner/history")}
+              trailing={
+                <>
+                  {at && (
+                    <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                      {dayjs(at).format("HH:mm")}
+                    </span>
+                  )}
+                  <FontAwesomeIcon icon={faChevronRight} className="text-xs text-text-muted-light dark:text-text-muted-dark" />
+                </>
+              }
+            />
           ))}
         </section>
       )}
 
-      {checkinParts.length > 0 && (
-        <p className="text-sm text-text-muted-light dark:text-text-muted-dark border-t border-gray-200 dark:border-gray-700 pt-2">
-          <span className="font-semibold text-text-light dark:text-text-dark">Check-in: </span>
-          {checkinParts.join(" · ")}
-        </p>
+      {showCatchUp && (
+        <section aria-label="Catch up" className="flex flex-col gap-2">
+          <SectionLabel>
+            Catch up · {missed.length === 1 ? "1 missed session" : `${missed.length} missed sessions`}
+          </SectionLabel>
+          {missed.map(({ plan, session, date }) => (
+            <AgendaRow
+              key={`${plan}/${session}`}
+              icon={faTriangleExclamation}
+              tone="warning"
+              title={session}
+              subtitle={`${plan} · was ${dayjs(date).format("ddd, MMM D")}`}
+              trailing={startPill}
+            />
+          ))}
+        </section>
       )}
 
-      {((isToday && hasUndone) || onAddEvent) && (
-        <div className="flex flex-wrap gap-2">
-          {isToday && hasUndone && (
-            <Button label="Start training" className="min-h-11" onClick={() => navigate("/training-planner/train")} />
-          )}
-          {onAddEvent && (
-            <Button label="+ Add regular event" decoration="cancel" className="min-h-11" onClick={onAddEvent} />
-          )}
-        </div>
-      )}
+      {children}
     </Card>
   );
 };

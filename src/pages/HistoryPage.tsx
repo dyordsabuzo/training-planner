@@ -1,4 +1,7 @@
 import { useContext, useMemo, useState } from "react";
+import dayjs from "dayjs";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import SourceDataContext from "../context/SourceDataContext";
 import SessionContext from "../context/SessionContext";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
@@ -7,7 +10,7 @@ import WrapperPage from "./WrapperPage";
 import { SessionStats } from "./others/SessionStats";
 import { EmptyState } from "../management/EmptyState";
 import { HistoryRun, historyRuns } from "../common/sessionStats";
-import { HistoryRunList, runKey } from "./HistoryRunList";
+import { HistoryRunList, runKey, runMinutes } from "./HistoryRunList";
 import { sessionOrder } from "./resolveSessionSupersets";
 
 // Every completed session across your plans, most recent first. Opening a run
@@ -21,6 +24,15 @@ export const HistoryPage = () => {
 
   const runs = useMemo(() => historyRuns(userdata), [userdata]);
   const pickedRuns = runs.filter((run) => picked.has(runKey(run)));
+  const totalMinutes = runs.reduce((sum, run) => sum + (runMinutes(run) ?? 0), 0);
+  const stats = [
+    { label: "Sessions", value: runs.length },
+    {
+      label: "Last 7 days",
+      value: runs.filter((run) => run.completedAt && dayjs(run.completedAt).isAfter(dayjs().subtract(7, "day"))).length,
+    },
+    { label: "Time", value: totalMinutes >= 60 ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : `${totalMinutes}m` },
+  ];
 
   const togglePick = (run: HistoryRun) =>
     setPicked((prev) => {
@@ -43,7 +55,12 @@ export const HistoryPage = () => {
     <WrapperPage className="max-w-[25rem] sm:max-w-2xl">
       <div className="flex flex-col gap-6 pt-8">
         <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">History</h1>
+          <h1 className="flex items-center gap-3 text-2xl font-bold text-text-light dark:text-text-dark">
+            <span className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800/40 text-primary dark:text-primary-300">
+              <FontAwesomeIcon icon={faClockRotateLeft} className="text-base" />
+            </span>
+            History
+          </h1>
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
             Completed sessions and what was used for each exercise.
           </p>
@@ -51,6 +68,20 @@ export const HistoryPage = () => {
 
         {runs.length === 0 && (
           <EmptyState message="No completed sessions yet. Finish a workout to see it here." />
+        )}
+
+        {runs.length > 0 && (
+          <dl
+            className="grid grid-cols-3 gap-2 rounded-2xl p-4 text-white bg-gradient-to-br from-primary to-primary-400
+              shadow-lg shadow-primary/30"
+          >
+            {stats.map(({ label, value }) => (
+              <div key={label} className="flex flex-col-reverse items-center gap-0.5 rounded-xl bg-white/10 py-3">
+                <dt className="text-[0.65rem] font-bold uppercase tracking-wider text-white/70">{label}</dt>
+                <dd className="text-2xl font-bold leading-none">{value}</dd>
+              </div>
+            ))}
+          </dl>
         )}
 
         {runs.length > 0 && (

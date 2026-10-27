@@ -12,6 +12,7 @@ import { PlanProgressCard } from "./others/PlanProgressCard";
 import { StartOrgForm } from "./others/StartOrgForm";
 import { DayStrip } from "./others/DayStrip";
 import { DayAgendaCard } from "./others/DayAgendaCard";
+import { DayEvents } from "./others/DayEvents";
 import { dayAgenda, dayStatus, missedSessions } from "../common/dayAgenda";
 import { checkinId } from "../common/checkins";
 import { eventDay, RecurringEvent } from "../common/recurringEvents";
@@ -463,33 +464,35 @@ export const Home = () => {
           <DailyCheckInCard checkin={checkins[checkinId(dayjs())]} onSave={saveCheckin} />
         )}
 
-        {user && (grantedPlans.length > 0 || events.length > 0) && (
+        {user && (grantedPlans.length > 0 || events.length > 0 || activeOrgId) && (
           <div className="flex flex-col gap-3">
-            <DayStrip
-              selected={selectedDay}
-              onSelect={setSelectedDay}
-              statusFor={(day) => dayStatus(agendaFor(day), day)}
-            />
+            {(grantedPlans.length > 0 || events.length > 0) && (
+              <DayStrip
+                selected={selectedDay}
+                onSelect={setSelectedDay}
+                statusFor={(day) => dayStatus(agendaFor(day), day)}
+              />
+            )}
             <DayAgendaCard
               day={selectedDay}
-              agenda={agendaFor(selectedDay)}
+              agenda={grantedPlans.length > 0 ? agendaFor(selectedDay) : undefined}
+              events={agendaFor(selectedDay).events}
               missed={missed}
               checkin={checkins[checkinId(selectedDay)]}
-              {...(!isImpersonating && {
-                onAttendance: (eventId, value) => setAttendance(eventId, eventDay(selectedDay), value),
-                onEditEvent: setEventForm,
-                onAddEvent: () => setEventForm("new"),
-              })}
-            />
+            >
+              {(activeOrgId || events.length > 0) && (
+                <DayEvents
+                  events={agendaFor(selectedDay).events}
+                  hasAnyEvents={events.length > 0}
+                  {...(!isImpersonating && {
+                    onAttendance: (eventId, value) => setAttendance(eventId, eventDay(selectedDay), value),
+                    onEditEvent: setEventForm,
+                    ...(activeOrgId && { onAddEvent: () => setEventForm("new") }),
+                  })}
+                />
+              )}
+            </DayAgendaCard>
           </div>
-        )}
-
-        {/* Without plans or events there's no agenda card to add from. */}
-        {user && activeOrgId && !isImpersonating && grantedPlans.length === 0 && events.length === 0 && (
-          <Card className="flex flex-col gap-3">
-            <p>Track your own regular training, like on-water sessions, and mark each one attended or missed.</p>
-            <Button label="+ Add regular event" className="min-h-11 self-start" onClick={() => setEventForm("new")} />
-          </Card>
         )}
 
         {eventForm && (

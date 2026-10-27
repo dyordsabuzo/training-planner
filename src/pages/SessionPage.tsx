@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDumbbell } from "@fortawesome/free-solid-svg-icons";
+import { faDumbbell, faForwardStep, faPlay, faShuffle } from "@fortawesome/free-solid-svg-icons";
 import SessionContext from "../context/SessionContext";
 import { SummaryPage } from "./SummaryPage";
 import { ExercisePage } from "./train/ExercisePage";
@@ -60,6 +60,10 @@ const sortWeekKeys = (keys: string[]) =>
 
 const stepLabelClassName =
   "text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark";
+
+// Secondary actions on the gradient Up next panel.
+const upNextActionClassName = `flex items-center gap-2 min-h-11 px-4 rounded-full bg-white/10 text-sm font-semibold
+  text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white`;
 
 const chipClassName = (isSelected: boolean, isCurrent = false) =>
   `relative min-h-11 px-3 rounded-lg text-sm font-medium border transition-colors
@@ -380,42 +384,63 @@ const SessionPage = () => {
         )}
 
         {!showPicker && !sessionData.session && upNext && (
-          <div className="flex flex-col gap-4 rounded-xl bg-primary-50 dark:bg-primary-800/30 p-5">
-            <span className={stepLabelClassName}>Up next</span>
-            <div className="flex flex-col gap-1">
-              <span className="text-xl font-bold line-clamp-2 break-words" title={upNext.session}>
-                {upNext.session}
+          <div
+            className="flex flex-col gap-4 rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-primary-400
+              shadow-lg shadow-primary/30"
+          >
+            <div className="flex items-start gap-3">
+              <span className="shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-white/15">
+                <FontAwesomeIcon icon={faDumbbell} className="text-lg" />
               </span>
-              <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                {[
-                  upNext.plan,
-                  upNext.week !== OPEN_WEEK ? upNext.week : null,
-                  upNext.date ? formatSessionDate(upNext.date) : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-white/70">Up next</span>
+                <span className="text-xl font-bold line-clamp-2 break-words" title={upNext.session}>
+                  {upNext.session}
+                </span>
+              </div>
             </div>
-            <Button
-              label="Continue"
-              className="min-h-11 py-3 text-base"
+            <ul aria-label="Session details" className="flex flex-wrap gap-1.5">
+              {[
+                upNext.plan,
+                upNext.week !== OPEN_WEEK ? upNext.week : null,
+                upNext.date ? formatSessionDate(upNext.date) : null,
+              ]
+                .filter(Boolean)
+                .map((detail) => (
+                  <li key={detail} className="px-3 py-1 rounded-full bg-white/15 text-xs font-semibold">
+                    {detail}
+                  </li>
+                ))}
+            </ul>
+            <button
+              type="button"
               onClick={() => startSession(upNext.plan, upNext.week, upNext.session)}
-            />
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="self-center min-h-11 text-sm underline text-text-muted-light dark:text-text-muted-dark"
+              className="flex items-center justify-center gap-2 min-h-12 px-6 rounded-full bg-white text-primary
+                text-base font-bold shadow-md hover:bg-primary-50 transition-colors
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              Choose a different session
+              <FontAwesomeIcon icon={faPlay} />
+              Start
             </button>
-            <button
-              type="button"
-              disabled={isSkipping}
-              onClick={() => skip({ plan: upNext.plan, week: upNext.week, session: upNext.session })}
-              className="self-center min-h-11 text-sm underline text-text-muted-light dark:text-text-muted-dark disabled:opacity-50"
-            >
-              {isSkipping ? "Skipping…" : "Skip this session"}
-            </button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className={upNextActionClassName}
+              >
+                <FontAwesomeIcon icon={faShuffle} />
+                Choose another
+              </button>
+              <button
+                type="button"
+                disabled={isSkipping}
+                onClick={() => skip({ plan: upNext.plan, week: upNext.week, session: upNext.session })}
+                className={`${upNextActionClassName} disabled:opacity-50`}
+              >
+                <FontAwesomeIcon icon={faForwardStep} />
+                {isSkipping ? "Skipping…" : "Skip"}
+              </button>
+            </div>
           </div>
         )}
 

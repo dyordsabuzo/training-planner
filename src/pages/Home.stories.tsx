@@ -254,6 +254,19 @@ const richHistoryAuth = withMockAuthContext({
   isLoading: false,
 });
 
+// Signed in to an org, so the Events panel can add events.
+const orgAuth = withMockAuthContext({
+  user: { email: "sam@trainingplanner.com" },
+  userPermission: {
+    role: "user",
+    plans: ["plan-1", "plan-2"],
+    firstName: "Sam",
+    lastName: "Trainee",
+  },
+  activeOrgId: "default",
+  isLoading: false,
+});
+
 export const PlansWithRichHistory: StoryObj<typeof Home> = {
   name: "Plans granted, with session/mood history",
   decorators: [
@@ -276,7 +289,7 @@ const lastEventDays = Array.from({ length: 14 }, (_, i) => dayjs().subtract(i + 
 export const WithRecurringEvents: StoryObj<typeof Home> = {
   name: "Plans granted, with recurring events",
   decorators: [
-    richHistoryAuth,
+    orgAuth,
     withMockSourceDataContext({
       sourceData: richSourceData,
       checkins: {},
@@ -298,6 +311,20 @@ export const WithRecurringEvents: StoryObj<typeof Home> = {
       saveEvent: async () => {},
       deleteEvent: async () => {},
       setAttendance: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+export const PlansWithoutEvents: StoryObj<typeof Home> = {
+  name: "Plans granted, no recurring events",
+  decorators: [
+    orgAuth,
+    withMockSourceDataContext({
+      sourceData: richSourceData,
+      checkins: {},
+      saveCheckin: async () => {},
+      events: [],
       initialise: () => {},
     }),
   ],
