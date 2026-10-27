@@ -5,6 +5,7 @@ import {
   faUserShield,
   faEye,
   faEyeSlash,
+  faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ProfileIcon } from "./ProfileIcon";
@@ -17,6 +18,8 @@ type Props = {
   lastName?: string;
   isAdmin?: boolean;
   isRealAdmin?: boolean;
+  // The platform admin; not affected by preview or impersonation.
+  isSuperAdmin?: boolean;
   isPreviewingAsUser?: boolean;
   onTogglePreview?: () => void;
   showEmail?: boolean;
@@ -34,6 +37,7 @@ export const ProfileMenu = ({
   lastName,
   isAdmin = false,
   isRealAdmin = false,
+  isSuperAdmin = false,
   isPreviewingAsUser = false,
   onTogglePreview,
   showEmail = true,
@@ -156,6 +160,20 @@ export const ProfileMenu = ({
             >
               <FontAwesomeIcon icon={faUserShield} fixedWidth />
               Admin
+            </Link>
+          )}
+
+          {isSuperAdmin && (
+            <Link
+              to="/training-planner/platform"
+              role="menuitem"
+              onClick={() => setIsOpen(false)}
+              className="min-h-11 flex items-center gap-2 px-3 text-sm text-text-light dark:text-text-dark
+                hover:bg-gray-50 dark:hover:bg-gray-800
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+            >
+              <FontAwesomeIcon icon={faBuilding} fixedWidth />
+              Platform
             </Link>
           )}
 

@@ -57,6 +57,7 @@ const Navigation = () => {
     user,
     userPermission,
     isRealAdmin,
+    isSuperAdmin,
     isPreviewingAsUser,
     setPreviewAsUser,
     isImpersonating,
@@ -211,6 +212,7 @@ const Navigation = () => {
               lastName={userPermission?.lastName}
               isAdmin={userPermission?.role === "admin"}
               isRealAdmin={isRealAdmin}
+              isSuperAdmin={isSuperAdmin}
               isPreviewingAsUser={isPreviewingAsUser || isImpersonating}
               onTogglePreview={togglePreview}
               showEmail={!isCollapsed}
@@ -285,6 +287,7 @@ const Navigation = () => {
                     lastName={userPermission?.lastName}
                     isAdmin={userPermission?.role === "admin"}
                     isRealAdmin={isRealAdmin}
+                    isSuperAdmin={isSuperAdmin}
                     isPreviewingAsUser={isPreviewingAsUser || isImpersonating}
                     onTogglePreview={togglePreview}
                     showEmail={false}
