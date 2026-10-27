@@ -18,6 +18,7 @@ import {
 import { getDocumentReference } from "../common/firebase";
 import { getDoc, setDoc } from "firebase/firestore";
 import { clearQueryCache } from "../common/queryCache";
+import { SuspendedOrg } from "./suspendedOrgs";
 import { forgetMembership, isTrainerRole, Org, OrgMember, OrgRole, useOrgMembership } from "./useOrgMembership";
 
 type _Props = {
@@ -63,6 +64,8 @@ const AuthContext = createContext({
   activeOrg: undefined as Org | undefined,
   orgRole: null as OrgRole | null,
   isSuperAdmin: false,
+  // Orgs the user lost to a suspension, for the notice on Home.
+  suspendedOrgs: [] as SuspendedOrg[],
   switchOrg: (orgId: string) => {},
   // Re-reads memberships after a change; preferOrgId becomes the active org.
   refreshOrgs: async (preferOrgId?: string) => {},
@@ -420,6 +423,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         activeOrg: membership.activeOrg,
         orgRole: membership.orgRole,
         isSuperAdmin: membership.isSuperAdmin,
+        suspendedOrgs: membership.suspendedOrgs,
         switchOrg: (orgId: string) => {
           setImpersonatedUser(null);
           setIsPreviewingAsUser(false);

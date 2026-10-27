@@ -21,6 +21,7 @@ export const CALLABLES = [
   "setAssignedPlans",
   "setClientTrainers",
   "suspendOrg",
+  "listOrgs",
 ] as const;
 
 // The Cloud Billing budget publishes its notifications to this topic.

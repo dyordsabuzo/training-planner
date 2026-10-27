@@ -64,12 +64,12 @@ exercises**.
 | `users` | `users/{uid}` | profile and access request |
 | `userdata` | `userdata/{uid}` | `inProgress` for a run underway |
 | `userdata/{uid}/plans` | `plans/{planId}` | `orgId` of the plan, plus that plan's logged progress |
-| `settings` | `settings/app` | admin contact email |
+| `settings` | `settings/app` | admin contact email (the "Contact us" link and the suspended-org notice on Home) |
 | `settings` | `settings/platform` | billing guard state: `functionsSuspended`, `costAmount`, `allowedCost` |
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `trainerUids[]` (clients), `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
-| `orgs/{orgId}/public` | `public/profile` | `name`, `contentVersion`, readable by anyone signed in (for orgs linking to this org's items) |
+| `orgs/{orgId}/public` | `public/profile` | `name`, `contentVersion`, `status` (set by `suspendOrg`), readable by anyone signed in (for orgs linking to this org's items) |
 | `orgs/{orgId}/links` | `links/{linkId}` | `srcOrgId`, `collection`, `srcId`, `linkedAt`, `linkedBy`: a live link to another org's item |
 
 All four content collections also carry the sharing fields `visibility`
@@ -175,6 +175,18 @@ the token once if it has no orgs yet. It remembers the active org on the
 device, and the profile menu offers a switcher when there is more than one.
 Home also shows which org's plans are on screen, with one-tap buttons for
 the others.
+
+A suspended org drops out of its members' claims. The app compares the claim
+with the roles it remembered on the device: an org that disappeared and whose
+`public/profile.status` is `suspended` is remembered too, and Home shows
+"<Org> is suspended" with the admin contact email until it's active again
+(`src/context/suspendedOrgs.ts`).
+
+The **Platform** page (`/training-planner/platform`, in the profile menu) is
+for super admins, whatever their role in the active org, and isn't hidden by
+preview or "View as". Its Organisations tab lists every org (`listOrgs`) with
+member and item counts, and suspends or reactivates them. Its Settings tab
+edits the admin contact email.
 Under `orgs/{orgId}`:
 
 How people get into an org:
@@ -214,7 +226,8 @@ Rules under `orgs/{orgId}`:
 | `removeMember` | owner, or the member themselves | removes the membership |
 | `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |
 | `setClientTrainers` | owner | sets a client's `trainerUids` (each must be a trainer or the owner) |
-| `suspendOrg` | super admin | suspends or reactivates an org |
+| `listOrgs` | super admin | every org (up to 200) with owner email, members by role, items per collection, public items and links |
+| `suspendOrg` | super admin | suspends or reactivates an org, and writes the status to its public profile |
 
 `billingGuard` isn't callable. It runs on Cloud Billing budget notifications
 and closes the callables to the public once the project starts costing

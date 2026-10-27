@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
 import UserManagementContext from "../context/UserManagementContext";
+import AppSettingsContext from "../context/AppSettingsContext";
 import { Loading } from "./helpers/Loading";
 import { getDisplayName } from "../common/utils";
 import { getCurrentWeekNumber } from "../common/planWeek";
@@ -27,6 +28,7 @@ import {
   faClipboardList,
   faClockRotateLeft,
   faCircleCheck,
+  faCircleExclamation,
   IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
 import { Card, Button, Input } from "@dyordsabuzo/ui-components";
@@ -123,6 +125,32 @@ const OrgHint = () => {
   );
 };
 
+// Orgs the user lost because the platform admin suspended them; they
+// otherwise just vanish from the switcher (see useOrgMembership).
+const SuspendedNotice = () => {
+  const { suspendedOrgs } = useContext(AuthContext);
+  const { adminEmail } = useContext(AppSettingsContext);
+  if (suspendedOrgs.length === 0) return null;
+  return (
+    <div role="status" className="flex items-start gap-3 rounded-md bg-amber-50 dark:bg-amber-700/20 p-3 text-sm">
+      <span className="text-amber-700 dark:text-amber-400 mt-0.5">
+        <FontAwesomeIcon icon={faCircleExclamation} />
+      </span>
+      <div className="flex flex-col gap-1">
+        {suspendedOrgs.map((org) => (
+          <span key={org.id}>
+            <strong>{org.name}</strong> is suspended. Contact{" "}
+            <a href={`mailto:${adminEmail}`} className="text-primary font-semibold underline">
+              {adminEmail}
+            </a>
+            .
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
@@ -130,6 +158,7 @@ export const Home = () => {
   const { user, userPermission, isLoading, requestAccess, orgs } = authContext;
   const { sourceData } = sourceDataContext;
   const { users, fetchUsers } = userManagementContext;
+  const { adminEmail } = useContext(AppSettingsContext);
   const { role, plans: grantedPlans = [] } = userPermission || {};
   const navigate = useNavigate();
   const [requestNote, setRequestNote] = useState("");
@@ -256,6 +285,8 @@ export const Home = () => {
             )}`}
           </h1>
 
+          <SuspendedNotice />
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatCard
               icon={faDumbbell}
@@ -343,6 +374,8 @@ export const Home = () => {
             : "Welcome to Training Planner"}
         </h1>
 
+        {user && <SuspendedNotice />}
+
         {user && <OrgHint />}
 
         {user && grantedPlans.length === 0 && (
@@ -392,6 +425,13 @@ export const Home = () => {
                 />
               </div>
             )}
+
+            <a
+              href={`mailto:${adminEmail}`}
+              className="self-start min-h-11 flex items-center text-sm font-semibold text-primary underline"
+            >
+              Contact us
+            </a>
 
             {orgs.length === 0 && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">

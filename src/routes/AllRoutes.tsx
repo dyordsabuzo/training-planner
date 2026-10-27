@@ -3,6 +3,7 @@ import Navigation from "../components/navigation/Navigation";
 import ErrorPage from "../pages/ErrorPage";
 import ListingPage from "../pages/ListingPage";
 import AdminPage from "../pages/AdminPage";
+import PlatformPage from "../pages/PlatformPage";
 import ProfilePage from "../pages/ProfilePage";
 import SessionPage from "../pages/SessionPage";
 import SimulateSessionPage from "../pages/SimulateSessionPage";
@@ -28,6 +29,7 @@ const AppShell = () => {
   const {
     user,
     userPermission,
+    isSuperAdmin,
     isPreviewingAsUser,
     setPreviewAsUser,
     isImpersonating,
@@ -145,6 +147,20 @@ const AppShell = () => {
                 <Navigate to="/login" />
               ) : userPermission?.role === "admin" ? (
                 <AdminPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+            errorElement={<ErrorPage />}
+          />
+          {/* The real role, so preview and impersonation don't hide it. */}
+          <Route
+            path={"/training-planner/platform"}
+            element={
+              !user ? (
+                <Navigate to="/login" />
+              ) : isSuperAdmin ? (
+                <PlatformPage />
               ) : (
                 <Navigate to="/" />
               )

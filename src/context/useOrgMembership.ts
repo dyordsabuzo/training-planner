@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import { getDoc } from "firebase/firestore";
 import { getDocumentReference } from "../common/firebase";
+import { nextSuspendedOrgs, OrgProfile, SuspendedOrg, suspendedCandidates } from "./suspendedOrgs";
 
 export type OrgRole = "owner" | "trainer" | "client";
 
@@ -27,7 +28,14 @@ const ACTIVE_ORG_KEY = "training-planner-active-org";
 // Firestore) still opens the cached content of the right org.
 const MEMBERSHIP_KEY = "training-planner-membership";
 
-type Remembered = { uid: string; roles: Record<string, OrgRole>; isSuperAdmin: boolean; members: Record<string, OrgMember> };
+type Remembered = {
+  uid: string;
+  roles: Record<string, OrgRole>;
+  isSuperAdmin: boolean;
+  members: Record<string, OrgMember>;
+  // Orgs the user lost because they were suspended (see suspendedOrgs.ts).
+  suspendedOrgs?: SuspendedOrg[];
+};
 
 const remembered = (uid: string): Remembered | null => {
   try {
@@ -58,6 +66,7 @@ export const useOrgMembership = (user: User | null) => {
   const [member, setMember] = useState<OrgMember | null>(null);
   const [isMemberLoading, setIsMemberLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [suspendedOrgs, setSuspendedOrgs] = useState<SuspendedOrg[]>([]);
 
   // Pass forceRefresh after a call that changed the user's memberships, and
   // preferOrgId to make a just-joined org active.
@@ -66,6 +75,7 @@ export const useOrgMembership = (user: User | null) => {
       if (!user) {
         setRoles({});
         setIsSuperAdmin(false);
+        setSuspendedOrgs([]);
         setIsLoading(false);
         return;
       }
@@ -75,11 +85,35 @@ export const useOrgMembership = (user: User | null) => {
         ({ claims } = await user.getIdTokenResult(true));
       }
       const claimed = (claims.orgs ?? {}) as Record<string, OrgRole>;
+      const last = remembered(user.uid);
       remember(user.uid, { roles: claimed, isSuperAdmin: claims.superAdmin === true });
       applyRoles(claimed, claims.superAdmin === true, preferOrgId);
+      checkSuspended(user.uid, last?.roles ?? {}, claimed, last?.suspendedOrgs ?? []);
     },
     [user]
   );
+
+  // Suspended orgs drop out of the claim; their profile says why.
+  const checkSuspended = async (
+    uid: string,
+    previousRoles: Record<string, OrgRole>,
+    claimed: Record<string, OrgRole>,
+    previous: SuspendedOrg[]
+  ) => {
+    const candidates = suspendedCandidates(previousRoles, claimed, previous);
+    const profiles = Object.fromEntries(
+      await Promise.all(
+        candidates.map((id) =>
+          getDoc(getDocumentReference(`orgs/${id}/public`, "profile"))
+            .then((snapshot): [string, OrgProfile] => [id, snapshot.data() ?? {}])
+            .catch((): [string, OrgProfile] => [id, null])
+        )
+      )
+    );
+    const next = nextSuspendedOrgs(candidates, profiles, previous);
+    remember(uid, { suspendedOrgs: next });
+    setSuspendedOrgs(next);
+  };
 
   const applyRoles = (claimed: Record<string, OrgRole>, superAdmin: boolean, preferOrgId?: string) => {
     setRoles(claimed);
@@ -101,6 +135,7 @@ export const useOrgMembership = (user: User | null) => {
       .catch(() => {
         const last = user && remembered(user.uid);
         applyRoles(last?.roles ?? {}, last?.isSuperAdmin ?? false);
+        setSuspendedOrgs(last?.suspendedOrgs ?? []);
       })
       .finally(() => setIsLoading(false));
   }, [loadClaims, user]);
@@ -154,6 +189,7 @@ export const useOrgMembership = (user: User | null) => {
     orgRole: activeOrgId ? roles[activeOrgId] ?? null : null,
     member,
     isSuperAdmin,
+    suspendedOrgs,
     // Plans assigned to a client are on the member doc, so wait for it too.
     isLoading: isLoading || isMemberLoading,
     switchOrg,

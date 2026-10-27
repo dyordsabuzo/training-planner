@@ -10,7 +10,7 @@ initializeApp();
 // short timeout. Extra concurrent calls are refused rather than scaled out.
 setGlobalOptions({ region: REGION, maxInstances: 1, cpu: "gcf_gen1", memory: "256MiB", timeoutSeconds: 10 });
 
-export { suspendOrg } from "./admin";
+export { listOrgs, suspendOrg } from "./admin";
 export { billingGuard } from "./guard";
 export { acceptInvite, createInvite } from "./invites";
 export { convertLinkToCopy, copyToOrg, linkToOrg, listLibrary, unlink } from "./library";
