@@ -130,6 +130,12 @@ userdata/{uid}/plans/{planId}
 userdata/{uid}/checkins/{YYYY-MM-DD}
   orgId, updatedAt    org it was saved in
   mood?, sleepHours?, sleepQuality?, energy?, soreness?   ratings 1-5
+userdata/{uid}/events/{eventId}
+  orgId, createdAt    org it was created in (never changes)
+  name, weekdays[]    0 = Sun .. 6 = Sat
+  startDate, endDate  YYYY-MM-DD, inclusive
+  startTime?, location?, notes?
+  attendance? { [YYYY-MM-DD]: "attended" | "missed" }
 ```
 
 `meta.incomplete` marks a run ended early from the between-unit summary
@@ -143,6 +149,16 @@ whose `meta.completedAt` does (`DayAgendaCard.tsx`). `src/common/dayAgenda.ts`
 derives this from the same data, so nothing extra is stored; sessions without
 a date don't appear on the strip. When today is selected, the card also lists
 every missed session (dated before today and not done).
+
+Clients can add their own regular events (e.g. on-water training every
+Tue/Thu) from the agenda card ("+ Add regular event",
+`RecurringEventForm.tsx`, validated with Zod in
+`src/common/recurringEvents.ts`). An event shows on each matching weekday in
+its date range. On today or a past day the client marks it Attended or
+Missed (Undo clears it); an unconfirmed one on a past day makes that day
+overdue on the strip, and today's counts as planned. The strip shows for a
+client with plans or with events; a client with neither gets a card with
+just the add button.
 
 A session can be marked optional (`optional: true`, set in the session form,
 off by default). It shows only on its date, labelled "Optional", and is never
@@ -181,6 +197,9 @@ active org has the `admin` role and a client has `user`
   docs tagged with that org. A list must filter on `orgId`. The root
   `userdata/{uid}` (`inProgress`) stays private to the user and the platform
   admin.
+- Recurring events follow the same rule as plan docs: only the user writes
+  them (tagged with an org they belong to, `orgId` fixed), and trainers of
+  that org read them with an `orgId` filter.
 - "View as" shows the app as a member sees it, read-only. It uses the same
   per-org progress read, so it works for any trainer of the org.
 - Trainers write content. Roles and plan assignments change only through

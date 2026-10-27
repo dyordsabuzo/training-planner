@@ -254,6 +254,19 @@ const richHistoryAuth = withMockAuthContext({
   isLoading: false,
 });
 
+// Signed in to an org, so the Events panel can add events.
+const orgAuth = withMockAuthContext({
+  user: { email: "sam@trainingplanner.com" },
+  userPermission: {
+    role: "user",
+    plans: ["plan-1", "plan-2"],
+    firstName: "Sam",
+    lastName: "Trainee",
+  },
+  activeOrgId: "default",
+  isLoading: false,
+});
+
 export const PlansWithRichHistory: StoryObj<typeof Home> = {
   name: "Plans granted, with session/mood history",
   decorators: [
@@ -262,6 +275,56 @@ export const PlansWithRichHistory: StoryObj<typeof Home> = {
       sourceData: richSourceData,
       checkins: {},
       saveCheckin: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+// A Tue/Thu event over the last and next few weeks, attended last week and
+// unconfirmed since, so recent Tue/Thu are overdue on the strip.
+const eventDays = [2, 4];
+const lastEventDays = Array.from({ length: 14 }, (_, i) => dayjs().subtract(i + 1, "day")).filter((d) =>
+  eventDays.includes(d.day())
+);
+export const WithRecurringEvents: StoryObj<typeof Home> = {
+  name: "Plans granted, with recurring events",
+  decorators: [
+    orgAuth,
+    withMockSourceDataContext({
+      sourceData: richSourceData,
+      checkins: {},
+      saveCheckin: async () => {},
+      events: [
+        {
+          id: "e1",
+          orgId: "default",
+          name: "On-water training",
+          weekdays: eventDays,
+          startDate: dateAgo(21),
+          endDate: dayjs().add(21, "day").format("YYYY-MM-DD"),
+          startTime: "18:00",
+          location: "Marina",
+          attendance: Object.fromEntries(lastEventDays.slice(2).map((d) => [d.format("YYYY-MM-DD"), "attended"])),
+          createdAt: dateAgo(21),
+        },
+      ],
+      saveEvent: async () => {},
+      deleteEvent: async () => {},
+      setAttendance: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+export const PlansWithoutEvents: StoryObj<typeof Home> = {
+  name: "Plans granted, no recurring events",
+  decorators: [
+    orgAuth,
+    withMockSourceDataContext({
+      sourceData: richSourceData,
+      checkins: {},
+      saveCheckin: async () => {},
+      events: [],
       initialise: () => {},
     }),
   ],

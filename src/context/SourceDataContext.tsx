@@ -1,6 +1,8 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import {
   deleteDoc,
+  deleteField,
+  doc,
   documentId,
   getDoc,
   getDocs,
@@ -20,6 +22,7 @@ import { contentVersionKey } from "../common/queryCache";
 import { personalisePlan } from "../management/cloneEntity";
 import { isBlocked, Sharing, sharingOf, widenSharing } from "../common/sharing";
 import { Checkin, checkinId, cleanCheckin } from "../common/checkins";
+import { Attendance, cleanEventInput, EventInput, RecurringEvent } from "../common/recurringEvents";
 import dayjs from "dayjs";
 import {
   assembleUserdata,
@@ -30,6 +33,7 @@ import {
   Link,
   LinkedSource,
   toStoredEntity,
+  userdataEventsPath,
   userdataPlansPath,
   userdataView,
   withLinked,
@@ -78,6 +82,15 @@ const fetchCheckins = async (uid: string, from: string, to: string, orgId?: stri
   return Object.fromEntries(snapshot.docs.map((d) => [d.id, d.data() as Checkin]));
 };
 
+// Recurring events the user created in one org. The orgId filter is also
+// what lets a trainer ("View as") pass the rules.
+const eventsKey = (uid?: string, orgId?: string) => ["sourceData", "events", uid, orgId];
+
+const fetchEvents = async (uid: string, orgId: string) => {
+  const snapshot = await getDocs(query(getCollection(userdataEventsPath(uid)), where("orgId", "==", orgId)));
+  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }) as RecurringEvent);
+};
+
 const recentRange = () => [
   checkinId(dayjs().subtract(CHECKIN_DAYS - 1, "day")),
   checkinId(dayjs()),
@@ -118,6 +131,13 @@ type SourceDataContextValue = {
   checkins: Record<string, Checkin>;
   // Saves today's check-in for the signed-in user, tagged with the active org.
   saveCheckin: (checkin: Checkin) => Promise<void>;
+  // The signed-in (or viewed) user's recurring events in the active org.
+  events: RecurringEvent[];
+  // Creates (no id) or replaces an event's details, keeping its attendance.
+  saveEvent: (input: EventInput, id?: string) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  // Confirms one day's attendance; null clears it (undo).
+  setAttendance: (id: string, date: string, value: Attendance | null) => Promise<void>;
 };
 
 const noop = () => {};
@@ -149,6 +169,10 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   unlinkItem: async () => {},
   checkins: {},
   saveCheckin: async () => {},
+  events: [],
+  saveEvent: async () => {},
+  deleteEvent: async () => {},
+  setAttendance: async () => {},
 });
 
 export default SourceDataContext;
@@ -375,6 +399,50 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
       ...previous,
       [day]: data,
     }));
+  };
+
+  const eventsQuery = useQuery({
+    queryKey: eventsKey(effectiveUid, activeOrgId),
+    queryFn: () => fetchEvents(effectiveUid!, activeOrgId!),
+    enabled: contentEnabled && !!effectiveUid,
+  });
+
+  // Only the user writes their events; "View as" is read-only.
+  const eventRef = (id: string) => getDocumentReference(userdataEventsPath(user!.uid), id);
+  const canWriteEvents = !!user && !isImpersonating && !!activeOrgId;
+  const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: eventsKey(user?.uid, activeOrgId) });
+
+  const saveEvent = async (input: EventInput, id?: string) => {
+    if (!canWriteEvents) return;
+    const details = cleanEventInput(input);
+    const existing = eventsQuery.data?.find((e) => e.id === id);
+    if (existing) {
+      await setDoc(eventRef(existing.id), {
+        orgId: existing.orgId,
+        createdAt: existing.createdAt,
+        ...(existing.attendance && { attendance: existing.attendance }),
+        ...details,
+      });
+    } else {
+      await setDoc(doc(getCollection(userdataEventsPath(user!.uid))), {
+        ...details,
+        orgId: activeOrgId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    await invalidateEvents();
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!canWriteEvents) return;
+    await deleteDoc(eventRef(id));
+    await invalidateEvents();
+  };
+
+  const setAttendance = async (id: string, date: string, value: Attendance | null) => {
+    if (!canWriteEvents) return;
+    await updateDoc(eventRef(id), { [`attendance.${date}`]: value ?? deleteField() });
+    await invalidateEvents();
   };
 
   const sourceData: SourceData = { ...contentData, userdata };
@@ -796,6 +864,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         viewUserdata,
         checkins: checkinsQuery.data ?? {},
         saveCheckin,
+        events: eventsQuery.data ?? [],
+        saveEvent,
+        deleteEvent,
+        setAttendance,
         isLoading,
         error,
         addExercise: addExerciseMutation.mutate,

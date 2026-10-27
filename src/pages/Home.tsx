@@ -12,8 +12,11 @@ import { PlanProgressCard } from "./others/PlanProgressCard";
 import { StartOrgForm } from "./others/StartOrgForm";
 import { DayStrip } from "./others/DayStrip";
 import { DayAgendaCard } from "./others/DayAgendaCard";
+import { DayEvents } from "./others/DayEvents";
 import { dayAgenda, dayStatus, missedSessions } from "../common/dayAgenda";
 import { checkinId } from "../common/checkins";
+import { eventDay, RecurringEvent } from "../common/recurringEvents";
+import { RecurringEventForm } from "../forms/RecurringEventForm";
 import { DailyCheckInCard } from "./others/DailyCheckInCard";
 import dayjs, { Dayjs } from "dayjs";
 import { PENDING_INVITE_KEY } from "./JoinPage";
@@ -161,8 +164,8 @@ export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
   const userManagementContext = useContext(UserManagementContext);
-  const { user, userPermission, isLoading, requestAccess, orgs, isImpersonating } = authContext;
-  const { sourceData, checkins = {}, saveCheckin } = sourceDataContext;
+  const { user, userPermission, isLoading, requestAccess, orgs, isImpersonating, activeOrgId } = authContext;
+  const { sourceData, checkins = {}, saveCheckin, events = [], setAttendance } = sourceDataContext;
   const { users, fetchUsers } = userManagementContext;
   const { adminEmail } = useContext(AppSettingsContext);
   const { role, plans: grantedPlans = [] } = userPermission || {};
@@ -170,6 +173,8 @@ export const Home = () => {
   const [requestNote, setRequestNote] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Dayjs>(() => dayjs());
+  // The recurring event being edited, or "new" while adding one.
+  const [eventForm, setEventForm] = useState<RecurringEvent | "new" | null>(null);
 
   // Back to an invite link that was opened before signing in.
   useEffect(() => {
@@ -201,7 +206,7 @@ export const Home = () => {
   );
 
   const agendaFor = (day: Dayjs) =>
-    dayAgenda(day, { plans: sourceData?.plans, sessions: sourceData?.sessions, userdata });
+    dayAgenda(day, { plans: sourceData?.plans, sessions: sourceData?.sessions, userdata }, events);
   const missed = useMemo(
     () => missedSessions({ plans: sourceData?.plans, sessions: sourceData?.sessions, userdata }),
     [sourceData?.plans, sourceData?.sessions, userdata]
@@ -455,25 +460,47 @@ export const Home = () => {
           </Card>
         )}
 
-        {user && grantedPlans.length > 0 && (
-          <>
-            {!isImpersonating && (
-              <DailyCheckInCard checkin={checkins[checkinId(dayjs())]} onSave={saveCheckin} />
-            )}
+        {user && grantedPlans.length > 0 && !isImpersonating && (
+          <DailyCheckInCard checkin={checkins[checkinId(dayjs())]} onSave={saveCheckin} />
+        )}
 
-            <div className="flex flex-col gap-3">
+        {user && (grantedPlans.length > 0 || events.length > 0 || activeOrgId) && (
+          <div className="flex flex-col gap-3">
+            {(grantedPlans.length > 0 || events.length > 0) && (
               <DayStrip
                 selected={selectedDay}
                 onSelect={setSelectedDay}
                 statusFor={(day) => dayStatus(agendaFor(day), day)}
               />
-              <DayAgendaCard
-                day={selectedDay}
-                agenda={agendaFor(selectedDay)}
-                missed={missed}
-                checkin={checkins[checkinId(selectedDay)]}
-              />
-            </div>
+            )}
+            <DayAgendaCard
+              day={selectedDay}
+              agenda={grantedPlans.length > 0 ? agendaFor(selectedDay) : undefined}
+              events={agendaFor(selectedDay).events}
+              missed={missed}
+              checkin={checkins[checkinId(selectedDay)]}
+            >
+              {(activeOrgId || events.length > 0) && (
+                <DayEvents
+                  events={agendaFor(selectedDay).events}
+                  hasAnyEvents={events.length > 0}
+                  {...(!isImpersonating && {
+                    onAttendance: (eventId, value) => setAttendance(eventId, eventDay(selectedDay), value),
+                    onEditEvent: setEventForm,
+                    ...(activeOrgId && { onAddEvent: () => setEventForm("new") }),
+                  })}
+                />
+              )}
+            </DayAgendaCard>
+          </div>
+        )}
+
+        {eventForm && (
+          <RecurringEventForm event={eventForm === "new" ? undefined : eventForm} closeForm={() => setEventForm(null)} />
+        )}
+
+        {user && grantedPlans.length > 0 && (
+          <>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
