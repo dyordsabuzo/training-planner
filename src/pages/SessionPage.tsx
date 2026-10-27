@@ -30,6 +30,7 @@ import {
   openPlanSkippedSessions,
   sessionDueStatus,
   sortSessionsByDate,
+  isLapsedOptional,
 } from "../common/planSessions";
 
 // Weights start from the last session of the plan that included the exercise.
@@ -191,7 +192,9 @@ const SessionPage = () => {
     const planName = sessionData.plan;
     if (!selectedPlanData || !planName) return null;
     if (isOpenPlan) {
-      const session = sessionOptions.find((name) => !openDone.includes(name));
+      const session = sessionOptions.find(
+        (name) => !openDone.includes(name) && !isLapsedOptional(sourceData?.sessions?.[name])
+      );
       return session
         ? { plan: planName, week: OPEN_WEEK, session, date: sourceData?.sessions?.[session]?.date }
         : null;
@@ -206,7 +209,9 @@ const SessionPage = () => {
     if (!week) return null;
     const userdata: any = Object.values(sourceData?.userdata ?? {})[0];
     const doneInWeek = Object.keys(userdata?.[planName]?.[week] ?? {});
-    const session = sessionOptions.find((name) => !doneInWeek.includes(name));
+    const session = sessionOptions.find(
+      (name) => !doneInWeek.includes(name) && !isLapsedOptional(sourceData?.sessions?.[name])
+    );
     return session
       ? { plan: planName, week, session, date: sourceData?.sessions?.[session]?.date }
       : null;
@@ -227,6 +232,7 @@ const SessionPage = () => {
     const count = (config?.groups?.length ?? 0) + (config?.supersets?.length ?? 0);
     return [
       config?.date ? formatSessionDate(config.date) : null,
+      config?.optional ? "Optional" : null,
       `${count} ${count === 1 ? "group" : "groups"}`,
     ]
       .filter(Boolean)
@@ -520,6 +526,7 @@ const SessionPage = () => {
                         date={sourceData?.sessions?.[session]?.date}
                         done={openDone.includes(session)}
                         skipped={openSkipped.includes(session)}
+                        optional={sourceData?.sessions?.[session]?.optional === true}
                       />
                     )}
                   </button>

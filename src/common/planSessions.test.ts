@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import {
   openPlanDoneSessions,
   openPlanSkippedSessions,
+  isLapsedOptional,
   sessionDueStatus,
   sortPlansByCreated,
   sortSessionsByDate,
@@ -76,5 +77,23 @@ describe("sortPlansByCreated", () => {
       "Old",
       "Undated",
     ]);
+  });
+});
+
+describe("optional sessions", () => {
+  const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+  const today = dayjs().format("YYYY-MM-DD");
+
+  it("are never overdue", () => {
+    expect(sessionDueStatus(yesterday, false, true)).toBeNull();
+    expect(sessionDueStatus(yesterday, true, true)).toBe("done");
+    expect(sessionDueStatus(yesterday, false)).toBe("overdue");
+  });
+
+  it("lapse once their date has passed", () => {
+    expect(isLapsedOptional({ optional: true, date: yesterday })).toBe(true);
+    expect(isLapsedOptional({ optional: true, date: today })).toBe(false);
+    expect(isLapsedOptional({ optional: false, date: yesterday })).toBe(false);
+    expect(isLapsedOptional({ optional: true })).toBe(false);
   });
 });

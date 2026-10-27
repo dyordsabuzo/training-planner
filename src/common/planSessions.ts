@@ -25,11 +25,17 @@ export const sortSessionsByDate = (names: string[], sessions: any): string[] =>
 export const formatSessionDate = (date: string) => dayjs(date).format("ddd, MMM D");
 
 // "done" once logged, "overdue" when its date has passed and it isn't done.
-export const sessionDueStatus = (date: string | undefined, done: boolean) => {
+// Optional sessions are never overdue.
+export const sessionDueStatus = (date: string | undefined, done: boolean, optional = false) => {
   if (done) return "done";
-  if (date && dayjs(date).isBefore(dayjs(), "day")) return "overdue";
+  if (!optional && date && dayjs(date).isBefore(dayjs(), "day")) return "overdue";
   return null;
 };
+
+// An optional session whose date has passed: it's dropped, not missed, so
+// Up next moves past it.
+export const isLapsedOptional = (config: any) =>
+  config?.optional === true && !!config?.date && dayjs(config.date).isBefore(dayjs(), "day");
 
 // Plans newest first by creation date. Plans created before dates were recorded
 // have none, so they go last, by name.

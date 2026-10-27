@@ -6,12 +6,14 @@ type Props = {
   date?: string;
   done: boolean;
   skipped?: boolean;
+  optional?: boolean;
 };
 
 // Done sessions get a green check and skipped ones a muted skip icon.
-// Not-done sessions get an empty circle, red once their date has passed.
+// Not-done sessions get an empty circle, red once their date has passed
+// (never for optional sessions).
 // Sessions dated in the future show no icon.
-export const SessionStatusIcon = ({ date, done, skipped = false }: Props) => {
+export const SessionStatusIcon = ({ date, done, skipped = false, optional = false }: Props) => {
   if (skipped) {
     return (
       <span role="img" aria-label="Skipped" title="Skipped" className="text-text-muted-light dark:text-text-muted-dark">
@@ -32,7 +34,7 @@ export const SessionStatusIcon = ({ date, done, skipped = false }: Props) => {
     return null;
   }
 
-  const overdue = !!date && dayjs(date).isBefore(dayjs(), "day");
+  const overdue = !optional && !!date && dayjs(date).isBefore(dayjs(), "day");
   return (
     <span
       role="img"

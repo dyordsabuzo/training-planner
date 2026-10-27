@@ -40,6 +40,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   });
   const [groupsError, setGroupsError] = useState<string>();
   const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
+  const [optional, setOptional] = useState(formData?.optional ?? false);
   const tagFieldRef = useRef<HTMLDivElement>(null);
   // Group waiting for an exercise created from the nested exercise modal,
   // plus the name to pre-fill (search text from the dropdown, if any).
@@ -126,6 +127,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
       name,
       tags: finalTags,
       date: date ? date.format("YYYY-MM-DD") : null,
+      optional,
       supersets,
       groups: cleanGroups,
       // Order for the shared link (Firestore doesn't keep map key order).
@@ -180,6 +182,13 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           {date && (
             <Button label="Clear date" decoration="cancel" className="text-xs" onClick={() => setDate(null)} />
           )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Toggle label="Optional session?" labelDirection="row" value={optional} toggle={setOptional} />
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+            Shows only on its date and is never marked as missed or overdue.
+          </span>
         </div>
 
         <div ref={tagFieldRef}>
