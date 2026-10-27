@@ -267,6 +267,42 @@ export const PlansWithRichHistory: StoryObj<typeof Home> = {
   ],
 };
 
+// A Tue/Thu event over the last and next few weeks, attended last week and
+// unconfirmed since, so recent Tue/Thu are overdue on the strip.
+const eventDays = [2, 4];
+const lastEventDays = Array.from({ length: 14 }, (_, i) => dayjs().subtract(i + 1, "day")).filter((d) =>
+  eventDays.includes(d.day())
+);
+export const WithRecurringEvents: StoryObj<typeof Home> = {
+  name: "Plans granted, with recurring events",
+  decorators: [
+    richHistoryAuth,
+    withMockSourceDataContext({
+      sourceData: richSourceData,
+      checkins: {},
+      saveCheckin: async () => {},
+      events: [
+        {
+          id: "e1",
+          orgId: "default",
+          name: "On-water training",
+          weekdays: eventDays,
+          startDate: dateAgo(21),
+          endDate: dayjs().add(21, "day").format("YYYY-MM-DD"),
+          startTime: "18:00",
+          location: "Marina",
+          attendance: Object.fromEntries(lastEventDays.slice(2).map((d) => [d.format("YYYY-MM-DD"), "attended"])),
+          createdAt: dateAgo(21),
+        },
+      ],
+      saveEvent: async () => {},
+      deleteEvent: async () => {},
+      setAttendance: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
 // Today's check-in is saved (the card shows its summary); yesterday's shows
 // in the agenda when that day is selected.
 export const WithCheckIns: StoryObj<typeof Home> = {

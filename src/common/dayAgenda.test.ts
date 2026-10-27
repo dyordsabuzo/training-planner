@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import dayjs from "dayjs";
 import { dayAgenda, dayStatus, missedSessions, weekDays } from "./dayAgenda";
 import { OPEN_WEEK } from "./planCycle";
+import { RecurringEvent } from "./recurringEvents";
 
 describe("weekDays", () => {
   it("returns Monday to Sunday of the anchor's week", () => {
@@ -98,15 +99,43 @@ describe("dayStatus", () => {
   const past = dayjs().subtract(1, "day");
 
   it("ranks overdue, then planned, then done", () => {
-    expect(dayStatus({ scheduled: [s(true, false), s(false, true)], completed: [] }, today)).toBe("overdue");
-    expect(dayStatus({ scheduled: [s(true, false), s(false, false)], completed: [] }, today)).toBe("planned");
-    expect(dayStatus({ scheduled: [s(true, false)], completed: [] }, today)).toBe("done");
-    expect(dayStatus({ scheduled: [], completed: [run] }, today)).toBe("done");
-    expect(dayStatus({ scheduled: [], completed: [] }, today)).toBeNull();
+    expect(dayStatus({ scheduled: [s(true, false), s(false, true)], completed: [], events: [] }, today)).toBe("overdue");
+    expect(dayStatus({ scheduled: [s(true, false), s(false, false)], completed: [], events: [] }, today)).toBe("planned");
+    expect(dayStatus({ scheduled: [s(true, false)], completed: [], events: [] }, today)).toBe("done");
+    expect(dayStatus({ scheduled: [], completed: [run], events: [] }, today)).toBe("done");
+    expect(dayStatus({ scheduled: [], completed: [], events: [] }, today)).toBeNull();
   });
 
   it("leaves no mark for an optional session missed on a past day", () => {
-    expect(dayStatus({ scheduled: [s(false, false, true)], completed: [] }, today)).toBe("planned");
-    expect(dayStatus({ scheduled: [s(false, false, true)], completed: [] }, past)).toBeNull();
+    expect(dayStatus({ scheduled: [s(false, false, true)], completed: [], events: [] }, today)).toBe("planned");
+    expect(dayStatus({ scheduled: [s(false, false, true)], completed: [], events: [] }, past)).toBeNull();
+  });
+
+  it("counts recurring events: unconfirmed past is overdue, today's is planned, attended is done", () => {
+    const occ = (status: any) => ({ event: {} as RecurringEvent, status });
+    expect(dayStatus({ scheduled: [s(true, false)], completed: [], events: [occ("overdue")] }, past)).toBe("overdue");
+    expect(dayStatus({ scheduled: [s(true, false)], completed: [], events: [occ("pending")] }, today)).toBe("planned");
+    expect(dayStatus({ scheduled: [], completed: [], events: [occ("attended")] }, past)).toBe("done");
+    expect(dayStatus({ scheduled: [], completed: [], events: [occ("missed")] }, past)).toBeNull();
+    expect(dayStatus({ scheduled: [], completed: [], events: [occ(null)] }, today.add(1, "day"))).toBeNull();
+  });
+});
+
+describe("dayAgenda with recurring events", () => {
+  it("lists the events falling on the day with their status", () => {
+    const day = dayjs().subtract(1, "day");
+    const event: RecurringEvent = {
+      id: "e1",
+      orgId: "o",
+      name: "On-water",
+      weekdays: [day.day()],
+      startDate: day.subtract(7, "day").format("YYYY-MM-DD"),
+      endDate: day.add(7, "day").format("YYYY-MM-DD"),
+      createdAt: "x",
+    };
+    const sources = { plans: {}, sessions: {}, userdata: {} };
+    expect(dayAgenda(day, sources, [event]).events).toEqual([{ event, status: "overdue" }]);
+    expect(dayAgenda(day.add(1, "day"), sources, [event]).events).toEqual([]);
+    expect(dayAgenda(day, sources).events).toEqual([]);
   });
 });

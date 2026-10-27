@@ -389,6 +389,8 @@ const mapUserdata = (doc: any, keys: KeyMaps) => {
 // userdata/{uid}/plans/{planId} as { orgId, [week]: ... }, so a trainer of
 // that org can read them (Firestore rules check orgId).
 export const userdataPlansPath = (uid: string) => `userdata/${uid}/plans`;
+// Recurring personal events, also tagged with orgId (see recurringEvents.ts).
+export const userdataEventsPath = (uid: string) => `userdata/${uid}/events`;
 
 // Root doc + plan docs -> the single-doc shape the rest of the app reads.
 // Plan fields still on the root (before scripts/split-userdata.ts --cleanup)
