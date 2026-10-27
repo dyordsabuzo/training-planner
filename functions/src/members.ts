@@ -2,7 +2,7 @@ import { getAuth } from "firebase-admin/auth";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { refreshClaims } from "./claims";
-import { idSchema, memberRef, parse, requireRole, requireUid } from "./common";
+import { idSchema, memberRef, orgRef, parse, requireRole, requireUid } from "./common";
 
 const targetMember = async (orgId: string, uid: string) => {
   const member = await memberRef(orgId, uid).get();
@@ -10,15 +10,23 @@ const targetMember = async (orgId: string, uid: string) => {
   return member;
 };
 
-// Owner only: adds an existing account (e.g. one that asked for access) as a
-// trainer or client. Existing members are left as they are.
+// Owner, or the platform admin (from the Platform page's access requests):
+// adds an existing account as a trainer or client. Existing members are left
+// as they are. Suspended orgs refuse it either way.
 export const addMember = onCall(async (request) => {
   const caller = requireUid(request);
   const { orgId, uid, role } = parse(
     z.object({ orgId: idSchema, uid: idSchema, role: z.enum(["trainer", "client"]) }),
     request.data
   );
-  await requireRole(orgId, caller, ["owner"]);
+  if (request.auth!.token.superAdmin === true) {
+    const org = await orgRef(orgId).get();
+    if (!org.exists || org.get("status") === "suspended") {
+      throw new HttpsError("permission-denied", "Not allowed for this organisation.");
+    }
+  } else {
+    await requireRole(orgId, caller, ["owner"]);
+  }
   const account = await getAuth()
     .getUser(uid)
     .catch(() => {
@@ -26,7 +34,8 @@ export const addMember = onCall(async (request) => {
     });
 
   const ref = memberRef(orgId, uid);
-  if (!(await ref.get()).exists) {
+  const added = !(await ref.get()).exists;
+  if (added) {
     await ref.create({
       uid,
       role,
@@ -37,7 +46,7 @@ export const addMember = onCall(async (request) => {
     });
     await refreshClaims(uid);
   }
-  return { ok: true };
+  return { ok: true, added };
 });
 
 // Owner only; the owner role itself can't be given or taken here.

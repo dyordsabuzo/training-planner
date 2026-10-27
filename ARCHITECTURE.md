@@ -189,7 +189,9 @@ with the roles it remembered on the device: an org that disappeared and whose
 The **Platform** page (`/training-planner/platform`, in the profile menu) is
 for super admins, whatever their role in the active org, and isn't hidden by
 preview or "View as". Its Organisations tab lists every org (`listOrgs`) with
-member and item counts, and suspends or reactivates them. Its Settings tab
+member and item counts, and suspends or reactivates them. Its Requests tab
+lists accounts that asked for access (`users` where `accessRequested`), to
+dismiss or add to any active org with a role. Its Settings tab
 edits the admin contact email.
 Under `orgs/{orgId}`:
 
@@ -203,8 +205,8 @@ How people get into an org:
   trainers.
   A link opened while signed out is remembered, and Home returns to it
   after sign-in or sign-up.
-- **The platform admin** can still add an existing account that asked for
-  access (`addMember`, from the Clients screen).
+- **The platform admin** adds an existing account that asked for access to
+  any active org (`addMember`, from Platform → Requests).
 
 Rules under `orgs/{orgId}`:
 
@@ -225,7 +227,7 @@ Rules under `orgs/{orgId}`:
 | `unlink` | owner, trainer | removes a link that nothing in the org uses |
 | `createInvite` | owner (any role), trainer (`client` only) | invite token (expiry, max uses) |
 | `acceptInvite` | any signed-in user | joins the org with the invite's role |
-| `addMember` | owner | adds an existing account as `trainer` or `client` (used by the Users screen) |
+| `addMember` | owner, or super admin | adds an existing account as `trainer` or `client` (Clients screen, Platform → Requests); refused for suspended orgs |
 | `setMemberRole` | owner | `trainer` ↔ `client` |
 | `removeMember` | owner, or the member themselves | removes the membership |
 | `setAssignedPlans` | owner, trainer | sets a member's `assignedPlanIds` |

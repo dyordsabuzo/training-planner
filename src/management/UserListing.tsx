@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import UserManagementContext, {
   AppUser,
-  hasPendingAccessRequest,
 } from "../context/UserManagementContext";
 import AuthContext from "../context/AuthContext";
 import AppSettingsContext from "../context/AppSettingsContext";
@@ -39,11 +38,6 @@ const buildColumns = (
           <span className="font-bold truncate">
             {getDisplayName(u.firstName, u.lastName, u.email)}
           </span>
-          {hasPendingAccessRequest(u) && (
-            <Badge variant="warning" className="shrink-0">
-              Requested access
-            </Badge>
-          )}
         </div>
         <div
           className={`text-xs text-text-muted-light dark:text-text-muted-dark truncate ${
@@ -205,9 +199,6 @@ export const UserListing = () => {
           `${u.email} ${u.displayName} ${u.firstName} ${u.lastName}`
             .toLowerCase()
             .includes(search.toLowerCase())
-        )
-        .sort(
-          (a, b) => Number(hasPendingAccessRequest(b)) - Number(hasPendingAccessRequest(a))
         ),
     [users, search, filter, onlyMine, user?.uid]
   );
@@ -217,7 +208,6 @@ export const UserListing = () => {
   }
 
   const editingUser = users.find((u) => u.id === editingUserId);
-  const pendingCount = users.filter(hasPendingAccessRequest).length;
 
   return (
     <BaseListing>
@@ -253,12 +243,6 @@ export const UserListing = () => {
       {saveError && !functionsSuspended && (
         <Badge variant="danger" className="w-fit">
           {saveError}
-        </Badge>
-      )}
-
-      {pendingCount > 0 && (
-        <Badge variant="warning" className="w-fit">
-          {pendingCount} {pendingCount === 1 ? "user" : "users"} waiting for plan access
         </Badge>
       )}
 

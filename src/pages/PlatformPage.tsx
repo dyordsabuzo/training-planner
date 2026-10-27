@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Tabs } from "@dyordsabuzo/ui-components";
 import { AppSettingsForm } from "../management/AppSettingsForm";
 import { PlatformOrgs } from "../management/PlatformOrgs";
+import { PlatformRequests } from "../management/PlatformRequests";
 import WrapperPage from "./WrapperPage";
 
-const TABS = ["Organisations", "Settings"];
+const TABS = ["Organisations", "Requests", "Settings"];
 
 // Super admins only (see AllRoutes): the whole platform rather than the active org.
 const PlatformPage = () => {
@@ -20,6 +21,7 @@ const PlatformPage = () => {
 
         <div className="w-full px-2">
           {tab === "Organisations" && <PlatformOrgs />}
+          {tab === "Requests" && <PlatformRequests />}
           {tab === "Settings" && <AppSettingsForm />}
         </div>
       </div>
