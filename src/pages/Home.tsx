@@ -10,6 +10,10 @@ import { getDisplayName } from "../common/utils";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { PlanProgressCard } from "./others/PlanProgressCard";
 import { StartOrgForm } from "./others/StartOrgForm";
+import { DayStrip } from "./others/DayStrip";
+import { DayAgendaCard } from "./others/DayAgendaCard";
+import { dayAgenda, dayStatus } from "../common/dayAgenda";
+import dayjs, { Dayjs } from "dayjs";
 import { PENDING_INVITE_KEY } from "./JoinPage";
 
 import { EmptyState } from "../management/EmptyState";
@@ -163,6 +167,7 @@ export const Home = () => {
   const navigate = useNavigate();
   const [requestNote, setRequestNote] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Dayjs>(() => dayjs());
 
   // Back to an invite link that was opened before signing in.
   useEffect(() => {
@@ -192,6 +197,9 @@ export const Home = () => {
     () => Object.values(sourceData?.userdata ?? {})[0] ?? {},
     [sourceData?.userdata]
   );
+
+  const agendaFor = (day: Dayjs) =>
+    dayAgenda(day, { plans: sourceData?.plans, sessions: sourceData?.sessions, userdata });
 
   const planStats: PlanStats[] = useMemo(() => {
     const plans = sourceData?.plans ?? {};
@@ -443,6 +451,15 @@ export const Home = () => {
 
         {user && grantedPlans.length > 0 && (
           <>
+            <div className="flex flex-col gap-3">
+              <DayStrip
+                selected={selectedDay}
+                onSelect={setSelectedDay}
+                statusFor={(day) => dayStatus(agendaFor(day))}
+              />
+              <DayAgendaCard day={selectedDay} agenda={agendaFor(selectedDay)} />
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
                 icon={faDumbbell}

@@ -133,6 +133,13 @@ userdata/{uid}/plans/{planId}
 ("End session"): the sets logged so far are kept and the run still counts
 as done; history shows it as "Incomplete".
 
+Client Home opens on a day strip (`DayStrip.tsx`, one week on phones, two
+from 768px up) with today selected.
+Tapping a day lists the plan sessions whose `date` falls on it and the runs
+whose `meta.completedAt` does (`DayAgendaCard.tsx`). `src/common/dayAgenda.ts`
+derives this from the same data, so nothing extra is stored; sessions without
+a date don't appear on the strip.
+
 Each plan's progress is its own doc, tagged with its org, so a trainer can
 read a client's progress for their org only. The app reads the active org's
 plan docs (`where orgId ==`) and `assembleUserdata` (`refs.ts`) joins them

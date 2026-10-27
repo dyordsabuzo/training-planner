@@ -24,7 +24,8 @@ Firestore security rules for this project live in the
 
 ## Getting started
 
-Requires Node 22.22.3+ and Yarn (see `.tool-versions`).
+Requires Node 22 and Yarn 1, pinned in `.tool-versions`. Newer Node releases
+fail `firebase-tools`' engine check on `yarn install`.
 
 ```bash
 yarn install
