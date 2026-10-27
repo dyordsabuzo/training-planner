@@ -133,7 +133,8 @@ userdata/{uid}/plans/{planId}
 ("End session"): the sets logged so far are kept and the run still counts
 as done; history shows it as "Incomplete".
 
-Client Home opens on a week strip (`DayStrip.tsx`) with today selected.
+Client Home opens on a day strip (`DayStrip.tsx`, one week on phones, two
+from 768px up) with today selected.
 Tapping a day lists the plan sessions whose `date` falls on it and the runs
 whose `meta.completedAt` does (`DayAgendaCard.tsx`). `src/common/dayAgenda.ts`
 derives this from the same data, so nothing extra is stored; sessions without
