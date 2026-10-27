@@ -3,9 +3,10 @@ import { Tabs } from "@dyordsabuzo/ui-components";
 import { AppSettingsForm } from "../management/AppSettingsForm";
 import { PlatformOrgs } from "../management/PlatformOrgs";
 import { PlatformRequests } from "../management/PlatformRequests";
+import { PlatformMarketplace } from "../management/PlatformMarketplace";
 import WrapperPage from "./WrapperPage";
 
-const TABS = ["Organisations", "Requests", "Settings"];
+const TABS = ["Organisations", "Requests", "Marketplace", "Settings"];
 
 // Super admins only (see AllRoutes): the whole platform rather than the active org.
 const PlatformPage = () => {
@@ -22,6 +23,7 @@ const PlatformPage = () => {
         <div className="w-full px-2">
           {tab === "Organisations" && <PlatformOrgs />}
           {tab === "Requests" && <PlatformRequests />}
+          {tab === "Marketplace" && <PlatformMarketplace />}
           {tab === "Settings" && <AppSettingsForm />}
         </div>
       </div>

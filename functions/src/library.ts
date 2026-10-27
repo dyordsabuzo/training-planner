@@ -1,7 +1,17 @@
-import { FieldValue, WriteBatch } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, QueryDocumentSnapshot, WriteBatch } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { bumpContentVersion, db, idSchema, linkRef, orgRef, parse, requireRole, requireUid } from "./common";
+import {
+  bumpContentVersion,
+  db,
+  idSchema,
+  linkRef,
+  orgRef,
+  parse,
+  requireRole,
+  requireSuperAdmin,
+  requireUid,
+} from "./common";
 import {
   BACK_LINKS,
   CONTENT,
@@ -23,6 +33,33 @@ const LIST_LIMIT = 100;
 const key = ({ collection, id }: Ref) => `${collection}/${id}`;
 const tagsOf = (data: any): string[] =>
   Array.isArray(data?.tags) ? data.tags : typeof data?.tags === "string" && data.tags ? data.tags.split(",") : [];
+
+// Org content only: the plans collection group also holds userdata/{uid}/plans.
+const isOrgContent = (doc: QueryDocumentSnapshot) => doc.ref.parent.parent?.parent.id === "orgs";
+
+// A list entry for one content doc, without its owner's name.
+const describeItem = (collection: Content, doc: QueryDocumentSnapshot) => {
+  const data = doc.data();
+  return {
+    collection,
+    id: doc.id,
+    orgId: doc.ref.parent.parent!.id,
+    name: String(data.name ?? doc.id),
+    tags: tagsOf(data),
+    uses: dependencyRefs(collection, data).length,
+  };
+};
+
+// Owner org names and statuses, from the org docs.
+const ownersOf = async (orgIds: string[]) => {
+  const ids = Array.from(new Set(orgIds));
+  const orgs = ids.length ? await db().getAll(...ids.map((id) => orgRef(id))) : [];
+  return new Map(
+    orgs
+      .filter((o) => o.exists)
+      .map((o) => [o.id, { name: String(o.get("name")), suspended: o.get("status") === "suspended" }])
+  );
+};
 
 // The Library browser's lists. "Shared with me" can't be a client query (the
 // rules can't prove sharedWithOrgIds.hasAny(claims) for a list), so both
@@ -49,23 +86,14 @@ export const listLibrary = onCall(async (request) => {
 
   const found = snaps.flatMap((snap, i) =>
     snap.docs
-      .map((doc) => ({ doc, ownerId: doc.ref.parent.parent?.id, isOrgContent: doc.ref.parent.parent?.parent.id === "orgs" }))
-      .filter(({ doc, ownerId, isOrgContent }) => isOrgContent && ownerId !== orgId && isOfferedTo(doc.data(), orgId))
-      .map(({ doc, ownerId }) => {
-        const data = doc.data();
-        const uses = dependencyRefs(CONTENT[i], data).length;
-        return { collection: CONTENT[i], id: doc.id, orgId: ownerId!, name: String(data.name ?? doc.id), tags: tagsOf(data), uses };
-      })
+      .filter((doc) => isOrgContent(doc) && doc.ref.parent.parent!.id !== orgId && isOfferedTo(doc.data(), orgId))
+      .map((doc) => describeItem(CONTENT[i], doc))
   );
 
-  const ownerIds = Array.from(new Set(found.map((item) => item.orgId)));
-  const owners = ownerIds.length ? await db().getAll(...ownerIds.map((id) => orgRef(id))) : [];
-  const active = new Map(
-    owners.filter((o) => o.exists && o.get("status") !== "suspended").map((o) => [o.id, String(o.get("name"))])
-  );
+  const owners = await ownersOf(found.map((item) => item.orgId));
   const items = found
-    .filter((item) => active.has(item.orgId))
-    .map((item) => ({ ...item, orgName: active.get(item.orgId)! }));
+    .filter((item) => owners.has(item.orgId) && !owners.get(item.orgId)!.suspended)
+    .map((item) => ({ ...item, orgName: owners.get(item.orgId)!.name }));
   return { items };
 });
 
@@ -319,4 +347,92 @@ export const unlink = onCall(async (request) => {
   bumpContentVersion(batch, srcOrgId, now);
   await batch.commit();
   return { id: linkId };
+});
+
+// Marketplace pages walk the content collections in order; the cursor is
+// where the last page stopped.
+const MARKETPLACE_PAGE = 100;
+const cursorSchema = z.object({ collection: z.enum(CONTENT), after: z.string().max(400) }).nullable().optional();
+
+const moderationOf = (data: any) =>
+  data?.moderation
+    ? {
+        blocked: data.moderation.blocked === true,
+        reason: (data.moderation.reason as string | undefined) ?? null,
+        at: data.moderation.at?.toDate?.().toISOString() ?? null,
+      }
+    : null;
+
+// Platform → Marketplace: every public item, suspended orgs' included, plus
+// every blocked one (blocked items are private, so they come from a second
+// query, on the first page only).
+export const listMarketplace = onCall({ timeoutSeconds: 60 }, async (request) => {
+  requireSuperAdmin(request);
+  const { cursor } = parse(z.object({ cursor: cursorSchema }), request.data ?? {});
+
+  const docs: { collection: Content; doc: QueryDocumentSnapshot }[] = [];
+  let next: { collection: Content; after: string } | null = null;
+  for (const collection of CONTENT.slice(cursor ? CONTENT.indexOf(cursor.collection) : 0)) {
+    let query = db()
+      .collectionGroup(collection)
+      .where("visibility", "==", "public")
+      .orderBy(FieldPath.documentId())
+      .limit(MARKETPLACE_PAGE - docs.length);
+    if (cursor?.collection === collection) query = query.startAfter(db().doc(cursor.after));
+    const snap = await query.get();
+    snap.docs.forEach((doc) => docs.push({ collection, doc }));
+    if (docs.length >= MARKETPLACE_PAGE) {
+      next = { collection, after: snap.docs[snap.docs.length - 1].ref.path };
+      break;
+    }
+  }
+  if (!cursor) {
+    const blocked = await Promise.all(
+      CONTENT.map((collection) => db().collectionGroup(collection).where("moderation.blocked", "==", true).get())
+    );
+    blocked.forEach((snap, i) => snap.docs.forEach((doc) => docs.push({ collection: CONTENT[i], doc })));
+  }
+
+  const found = docs.filter(({ doc }) => isOrgContent(doc));
+  const owners = await ownersOf(found.map(({ doc }) => doc.ref.parent.parent!.id));
+  const items = found.map(({ collection, doc }) => {
+    const item = describeItem(collection, doc);
+    const owner = owners.get(item.orgId);
+    return {
+      ...item,
+      orgName: owner?.name ?? item.orgId,
+      orgSuspended: owner?.suspended ?? false,
+      visibility: String(doc.get("visibility") ?? "private"),
+      archived: doc.get("archived") === true,
+      linkCount: (doc.get("linkCount") as number | undefined) ?? 0,
+      moderation: moderationOf(doc.data()),
+    };
+  });
+  return { items, next };
+});
+
+// Blocking takes an item out of the marketplace (private) and keeps it out:
+// the rules refuse making it public while blocked. Who it's shared with
+// stays as it was. Unblocking only lifts the block; the owner republishes.
+export const moderateItem = onCall(async (request) => {
+  const uid = requireSuperAdmin(request);
+  const { orgId, collection, id, blocked, reason } = parse(
+    z.object({
+      orgId: idSchema,
+      collection: z.enum(CONTENT),
+      id: idSchema,
+      blocked: z.boolean(),
+      reason: z.string().trim().max(500).optional(),
+    }),
+    request.data
+  );
+  const item = orgRef(orgId).collection(collection).doc(id);
+  if (!(await item.get()).exists) throw new HttpsError("not-found", "No such item.");
+
+  const moderation = { blocked, reason: blocked ? reason || null : null, at: new Date(), by: uid };
+  const batch = db().batch();
+  batch.update(item, blocked ? { visibility: "private", moderation } : { moderation });
+  bumpContentVersion(batch, orgId, new Date().toISOString());
+  await batch.commit();
+  return { ok: true };
 });

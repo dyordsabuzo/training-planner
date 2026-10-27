@@ -14,7 +14,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Badge, Button, Modal } from "@dyordsabuzo/ui-components";
-import { canShare, sharingOf, VISIBILITY_LABELS } from "../common/sharing";
+import { canShare, isBlocked, sharingOf, VISIBILITY_LABELS } from "../common/sharing";
 import { Dependency } from "../context/SourceDataContext";
 import { VisibilityModal } from "./VisibilityModal";
 import { LinkedItemModal, LinkedMode } from "./LinkedItemModal";
@@ -262,6 +262,11 @@ export const EntityActions = ({
   return (
     <div className="flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
       {sharing && <SharingIcon entity={sharing.entity} />}
+      {sharing && isBlocked(sharing.entity) && (
+        <span title={sharing.entity.moderation?.reason || undefined}>
+          <Badge variant="danger">Blocked from marketplace</Badge>
+        </span>
+      )}
       {linkCount > 0 && <Badge variant="primary">Used by {plural(linkCount, "org")}</Badge>}
       <ActionMenu
         items={menuItems}

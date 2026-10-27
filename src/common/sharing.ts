@@ -26,14 +26,19 @@ export const sharingOf = (entity: any): Sharing => ({
   sharedWithOrgs: Array.isArray(entity?.sharedWithOrgs) ? entity.sharedWithOrgs : [],
 });
 
+// Blocked from the marketplace by the platform admin (moderateItem); the
+// rules refuse making it public until it's unblocked.
+export const isBlocked = (entity: any) => entity?.moderation?.blocked === true;
+
 // Plans personalised for a client are never shared.
 export const canShare = (entity: any) => !entity?.personalisedFor;
 
 // Sharing an item's dependencies along with it only ever widens their
 // access: a public dependency stays public, and orgs are added, not replaced.
-export const widenSharing = (current: Sharing, next: Sharing): Sharing => {
+// A blocked item never becomes public; it keeps what it had.
+export const widenSharing = (current: Sharing, next: Sharing, blocked = false): Sharing => {
   if (current.visibility === "public" || next.visibility === "private") return current;
-  if (next.visibility === "public") return next;
+  if (next.visibility === "public") return blocked ? current : next;
   const orgs = [...current.sharedWithOrgs];
   next.sharedWithOrgs.forEach((org) => {
     if (!orgs.some((o) => o.id === org.id)) orgs.push(org);

@@ -7,7 +7,7 @@ import { buildWeek } from "../common/planCycle";
 import AuthContext from "./AuthContext";
 import { contentVersionKey } from "../common/queryCache";
 import { personalisePlan } from "../management/cloneEntity";
-import { Sharing, sharingOf, widenSharing } from "../common/sharing";
+import { isBlocked, Sharing, sharingOf, widenSharing } from "../common/sharing";
 import {
   assembleUserdata,
   Collections,
@@ -648,7 +648,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
               .map((dep) => ({
               db: dep.db,
               id: dep.id,
-              sharing: widenSharing(sharingOf(entityOf(dep.db, dep.id)), sharing),
+              sharing: widenSharing(sharingOf(entityOf(dep.db, dep.id)), sharing, isBlocked(entityOf(dep.db, dep.id))),
             }))
           : []),
       ];

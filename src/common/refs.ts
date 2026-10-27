@@ -94,6 +94,7 @@ const NOT_LINKED_FIELDS = [
   "sharedWithOrgIds",
   "sharedWithOrgs",
   "linkCount",
+  "moderation",
   "isShareable",
   "sharedSnapshot",
   "sharedOrder",

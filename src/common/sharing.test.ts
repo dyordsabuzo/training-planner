@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canShare, sharingOf, widenSharing } from "./sharing";
+import { canShare, isBlocked, sharingOf, widenSharing } from "./sharing";
 
 const orgA = { id: "a", name: "A", code: "AAAAAA" };
 const orgB = { id: "b", name: "B", code: "BBBBBB" };
@@ -27,5 +27,16 @@ describe("sharing", () => {
     expect(widenSharing(pub, shared(orgA))).toEqual(pub);
     expect(widenSharing(shared(orgA), pub)).toEqual(pub);
     expect(widenSharing(shared(orgA), priv)).toEqual(shared(orgA));
+  });
+  it("never widens a blocked dependency to public", () => {
+    const pub = sharingOf({ visibility: "public" });
+    expect(widenSharing(shared(orgA), pub, true)).toEqual(shared(orgA));
+    expect(widenSharing(sharingOf({}), pub, true)).toEqual(sharingOf({}));
+    expect(widenSharing(sharingOf({}), shared(orgA), true)).toEqual(shared(orgA));
+  });
+  it("is blocked only while moderation.blocked is set", () => {
+    expect(isBlocked({ moderation: { blocked: true } })).toBe(true);
+    expect(isBlocked({ moderation: { blocked: false } })).toBe(false);
+    expect(isBlocked({})).toBe(false);
   });
 });
