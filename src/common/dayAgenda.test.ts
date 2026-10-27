@@ -50,17 +50,17 @@ describe("dayAgenda", () => {
 
   it("matches sessions dated on the same day", () => {
     expect(dayAgenda(dayjs(), ctx).scheduled).toEqual([
-      { plan: "Open", session: "Today", done: false, overdue: false },
+      { plan: "Open", session: "Today", done: false, overdue: false, optional: false },
     ]);
   });
 
   it("marks done and overdue sessions", () => {
     expect(dayAgenda(dayjs(yesterday), ctx).scheduled).toEqual([
-      { plan: "Open", session: "Missed", done: false, overdue: true },
+      { plan: "Open", session: "Missed", done: false, overdue: true, optional: false },
     ]);
     expect(dayAgenda(dayjs(lastWeek), ctx).scheduled).toEqual([
-      { plan: "Open", session: "Done", done: true, overdue: false },
-      { plan: "Weekly", session: "Legs", done: true, overdue: false },
+      { plan: "Open", session: "Done", done: true, overdue: false, optional: false },
+      { plan: "Weekly", session: "Legs", done: true, overdue: false, optional: false },
     ]);
   });
 
@@ -72,8 +72,16 @@ describe("dayAgenda", () => {
       sessions: { ...sessions, Arms: { date: older } },
     };
     expect(missedSessions(withOlder)).toEqual([
-      { plan: "Weekly", session: "Arms", date: older, done: false, overdue: true },
-      { plan: "Open", session: "Missed", date: yesterday, done: false, overdue: true },
+      { plan: "Weekly", session: "Arms", date: older, done: false, overdue: true, optional: false },
+      { plan: "Open", session: "Missed", date: yesterday, done: false, overdue: true, optional: false },
+    ]);
+  });
+
+  it("never lists optional sessions as missed, but keeps them on their day", () => {
+    const optionalCtx = { ...ctx, sessions: { ...sessions, Missed: { date: yesterday, optional: true } } };
+    expect(missedSessions(optionalCtx)).toEqual([]);
+    expect(dayAgenda(dayjs(yesterday), optionalCtx).scheduled).toEqual([
+      { plan: "Open", session: "Missed", done: false, overdue: false, optional: true },
     ]);
   });
 
@@ -85,13 +93,20 @@ describe("dayAgenda", () => {
 
 describe("dayStatus", () => {
   const run: any = { plan: "P", week: "W", session: "S", logged: {} };
-  const s = (done: boolean, overdue: boolean) => ({ plan: "P", session: "S", done, overdue });
+  const s = (done: boolean, overdue: boolean, optional = false) => ({ plan: "P", session: "S", done, overdue, optional });
+  const today = dayjs();
+  const past = dayjs().subtract(1, "day");
 
   it("ranks overdue, then planned, then done", () => {
-    expect(dayStatus({ scheduled: [s(true, false), s(false, true)], completed: [] })).toBe("overdue");
-    expect(dayStatus({ scheduled: [s(true, false), s(false, false)], completed: [] })).toBe("planned");
-    expect(dayStatus({ scheduled: [s(true, false)], completed: [] })).toBe("done");
-    expect(dayStatus({ scheduled: [], completed: [run] })).toBe("done");
-    expect(dayStatus({ scheduled: [], completed: [] })).toBeNull();
+    expect(dayStatus({ scheduled: [s(true, false), s(false, true)], completed: [] }, today)).toBe("overdue");
+    expect(dayStatus({ scheduled: [s(true, false), s(false, false)], completed: [] }, today)).toBe("planned");
+    expect(dayStatus({ scheduled: [s(true, false)], completed: [] }, today)).toBe("done");
+    expect(dayStatus({ scheduled: [], completed: [run] }, today)).toBe("done");
+    expect(dayStatus({ scheduled: [], completed: [] }, today)).toBeNull();
+  });
+
+  it("leaves no mark for an optional session missed on a past day", () => {
+    expect(dayStatus({ scheduled: [s(false, false, true)], completed: [] }, today)).toBe("planned");
+    expect(dayStatus({ scheduled: [s(false, false, true)], completed: [] }, past)).toBeNull();
   });
 });

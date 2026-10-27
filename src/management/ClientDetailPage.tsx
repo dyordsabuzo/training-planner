@@ -32,7 +32,9 @@ const planProgress = (plan: any, planName: string, userdata: any, sessions: any)
     const names = toStringArray(plan.sessions);
     const done = openPlanDoneSessions(userdata, planName);
     const overdue = names.filter(
-      (name) => sessionDueStatus(sessions?.[name]?.date, done.includes(name)) === "overdue"
+      (name) =>
+        sessionDueStatus(sessions?.[name]?.date, done.includes(name), sessions?.[name]?.optional === true) ===
+        "overdue"
     ).length;
     return { summary: `${done.length} of ${names.length} done`, overdue };
   }

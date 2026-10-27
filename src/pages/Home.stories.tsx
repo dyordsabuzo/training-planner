@@ -198,16 +198,19 @@ const richSourceData = {
       id: "plan-2",
       name: "Mobility Plan",
       open: true,
-      sessions: ["Hip Flow", "Shoulder Flow", "Full Body Stretch"],
+      sessions: ["Hip Flow", "Shoulder Flow", "Full Body Stretch", "Recovery Walk", "Easy Swim"],
       weeks: {},
     },
   },
   // One session done, one due today and one overdue, so the day strip
-  // shows each dot colour.
+  // shows each dot colour. Optional ones: today's is labelled, and the
+  // one 3 days ago is neither missed nor marked.
   sessions: {
     "Hip Flow": { date: dateAgo(2) },
     "Shoulder Flow": { date: dateAgo(1) },
     "Full Body Stretch": { date: dateAgo(0) },
+    "Recovery Walk": { date: dateAgo(0), optional: true },
+    "Easy Swim": { date: dateAgo(3), optional: true },
   },
   userdata: {
     "uid-user-1": {

@@ -465,7 +465,7 @@ export const Home = () => {
               <DayStrip
                 selected={selectedDay}
                 onSelect={setSelectedDay}
-                statusFor={(day) => dayStatus(agendaFor(day))}
+                statusFor={(day) => dayStatus(agendaFor(day), day)}
               />
               <DayAgendaCard
                 day={selectedDay}

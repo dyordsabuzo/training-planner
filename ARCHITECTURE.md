@@ -144,6 +144,11 @@ derives this from the same data, so nothing extra is stored; sessions without
 a date don't appear on the strip. When today is selected, the card also lists
 every missed session (dated before today and not done).
 
+A session can be marked optional (`optional: true`, set in the session form,
+off by default). It shows only on its date, labelled "Optional", and is never
+overdue or missed: `sessionDueStatus` skips it, and once its date passes Up
+next on the Train page moves past it (`isLapsedOptional`).
+
 Above the strip sits an optional daily check-in (`DailyCheckInCard.tsx`), a
 slim row that expands into the questions when tapped:
 mood, hours slept, sleep quality, energy and soreness, all optional, validated

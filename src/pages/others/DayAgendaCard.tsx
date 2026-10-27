@@ -35,14 +35,17 @@ export const DayAgendaCard = ({
         <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Rest day — nothing scheduled.</p>
       )}
 
-      {scheduled.map(({ plan, session, done, overdue }) => (
+      {scheduled.map(({ plan, session, done, overdue, optional }) => (
         <div key={`${plan}/${session}`} className={ROW}>
           <div className="flex flex-col">
             <span className="font-semibold text-text-light dark:text-text-dark">{session}</span>
             <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{plan}</span>
           </div>
-          {done && <Badge variant="success">Done</Badge>}
-          {overdue && <Badge variant="warning">Overdue</Badge>}
+          <span className="flex items-center gap-1 shrink-0">
+            {optional && <Badge variant="neutral">Optional</Badge>}
+            {done && <Badge variant="success">Done</Badge>}
+            {overdue && <Badge variant="warning">Overdue</Badge>}
+          </span>
         </div>
       ))}
 
