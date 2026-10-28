@@ -142,23 +142,46 @@ userdata/{uid}/events/{eventId}
 ("End session"): the sets logged so far are kept and the run still counts
 as done; history shows it as "Incomplete".
 
+History (`HistoryPage.tsx`) opens with totals (sessions, last 7 days, time)
+over the runs grouped by plan (`HistoryRunList.tsx`, shared with the client
+page). Opening a run shows `SessionStats.tsx`: the run's date and totals
+(time, sets logged of planned, volume, sets improved), then one card per unit
+with each set as a chip of its value, green with ↑ when it beat the same set
+last time and dashed when not logged. The Train page's Up next, Home's Up
+next tile and these summaries share one style: a primary gradient tile with
+white chips and a white Start.
+
 Client Home opens on a day strip (`DayStrip.tsx`, one week on phones, two
 from 768px up) with today selected.
-Tapping a day lists the plan sessions whose `date` falls on it and the runs
-whose `meta.completedAt` does (`DayAgendaCard.tsx`). `src/common/dayAgenda.ts`
-derives this from the same data, so nothing extra is stored; sessions without
-a date don't appear on the strip. When today is selected, the card also lists
-every missed session (dated before today and not done).
+Tapping a day fills the card under it (`DayAgendaCard.tsx`) with the plan
+sessions whose `date` falls on it and the runs whose `meta.completedAt` does.
+`src/common/dayAgenda.ts` derives this from the same data, so nothing extra
+is stored; sessions without a date don't appear on the strip. The card reads
+top to bottom by what needs doing:
+
+- a progress ring over the day's training and events, and a past day's
+  check-in as chips;
+- on today, the first session still to do as an "Up next" tile with Start;
+- **Training**: the rest still to do (Start when due today or overdue), then
+  what's done, each with its time and a link to History. A run of a session
+  scheduled that day shows once, as its done row;
+- **Catch up** (today only): every missed session (dated before today and
+  not done), each with Start;
+- **Events** (`DayEvents.tsx`, below).
+
+Start goes to the Train page, which picks the session; there's no deep link
+to a specific one. Rows share `AgendaRow.tsx` (icon tile, title, trailing
+actions).
 
 Clients can add their own regular events (e.g. on-water training every
-Tue/Thu) from the agenda card ("+ Add regular event",
-`RecurringEventForm.tsx`, validated with Zod in
-`src/common/recurringEvents.ts`). An event shows on each matching weekday in
-its date range. On today or a past day the client marks it Attended or
-Missed (Undo clears it); an unconfirmed one on a past day makes that day
-overdue on the strip, and today's counts as planned. The strip shows for a
-client with plans or with events; a client with neither gets a card with
-just the add button.
+Tue/Thu) from the Events section's "+ Add" (`RecurringEventForm.tsx`,
+validated with Zod in `src/common/recurringEvents.ts`). An event shows on each
+matching weekday in its date range. On today or a past day the client marks
+it attended (✓) or missed (✕), and Undo clears it; an unconfirmed one on a
+past day makes that day overdue on the strip, and today's counts as planned.
+The strip shows for a client with plans or with events. A client in an org
+with neither still gets the card, with just the Events section and its add
+button. In "View as" the section is read-only.
 
 A session can be marked optional (`optional: true`, set in the session form,
 off by default). It shows only on its date, labelled "Optional", and is never
