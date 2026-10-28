@@ -23,7 +23,7 @@ export const Empty: StoryObj<typeof PlanListing> = {
 };
 
 const buildWeeks = (count: number, annotatedIndexes: number[] = []) => {
-  let weeks: any = {};
+  const weeks: any = {};
   for (let i = 0; i < count; i++) {
     weeks[`Week ${i + 1}`] = {
       weekNumber: i,

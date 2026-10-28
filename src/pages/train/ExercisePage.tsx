@@ -63,7 +63,7 @@ const reducer = (state: State, action: Action) => {
         ...initialState,
         supersetCounter: state.supersetCounter + 1,
       };
-    case "update":
+    case "update": {
       let { exerciseCounter: ecounter, exerciseSet: eset } = state;
 
       if (
@@ -79,7 +79,8 @@ const reducer = (state: State, action: Action) => {
         exerciseSet: eset,
         supersetComplete: eset >= action.payload.targetSet,
       };
-    case "continue":
+    }
+    case "continue": {
       const exerciseCounter = state.exerciseCounter + 1;
       let { exerciseSet, supersetRest, supersetComplete } = state;
 
@@ -98,6 +99,7 @@ const reducer = (state: State, action: Action) => {
         supersetRest,
         supersetComplete,
       };
+    }
     // The exercise at `position` was dropped from the unit, leaving
     // `exerciseLength` exercises. The next one slides into its slot, or, if
     // it was the last of the round, the set ends as it would on "continue".
@@ -218,7 +220,7 @@ export const ExercisePage = () => {
   }, [exerciseState.exerciseCounter, supersetData]);
 
   useEffect(() => {
-    let superset: any = Object.values(sessionData.supersets)[
+    const superset: any = Object.values(sessionData.supersets)[
       exerciseState.supersetCounter
     ];
 

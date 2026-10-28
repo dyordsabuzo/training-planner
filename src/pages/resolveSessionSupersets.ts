@@ -83,8 +83,8 @@ export const resolveSessionSupersets = (
     // Gone, or a linked superset its owner no longer shares: skipped.
     if (!sourceData.supersets?.[s]) return;
     let { targetRep, targetSet, annotation } = seed;
-    let { sessions, rest, tags, ...superset } = sourceData.supersets[s];
-    let exercises = superset.exercises
+    const { sessions, rest, tags, ...superset } = sourceData.supersets[s];
+    const exercises = superset.exercises
       .filter((e: string) => sourceData.exercises[e])
       .map((e: string) => {
         const exercise = sourceData.exercises[e];

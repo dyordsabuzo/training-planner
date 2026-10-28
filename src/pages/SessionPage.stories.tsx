@@ -39,7 +39,7 @@ const baseSourceData = {
 };
 
 const buildWeeks = (count: number) => {
-  let weeks: any = {};
+  const weeks: any = {};
   for (let i = 0; i < count; i++) {
     weeks[`Week ${i + 1}`] = {
       weekNumber: i,

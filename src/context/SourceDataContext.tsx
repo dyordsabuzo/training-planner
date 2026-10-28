@@ -801,7 +801,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     mutationFn: async (plan: any) => {
       const previous = findPrevious(sourceData.plans, plan.id);
       let currentWeeks = previous?.weeks ?? {};
-      let currentWeeksLength = Object.keys(currentWeeks).length;
+      const currentWeeksLength = Object.keys(currentWeeks).length;
 
       if (parseInt(plan.numberOfWeeks || "0") > currentWeeksLength) {
         Array.from(

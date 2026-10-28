@@ -60,7 +60,8 @@ against real data, but be aware any writes during testing hit production.
 | `yarn test:watch` | Run tests in watch mode |
 | `yarn storybook` | Run Storybook locally |
 | `yarn build-storybook` | Build a static Storybook site |
-| `yarn lint` / `yarn format` | Lint / format the codebase |
+| `yarn lint` | Lint `src/` and auto-fix what it can (ESLint 9 flat config in `eslint.config.mjs`) |
+| `yarn format` | Format the codebase with Prettier |
 | `yarn firebase:emulators` | Run local Firebase emulators (Auth, Firestore, Functions) |
 | `yarn firebase:deploy` | Build and deploy Firebase Hosting only |
 | `yarn firebase:deploy:functions` | Deploy Cloud Functions from `functions/` |

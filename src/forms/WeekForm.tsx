@@ -30,7 +30,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    let { weekKey, planName, ...minWeekData } = weekData;
+    const { weekKey, planName, ...minWeekData } = weekData;
     sourceDataContext.updateWeekPlan(planName, {
       ...minWeekData,
       annotation,
