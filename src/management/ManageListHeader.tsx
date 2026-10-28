@@ -1,6 +1,6 @@
 import { faPlus, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Button } from "@dyordsabuzo/ui-components";
+import { FOCUS } from "../pages/others/AgendaRow";
 
 type Props = {
   title: string;
@@ -24,12 +24,12 @@ export const ManageListHeader = ({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-text-light dark:text-text-dark">
           {title}
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200">
+            {count} <span className="sr-only">{count === 1 ? "item" : "items"}</span>
+          </span>
         </h2>
-        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-          {count} {count === 1 ? "item" : "items"}
-        </p>
       </div>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
@@ -44,19 +44,22 @@ export const ManageListHeader = ({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder}
-            className="min-h-11 w-full sm:w-56 pl-9 pr-3 bg-white dark:bg-surface-dark
-              border border-gray-300 dark:border-gray-600 text-text-light dark:text-text-dark
-              text-sm rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+            className="min-h-11 w-full sm:w-64 pl-9 pr-4 bg-gray-50 dark:bg-gray-800/40
+              border border-transparent text-text-light dark:text-text-dark
+              text-sm rounded-full focus:bg-white dark:focus:bg-surface-dark focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
 
         {addLabel && onAdd && (
-          <Button onClick={onAdd} className="whitespace-nowrap">
-            <span className="flex items-center gap-2 px-2">
-              <FontAwesomeIcon icon={faPlus} />
-              {addLabel}
-            </span>
-          </Button>
+          <button
+            type="button"
+            onClick={onAdd}
+            className={`flex items-center justify-center gap-2 min-h-11 px-4 rounded-full whitespace-nowrap bg-primary
+              text-white text-sm font-semibold shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            {addLabel}
+          </button>
         )}
       </div>
     </div>

@@ -19,10 +19,16 @@ module.exports = {
           from: { transform: "translateX(-40%)", opacity: "0" },
           to: { transform: "translateX(0)", opacity: "1" },
         },
+        // Train page: content under a newly chosen plan (SessionPage.tsx).
+        "fade-up": {
+          from: { transform: "translateY(8px)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
+        },
       },
       animation: {
         "slide-from-right": "slide-from-right 250ms ease-out",
         "slide-from-left": "slide-from-left 250ms ease-out",
+        "fade-up": "fade-up 300ms ease-out 150ms both",
       },
     },
   },

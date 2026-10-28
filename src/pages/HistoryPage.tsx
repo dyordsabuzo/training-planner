@@ -1,7 +1,8 @@
 import { useContext, useMemo, useState } from "react";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import SourceDataContext from "../context/SourceDataContext";
 import SessionContext from "../context/SessionContext";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
@@ -12,6 +13,7 @@ import { EmptyState } from "../management/EmptyState";
 import { HistoryRun, historyRuns } from "../common/sessionStats";
 import { HistoryRunList, runKey, runMinutes } from "./HistoryRunList";
 import { sessionOrder } from "./resolveSessionSupersets";
+import { FOCUS } from "./others/AgendaRow";
 
 // Every completed session across your plans, most recent first. Opening a run
 // shows what was used for each exercise.
@@ -21,6 +23,12 @@ export const HistoryPage = () => {
   const { deleteRuns } = useContext(SessionContext) as any;
   const [viewing, setViewing] = useState<HistoryRun | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+
+  // Return to wherever History was opened from; on a direct visit there is no
+  // in-app history entry, so fall back to Train.
+  const goBack = () =>
+    window.history.state?.idx > 0 ? navigate(-1) : navigate("/training-planner/train");
 
   const runs = useMemo(() => historyRuns(userdata), [userdata]);
   const pickedRuns = runs.filter((run) => picked.has(runKey(run)));
@@ -55,6 +63,15 @@ export const HistoryPage = () => {
     <WrapperPage className="max-w-[25rem] sm:max-w-2xl">
       <div className="flex flex-col gap-6 pt-8">
         <div>
+          <button
+            type="button"
+            onClick={goBack}
+            className={`flex items-center gap-2 min-h-11 -ml-2 mb-1 px-2 rounded-full text-sm font-semibold
+              text-primary hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`}
+          >
+            <FontAwesomeIcon icon={faChevronLeft} />
+            Back
+          </button>
           <h1 className="flex items-center gap-3 text-2xl font-bold text-text-light dark:text-text-dark">
             <span className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800/40 text-primary dark:text-primary-300">
               <FontAwesomeIcon icon={faClockRotateLeft} className="text-base" />

@@ -29,10 +29,10 @@ export const RATINGS = [
 export const MoodCheckIn = ({ title, value, onChange }: Props) => {
   return (
     <div
-      className="border border-gray-200 dark:border-gray-700 rounded-md p-4
-        bg-white dark:bg-surface-dark shadow-sm flex flex-col gap-3"
+      className="rounded-2xl border border-gray-200 dark:border-gray-700 p-4
+        bg-white dark:bg-surface-dark flex flex-col gap-3"
     >
-      <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
+      <span className="text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
         {title}
       </span>
 
@@ -44,7 +44,7 @@ export const MoodCheckIn = ({ title, value, onChange }: Props) => {
             aria-label={rating.label}
             aria-pressed={value.rating === rating.value}
             onClick={() => onChange({ ...value, rating: rating.value })}
-            className={`flex-1 flex flex-col items-center gap-1 min-h-11 py-2 rounded-lg text-xs font-medium
+            className={`flex-1 flex flex-col items-center gap-1 min-h-11 py-2 rounded-xl text-xs font-medium
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
               ${
                 value.rating === rating.value
@@ -66,7 +66,7 @@ export const MoodCheckIn = ({ title, value, onChange }: Props) => {
         aria-label={`${title} note`}
         className="min-h-11 px-3 bg-white dark:bg-surface-dark
           border border-gray-300 dark:border-gray-600 text-text-light dark:text-text-dark
-          text-sm rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+          text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary"
       />
     </div>
   );
