@@ -6,7 +6,7 @@ import { displayUnitName, sideLabel } from "../resolveSessionSupersets";
 const CHIP = "px-2.5 py-1 rounded-full text-xs font-semibold";
 
 // "3 × 10 reps", "4 × 400 m", "3 × 45 s"; sets alone when there's no target.
-const unitTarget = (unit: any) => {
+export const unitTarget = (unit: any) => {
   const sets = Number(unit.targetSet) || 0;
   const amount = unit.targetTime
     ? `${unit.targetTime} s`
