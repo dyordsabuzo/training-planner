@@ -1,12 +1,13 @@
 import React, { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarDays,
   faCheck,
   faCircleCheck,
   faLayerGroup,
+  faListUl,
   faChevronLeft,
   faChevronRight,
   faClockRotateLeft,
@@ -37,6 +38,7 @@ import {
 } from "../common/planCycle";
 import { completedRuns, CompletedRun } from "../common/sessionStats";
 import { SessionStats } from "./others/SessionStats";
+import { SessionPreview } from "./others/SessionPreview";
 import {
   formatSessionDate,
   sortPlansByCreated,
@@ -318,6 +320,7 @@ const SessionPage = () => {
   const { sourceData } = sourceDataContext as any;
   const navigate = useNavigate();
   const { sessionId } = useParams();
+  const location = useLocation();
 
   const [sessionData, setSessionData] = useState<any>({});
   const [viewingRun, setViewingRun] = useState<CompletedRun | null>(null);
@@ -329,6 +332,12 @@ const SessionPage = () => {
   const [showAllDone, setShowAllDone] = useState(false);
   // Whether the chosen session came from the list (vs. Up next), for Back.
   const [sessionFromPicker, setSessionFromPicker] = useState(false);
+  // The session whose exercises are being previewed ("View").
+  const [preview, setPreview] = useState<{
+    title: string;
+    details: (string | null | undefined)[];
+    units: Record<string, any>;
+  } | null>(null);
 
   const skip = async (target: { plan: string; week: string; session: string }) => {
     setIsSkipping(true);
@@ -402,12 +411,13 @@ const SessionPage = () => {
     : [];
 
   // Sets a plan, week and session in one step (used by the up-next card).
-  const startSession = (planName: string, week: string, session: string) => {
+  // The session's runnable units with this plan and week's targets and weights.
+  const resolveFor = (planName: string, week: string, session: string) => {
     const plan: any = plans[planName];
     const weekData: any = plan?.open ? {} : plan?.weeks?.[week] ?? {};
     const userdata: any = Object.values(sourceData?.userdata ?? {})[0];
-    const { targetRep, targetSet, targetTime, annotation, weightRule } = weekData;
-    const supersets = resolveSession(sourceData, sourceData.sessions[session], {
+    const { targetRep, targetSet, annotation, weightRule } = weekData;
+    return resolveSession(sourceData, sourceData.sessions[session], {
       targetRep,
       targetSet,
       annotation,
@@ -415,6 +425,13 @@ const SessionPage = () => {
         getLastLoggedWeight(userdata, planName, week, exerciseName) ?? undefined,
       ...weightSeed(userdata, planName, week, weightRule),
     });
+  };
+
+  const startSession = (planName: string, week: string, session: string) => {
+    const plan: any = plans[planName];
+    const weekData: any = plan?.open ? {} : plan?.weeks?.[week] ?? {};
+    const { targetRep, targetSet, targetTime, annotation, weightRule } = weekData;
+    const supersets = resolveFor(planName, week, session);
     setSessionData({
       plan: planName,
       week,
@@ -596,6 +613,27 @@ const SessionPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionData.week, sessionOptions.join(","), sessionData.session, isOpenPlan]);
 
+  // Opened from a Home training item: preselect its plan and session once the
+  // data is in. Without a week (a session still to do), a fixed plan uses the
+  // week it was last run in, else the current week. Declared after the
+  // auto-select effects so it wins over them. The state is then cleared so a
+  // refresh opens Train normally.
+  useEffect(() => {
+    const target = location.state as { plan?: string; session?: string; week?: string } | null;
+    if (!target?.plan || !target.session) return;
+    const plan: any = plans[target.plan];
+    if (!plan || !sourceData?.sessions?.[target.session]) return;
+    const userdata: any = Object.values(sourceData?.userdata ?? {})[0];
+    const week = plan.open
+      ? OPEN_WEEK
+      : target.week ??
+        completedRuns(userdata, target.plan).find((run) => run.session === target.session)?.week ??
+        `Week ${(getCurrentWeekNumber(plan) ?? 0) + 1}`;
+    startSession(target.plan, week, target.session);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, sourceData?.plans, sourceData?.sessions]);
+
   if (sessionContext.sessionData && !sessionContext.isRunning) {
     return <SummaryPage />;
   }
@@ -706,6 +744,20 @@ const SessionPage = () => {
             ]}
           >
             <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setPreview({
+                    title: sessionData.session,
+                    details: [sessionData.plan, sessionData.week !== OPEN_WEEK ? sessionData.week : null],
+                    units: sessionData.supersets,
+                  })
+                }
+                className={upNextActionClassName}
+              >
+                <FontAwesomeIcon icon={faListUl} />
+                View exercises
+              </button>
               <button type="button" onClick={() => setPickerOpen(true)} className={upNextActionClassName}>
                 <FontAwesomeIcon icon={faShuffle} />
                 Change
@@ -758,6 +810,20 @@ const SessionPage = () => {
               Start
             </button>
             <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setPreview({
+                    title: upNext.session,
+                    details: [upNext.plan, upNext.week !== OPEN_WEEK ? upNext.week : null],
+                    units: resolveFor(upNext.plan, upNext.week, upNext.session),
+                  })
+                }
+                className={upNextActionClassName}
+              >
+                <FontAwesomeIcon icon={faListUl} />
+                View
+              </button>
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
@@ -941,6 +1007,14 @@ const SessionPage = () => {
         </div>
         )}
       </div>
+      {preview && (
+        <SessionPreview
+          title={preview.title}
+          details={preview.details}
+          units={preview.units}
+          onClose={() => setPreview(null)}
+        />
+      )}
       {viewingRun && (
         <SessionStats
           title={viewingRun.session}

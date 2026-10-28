@@ -169,8 +169,10 @@ top to bottom by what needs doing:
   not done), each with Start;
 - **Events** (`DayEvents.tsx`, below).
 
-Start goes to the Train page, which picks the session; there's no deep link
-to a specific one. Rows share `AgendaRow.tsx` (icon tile, title, trailing
+Tapping a training item (its row, Start, or the Up next tile) opens the
+Train page on that session, passed as router state (plan, session, and the
+run's week for done ones): a "Ready" tile with Start session, or View results
+and Run again when it has a run. Rows share `AgendaRow.tsx` (icon tile, title, trailing
 actions).
 
 The Train page (`SessionPage.tsx`) uses the same style. Plan cards sit at the

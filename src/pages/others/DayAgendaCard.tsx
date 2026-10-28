@@ -80,7 +80,10 @@ export const DayAgendaCard = ({
   const done = [
     ...scheduled
       .filter((s) => s.done)
-      .map((s) => ({ key: `${s.plan}/${s.session}`, ...s, at: runs.find(isRun(s))?.completedAt })),
+      .map((s) => {
+        const run = runs.find(isRun(s));
+        return { key: `${s.plan}/${s.session}`, ...s, week: run?.week, at: run?.completedAt };
+      }),
     ...runs
       .filter((run) => !scheduled.some((s) => isRun(s)(run)))
       .map((run) => ({ key: `${run.plan}/${run.week}/${run.session}`, ...run, at: run.completedAt })),
@@ -95,9 +98,11 @@ export const DayAgendaCard = ({
     total === 0 ? "Nothing planned" : doneCount >= total ? "All done — great work" : `${total - doneCount} to go`;
   const checkinParts = isToday ? [] : checkinSummary(checkin);
   const showCatchUp = isToday && missed.length > 0;
-  const start = () => navigate("/training-planner/train");
-  const startPill = (
-    <button type="button" onClick={start} className={START_PILL}>
+  // Opens Train on this session (Ready, or View results / Run again once run).
+  const open = (plan: string, session: string, week?: string) =>
+    navigate("/training-planner/train", { state: { plan, session, week } });
+  const startPill = (plan: string, session: string) => (
+    <button type="button" onClick={() => open(plan, session)} className={START_PILL}>
       <FontAwesomeIcon icon={faPlay} className="text-xs" />
       Start
     </button>
@@ -142,7 +147,7 @@ export const DayAgendaCard = ({
           </div>
           <button
             type="button"
-            onClick={start}
+            onClick={() => open(next.plan, next.session)}
             className="flex items-center gap-2 min-h-12 px-5 rounded-full bg-white text-primary font-bold shadow-md
               hover:bg-primary-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
@@ -172,17 +177,18 @@ export const DayAgendaCard = ({
               tone={overdue ? "warning" : "primary"}
               title={session}
               subtitle={plan}
+              onClick={() => open(plan, session)}
               trailing={
                 <>
                   {optional && <Badge variant="neutral">Optional</Badge>}
                   {overdue && <Badge variant="warning">Overdue</Badge>}
-                  {(isToday || overdue) && startPill}
+                  {(isToday || overdue) && startPill(plan, session)}
                 </>
               }
             />
           ))}
 
-          {done.map(({ key, plan, session, at }) => (
+          {done.map(({ key, plan, session, week, at }) => (
             <AgendaRow
               key={key}
               icon={faCheck}
@@ -190,7 +196,7 @@ export const DayAgendaCard = ({
               title={session}
               subtitle={plan}
               dimmed
-              onClick={() => navigate("/training-planner/history")}
+              onClick={() => open(plan, session, week)}
               trailing={
                 <>
                   {at && (
@@ -218,7 +224,8 @@ export const DayAgendaCard = ({
               tone="warning"
               title={session}
               subtitle={`${plan} · was ${dayjs(date).format("ddd, MMM D")}`}
-              trailing={startPill}
+              onClick={() => open(plan, session)}
+              trailing={startPill(plan, session)}
             />
           ))}
         </section>
