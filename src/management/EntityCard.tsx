@@ -59,9 +59,9 @@ export const EntityCard = ({
     <div
       onClick={onOpen}
       className={`relative grow min-h-11 text-left border border-l-4 ${barClass}
-        border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark
-        text-text-light dark:text-text-dark p-4 rounded-md text-sm shadow-sm hover:shadow-md
-        transition-shadow flex flex-col gap-2 ${onOpen ? "cursor-pointer" : ""}
+        border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark
+        text-text-light dark:text-text-dark p-4 rounded-2xl text-sm hover:shadow-md hover:-translate-y-0.5
+        transition-all flex flex-col gap-2 ${onOpen ? "cursor-pointer" : ""}
         ${selected ? "ring-2 ring-primary" : ""}`}
     >
       {meta && (

@@ -8,7 +8,6 @@ import { toDate, getCurrentWeekNumber } from "../common/planWeek";
 import { Loading } from "../pages/helpers/Loading";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
-import { SessionStatusIcon } from "../components/others/SessionStatusIcon";
 import { LoadMore } from "./LoadMore";
 import { useLoadMore } from "../common/useLoadMore";
 import { EntityActions, ActionsVariant } from "./EntityActions";
@@ -18,9 +17,6 @@ import { Badge, DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
 import {
   formatSessionDate,
   sortPlansByCreated,
-  openPlanDoneSessions,
-  openPlanSkippedSessions,
-  sessionDueStatus,
   sortSessionsByDate,
 } from "../common/planSessions";
 
@@ -163,9 +159,9 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
             <div
               key={planName}
               onClick={openPlan}
-              className="flex flex-col gap-4 border border-primary-200 dark:border-primary-700
+              className="flex flex-col gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer
                 bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
-                p-4 rounded-md text-sm shadow-sm hover:shadow-md hover:border-primary transition-shadow"
+                p-4 rounded-2xl text-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               <div className="flex items-start justify-between gap-2">
               <div className="flex flex-col gap-1 min-w-0">
@@ -218,24 +214,16 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                 <div className="flex flex-col gap-1">
                   {sortSessionsByDate(toStringArray(plan.sessions), sourceData.sessions).map(
                     (sessionName) => {
+                      // Setup view only: done/skipped/overdue are per-client
+                      // progress and belong on the client's own pages.
                       const date: string | undefined = sourceData.sessions?.[sessionName]?.date;
-                      const userdata = Object.values(sourceData.userdata ?? {})[0];
-                      const done = openPlanDoneSessions(userdata, planName).includes(sessionName);
-                      const skipped = openPlanSkippedSessions(userdata, planName).includes(sessionName);
                       const optional = sourceData.sessions?.[sessionName]?.optional === true;
-                      const status = sessionDueStatus(date, done, optional);
                       return (
                         <div key={sessionName} className="flex items-center justify-between gap-2 text-sm">
-                          <span className="flex items-center gap-2 min-w-0">
-                            <SessionStatusIcon date={date} done={done} skipped={skipped} optional={optional} />
-                            <span className="font-medium break-words min-w-0">{sessionName}</span>
-                          </span>
+                          <span className="font-medium break-words min-w-0">{sessionName}</span>
                           <span className="flex items-center gap-2 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
                             {date && formatSessionDate(date)}
                             {optional && <Badge variant="neutral">Optional</Badge>}
-                            {skipped && <Badge variant="neutral">Skipped</Badge>}
-                            {status === "done" && !skipped && <Badge variant="success">Done</Badge>}
-                            {status === "overdue" && <Badge variant="danger">Overdue</Badge>}
                           </span>
                         </div>
                       );
@@ -271,12 +259,12 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                             planName,
                           });
                         }}
-                        className={`relative min-h-11 px-3 rounded-lg text-sm font-medium border transition-colors
+                        className={`relative min-h-11 px-4 rounded-full text-sm font-semibold transition-colors
                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
                           ${
                             isCurrent
-                              ? "border-primary bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200"
-                              : "border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-primary-50 dark:hover:bg-primary-800/20"
+                              ? "bg-primary text-white shadow-sm shadow-primary/30"
+                              : "bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50 dark:hover:bg-primary-800/20"
                           }`}
                       >
                         {weekKey}

@@ -173,6 +173,19 @@ Start goes to the Train page, which picks the session; there's no deep link
 to a specific one. Rows share `AgendaRow.tsx` (icon tile, title, trailing
 actions).
 
+The Train page (`SessionPage.tsx`) uses the same style. Plan cards sit at the
+top with progress ("3 of 8 weeks done"); choosing one folds the others away
+(CSS `grid-rows` transition) and its ✕ clears the choice. Below is the Up
+next tile, or a picker with week pills and the sessions split into **To do**
+(soonest first, with Today / Overdue chips) and **Completed** (newest first,
+three shown until "Show all"). A chosen session becomes a "Ready" gradient
+tile. A header Back steps up one level (Ready → list or Up next → plans), and
+History has a Back to where it was opened from (Train if opened directly).
+
+Manage (`ListingPage.tsx`) is a setup view: plan cards show sessions, dates
+and Optional, never a client's done/skipped/overdue. That progress appears
+only on the user's own Home, Train and History.
+
 Clients can add their own regular events (e.g. on-water training every
 Tue/Thu) from the Events section's "+ Add" (`RecurringEventForm.tsx`,
 validated with Zod in `src/common/recurringEvents.ts`). An event shows on each

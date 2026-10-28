@@ -1,7 +1,21 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDumbbell, faForwardStep, faPlay, faShuffle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCalendarDays,
+  faCheck,
+  faCircleCheck,
+  faLayerGroup,
+  faChevronLeft,
+  faChevronRight,
+  faClockRotateLeft,
+  faDumbbell,
+  faForwardStep,
+  faPlay,
+  faShuffle,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import SessionContext from "../context/SessionContext";
 import { SummaryPage } from "./SummaryPage";
 import { ExercisePage } from "./train/ExercisePage";
@@ -11,7 +25,8 @@ import WrapperPage from "./WrapperPage";
 import { Loading } from "./helpers/Loading";
 import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
-import { Button } from "@dyordsabuzo/ui-components";
+import { Card } from "@dyordsabuzo/ui-components";
+import { FOCUS, SectionLabel } from "./others/AgendaRow";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { resolveSession, sessionOrder } from "./resolveSessionSupersets";
 import {
@@ -22,7 +37,6 @@ import {
 } from "../common/planCycle";
 import { completedRuns, CompletedRun } from "../common/sessionStats";
 import { SessionStats } from "./others/SessionStats";
-import { SessionStatusIcon } from "../components/others/SessionStatusIcon";
 import {
   formatSessionDate,
   sortPlansByCreated,
@@ -58,23 +72,245 @@ const sortWeekKeys = (keys: string[]) =>
     return Number(numA) - Number(numB);
   });
 
-const stepLabelClassName =
-  "text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark";
-
-// Secondary actions on the gradient Up next panel.
+// Secondary actions on the gradient hero tile.
 const upNextActionClassName = `flex items-center gap-2 min-h-11 px-4 rounded-full bg-white/10 text-sm font-semibold
   text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white`;
 
+const OUTLINE_PILL = `flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-full border border-primary-200
+  dark:border-primary-700 text-sm text-primary font-semibold hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`;
+
+const PRIMARY_PILL = `flex items-center justify-center gap-2 min-h-12 px-6 rounded-full bg-primary text-white text-base
+  font-bold shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
+
 const chipClassName = (isSelected: boolean, isCurrent = false) =>
-  `relative min-h-11 px-3 rounded-lg text-sm font-medium border transition-colors
-   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+  `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors ${FOCUS}
    ${
      isSelected
-       ? "border-primary bg-primary text-white"
+       ? "bg-primary text-white shadow-sm shadow-primary/30"
        : isCurrent
-         ? "border-primary text-primary dark:text-primary-200"
-         : "border-gray-300 dark:border-gray-600 text-text-light dark:text-text-dark hover:border-primary hover:bg-primary-50 dark:hover:bg-primary-800/20"
+         ? "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200"
+         : "bg-gray-50 dark:bg-gray-800/40 text-text-light dark:text-text-dark hover:bg-primary-50 dark:hover:bg-primary-800/20"
    }`;
+
+// Completed sessions shown before "Show all".
+const DONE_PREVIEW = 3;
+
+type SessionRowStatus = "today" | "overdue" | "upcoming" | "done" | "skipped" | "lapsed";
+
+const DATE_TILE: Record<SessionRowStatus, string> = {
+  today: "bg-primary text-white shadow-sm shadow-primary/30",
+  overdue: "bg-red-50 text-danger dark:bg-red-500/15",
+  upcoming: "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-300",
+  done: "bg-success-50 text-success dark:bg-success-500/20 dark:text-success-500",
+  skipped: "bg-gray-100 text-text-muted-light dark:bg-gray-700/60 dark:text-text-muted-dark",
+  lapsed: "bg-gray-100 text-text-muted-light dark:bg-gray-700/60 dark:text-text-muted-dark",
+};
+
+const STATUS_CHIP: Partial<Record<SessionRowStatus, [string, string]>> = {
+  today: ["Today", "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200"],
+  overdue: ["Overdue", "bg-red-50 text-danger dark:bg-red-500/15"],
+  skipped: ["Skipped", "bg-gray-100 text-text-muted-light dark:bg-gray-700/60 dark:text-text-muted-dark"],
+  lapsed: ["Lapsed", "bg-gray-100 text-text-muted-light dark:bg-gray-700/60 dark:text-text-muted-dark"],
+};
+
+// A session in the picker: date tile, name, size, and one status chip.
+const SessionRow = ({
+  name,
+  config,
+  status,
+  selected,
+  onClick,
+}: {
+  name: string;
+  config: any;
+  status: SessionRowStatus;
+  selected: boolean;
+  onClick: () => void;
+}) => {
+  const date = config?.date ? dayjs(config.date) : null;
+  const groups = (config?.groups?.length ?? 0) + (config?.supersets?.length ?? 0);
+  const chip = STATUS_CHIP[status];
+  const finished = status === "done" || status === "skipped" || status === "lapsed";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`flex items-center gap-3 w-full min-h-16 p-2 pr-3 rounded-2xl text-left transition-colors
+        bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50/60 dark:hover:bg-primary-800/20 ${FOCUS}
+        ${selected ? "ring-2 ring-primary" : ""} ${finished ? "opacity-75" : ""}`}
+    >
+      <span
+        className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl shrink-0 ${DATE_TILE[status]}`}
+        title={date ? formatSessionDate(config.date) : undefined}
+      >
+        {date ? (
+          <>
+            <span className="text-[10px] font-bold uppercase leading-none opacity-80">{date.format("MMM")}</span>
+            <span className="text-lg font-bold leading-tight">{date.format("D")}</span>
+          </>
+        ) : (
+          <FontAwesomeIcon icon={status === "done" ? faCheck : faDumbbell} />
+        )}
+      </span>
+      <span className="flex flex-col min-w-0 grow">
+        <span className="font-semibold truncate text-text-light dark:text-text-dark" title={name}>
+          {name}
+        </span>
+        <span className="text-xs truncate text-text-muted-light dark:text-text-muted-dark">
+          {[date?.format("dddd"), `${groups} ${groups === 1 ? "group" : "groups"}`, config?.optional ? "Optional" : null]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </span>
+      {chip ? (
+        <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${chip[1]}`}>{chip[0]}</span>
+      ) : status === "done" ? (
+        <FontAwesomeIcon icon={faCircleCheck} className="shrink-0 text-lg text-success-500" aria-label="Done" />
+      ) : (
+        <FontAwesomeIcon icon={faChevronRight} className="shrink-0 px-1 text-text-muted-light dark:text-text-muted-dark" />
+      )}
+    </button>
+  );
+};
+
+// A plan in the picker: size, current week and progress at a glance.
+const PlanTile = ({
+  name,
+  plan,
+  userdata,
+  selected,
+  onClick,
+  onClear,
+}: {
+  name: string;
+  plan: any;
+  userdata: any;
+  selected: boolean;
+  onClick?: () => void;
+  onClear?: () => void;
+}) => {
+  const sessionCount = plan?.sessions?.length ?? 0;
+  const weekCount = Object.keys(plan?.weeks ?? {}).length;
+  // Same rule as the week picker: a week with any logged run counts as done.
+  const [done, total] = plan?.open
+    ? [openPlanDoneSessions(userdata, name).length, sessionCount]
+    : [Object.keys(userdata?.[name] ?? {}).length, weekCount];
+  const percent = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  const currentWeek = plan?.open ? null : getCurrentWeekNumber(plan);
+  const muted = selected ? "text-white/75" : "text-text-muted-light dark:text-text-muted-dark";
+
+  const body = (
+    <>
+      <span className="flex items-start gap-3">
+        <span
+          className={`flex items-center justify-center w-11 h-11 rounded-xl shrink-0 ${
+            selected
+              ? "bg-white/15"
+              : "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-300"
+          }`}
+        >
+          <FontAwesomeIcon icon={plan?.open ? faCalendarDays : faLayerGroup} />
+        </span>
+        <span className="flex flex-col min-w-0 grow">
+          <span className="font-bold line-clamp-2 break-words" title={name}>
+            {name}
+          </span>
+          <span className={`text-xs ${muted}`}>
+            {[
+              plan?.open ? "Open plan" : `${weekCount} ${weekCount === 1 ? "week" : "weeks"}`,
+              `${sessionCount} ${sessionCount === 1 ? "session" : "sessions"}`,
+            ].join(" · ")}
+          </span>
+        </span>
+        {currentWeek !== null && currentWeek < weekCount && (
+          <span
+            className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${
+              selected ? "bg-white/15" : "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200"
+            }`}
+          >
+            Week {currentWeek + 1}
+          </span>
+        )}
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label="Clear plan selection"
+            title="Clear selection"
+            className="shrink-0 flex items-center justify-center w-11 h-11 -m-2 rounded-full text-white/80
+              hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+        )}
+      </span>
+      <span className="flex flex-col gap-1.5">
+        <span className={`h-1.5 rounded-full overflow-hidden ${selected ? "bg-white/20" : "bg-gray-200 dark:bg-gray-700"}`}>
+          <span
+            className={`block h-full rounded-full ${selected ? "bg-white" : "bg-primary"}`}
+            style={{ width: `${percent}%` }}
+          />
+        </span>
+        <span className={`text-xs font-medium ${muted}`}>
+          {done} of {total} {plan?.open ? "sessions" : "weeks"} done
+        </span>
+      </span>
+    </>
+  );
+
+  const className = `flex flex-col gap-4 w-full p-4 rounded-2xl text-left transition-all ${
+    selected
+      ? "text-white bg-gradient-to-br from-primary to-primary-400 shadow-md shadow-primary/30"
+      : "text-text-light dark:text-text-dark bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50/60 dark:hover:bg-primary-800/20 hover:shadow-sm"
+  }`;
+
+  return onClick ? (
+    <button type="button" aria-pressed={selected} onClick={onClick} className={`${className} ${FOCUS}`}>
+      {body}
+    </button>
+  ) : (
+    <div className={className}>{body}</div>
+  );
+};
+
+// Gradient tile for the session about to be started (Up next / Ready).
+const HeroTile = ({
+  eyebrow,
+  title,
+  details,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  details: (string | null | undefined)[];
+  children: ReactNode;
+}) => (
+  <div
+    className="flex flex-col gap-4 rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-primary-400
+      shadow-lg shadow-primary/30 motion-safe:animate-fade-up"
+  >
+    <div className="flex items-start gap-3">
+      <span className="shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-white/15">
+        <FontAwesomeIcon icon={faDumbbell} className="text-lg" />
+      </span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-xs font-bold uppercase tracking-wider text-white/70">{eyebrow}</span>
+        <span className="text-xl font-bold line-clamp-2 break-words" title={title}>
+          {title}
+        </span>
+      </div>
+    </div>
+    <ul aria-label="Session details" className="flex flex-wrap gap-1.5">
+      {details.filter(Boolean).map((detail) => (
+        <li key={detail} className="px-3 py-1 rounded-full bg-white/15 text-xs font-semibold">
+          {detail}
+        </li>
+      ))}
+    </ul>
+    {children}
+  </div>
+);
 
 const SessionPage = () => {
   const sessionContext = useContext(SessionContext);
@@ -90,6 +326,9 @@ const SessionPage = () => {
   // The session just skipped from Up next, so it can be undone.
   const [lastSkipped, setLastSkipped] = useState<{ plan: string; week: string; session: string } | null>(null);
   const [isSkipping, setIsSkipping] = useState(false);
+  const [showAllDone, setShowAllDone] = useState(false);
+  // Whether the chosen session came from the list (vs. Up next), for Back.
+  const [sessionFromPicker, setSessionFromPicker] = useState(false);
 
   const skip = async (target: { plan: string; week: string; session: string }) => {
     setIsSkipping(true);
@@ -189,6 +428,7 @@ const SessionPage = () => {
     });
     setPickerOpen(false);
     setLastSkipped(null);
+    setSessionFromPicker(false);
   };
 
   // The next session to do: the first unfinished one in the selected plan.
@@ -230,18 +470,31 @@ const SessionPage = () => {
       ) ?? null
     : null;
 
-  // Date and size of a session, shown under its name in the picker.
-  const sessionMeta = (session: string) => {
+  const doneInSelectedWeek: string[] =
+    !isOpenPlan && sessionData.week
+      ? Object.keys((Object.values(sourceData?.userdata ?? {})[0] as any)?.[sessionData.plan]?.[sessionData.week] ?? {})
+      : [];
+
+  const statusOf = (session: string): SessionRowStatus => {
     const config = sourceData?.sessions?.[session];
-    const count = (config?.groups?.length ?? 0) + (config?.supersets?.length ?? 0);
-    return [
-      config?.date ? formatSessionDate(config.date) : null,
-      config?.optional ? "Optional" : null,
-      `${count} ${count === 1 ? "group" : "groups"}`,
-    ]
-      .filter(Boolean)
-      .join(" · ");
+    if (openSkipped.includes(session)) return "skipped";
+    if (openDone.includes(session) || doneInSelectedWeek.includes(session)) return "done";
+    if (isLapsedOptional(config)) return "lapsed";
+    if (sessionDueStatus(config?.date, false, config?.optional === true) === "overdue") return "overdue";
+    if (config?.date && dayjs(config.date).isSame(dayjs(), "day")) return "today";
+    return "upcoming";
   };
+
+  // To do: soonest first (sessionOptions is already date-ascending for open plans).
+  // Completed: most recent first, undated last.
+  const isFinished = (session: string) => ["done", "skipped", "lapsed"].includes(statusOf(session));
+  const toDoSessions = sessionOptions.filter((session) => !isFinished(session));
+  const finishedSessions = sessionOptions
+    .filter(isFinished)
+    .sort((a, b) =>
+      (sourceData?.sessions?.[b]?.date ?? "").localeCompare(sourceData?.sessions?.[a]?.date ?? "") ||
+      a.localeCompare(b)
+    );
 
   const currentWeekIndex = selectedPlanData ? getCurrentWeekNumber(selectedPlanData) : null;
 
@@ -278,7 +531,39 @@ const SessionPage = () => {
 
     setSessionData((prev: any) => ({ ...prev, session, supersets }));
     setPickerOpen(false);
+    setSessionFromPicker(true);
   };
+
+  // One step back: Ready → where the session was picked, open picker → Up next,
+  // chosen plan → plan list. A lone session in a fixed week is auto-selected,
+  // so clearing it would just re-select it; step back to the plans instead.
+  const autoSelectedSession = !isOpenPlan && sessionOptions.length === 1;
+
+  // Clears the plan so every plan card unfolds again.
+  const clearPlan = () => {
+    setSessionData({});
+    setPickerOpen(false);
+    setLastSkipped(null);
+  };
+  const back = (() => {
+    if (sessionData.session && !autoSelectedSession) {
+      return {
+        label: sessionFromPicker ? "Back to sessions" : "Back",
+        run: () => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          setSessionData(({ session, supersets, ...rest }: any) => rest);
+          setPickerOpen(sessionFromPicker);
+        },
+      };
+    }
+    if (pickerOpen && sessionData.plan) {
+      return { label: "Back", run: () => setPickerOpen(false) };
+    }
+    if (sessionData.plan && planNames.length > 1) {
+      return { label: "Back to plans", run: clearPlan };
+    }
+    return null;
+  })();
 
   // Open plans have no weeks, so every run is logged under the OPEN_WEEK key.
   useEffect(() => {
@@ -333,85 +618,135 @@ const SessionPage = () => {
 
   return (
     <WrapperPage className="max-w-[32rem] sm:max-w-xl lg:max-w-4xl">
-      <div className="flex flex-col gap-6 pt-4 sm:pt-8">
+      <div className="flex flex-col gap-6 pt-8">
         <div>
-          <h1 className="flex items-start gap-3 text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
-            <span className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800/40 text-primary dark:text-primary-300">
-              <FontAwesomeIcon icon={faDumbbell} />
-            </span>
-            Start a workout
-          </h1>
+          {back && (
+            <button
+              type="button"
+              onClick={back.run}
+              className={`flex items-center gap-2 min-h-11 -ml-2 mb-1 px-2 rounded-full text-sm font-semibold
+                text-primary hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`}
+            >
+              <FontAwesomeIcon icon={faChevronLeft} />
+              {back.label}
+            </button>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="flex items-center gap-3 text-2xl font-bold text-text-light dark:text-text-dark">
+              <span className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800/40 text-primary dark:text-primary-300">
+                <FontAwesomeIcon icon={faDumbbell} className="text-base" />
+              </span>
+              Start a workout
+            </h1>
+            <button
+              type="button"
+              onClick={() => navigate("/training-planner/history")}
+              className={`${OUTLINE_PILL} shrink-0`}
+            >
+              <FontAwesomeIcon icon={faClockRotateLeft} />
+              History
+            </button>
+          </div>
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-            {upNext && !showPicker && !sessionData.session
-              ? "Ready when you are."
-              : "Pick a plan, week, and session to begin."}
+            {!sessionData.plan
+              ? "Choose a plan to begin."
+              : upNext && !showPicker && !sessionData.session
+                ? "Ready when you are."
+                : "Pick a week and session to begin."}
           </p>
         </div>
 
-        <div className="flex justify-end">
-          <Button
-            label="View history"
-            decoration="cancel"
-            className="text-xs"
-            onClick={() => navigate("/training-planner/history")}
-          />
+        <div className="flex flex-col">
+          <SectionLabel>{sessionData.plan ? "Plan" : "Your plans"}</SectionLabel>
+          {/* Single column so unselected plans can fold away (grid-rows 1fr → 0fr)
+              while the selected one stays put. */}
+          <div className="flex flex-col -m-1.5 -mb-1.5">
+            {planNames.map((plan) => {
+              const selected = sessionData.plan === plan;
+              const folded = !!sessionData.plan && !selected;
+              return (
+                <div
+                  key={plan}
+                  aria-hidden={folded}
+                  {...(folded ? { inert: "" } : {})}
+                  className={`grid transition-[grid-template-rows,opacity,transform] duration-300 ease-out
+                    motion-reduce:transition-none ${
+                      folded ? "grid-rows-[0fr] opacity-0 -translate-y-2" : "grid-rows-[1fr] opacity-100"
+                    }`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="p-1.5">
+                      <PlanTile
+                        name={plan}
+                        plan={plans[plan]}
+                        userdata={Object.values(sourceData?.userdata ?? {})[0]}
+                        selected={selected}
+                        // A single plan is pre-selected and can't be cleared.
+                        onClick={planNames.length > 1 && !selected ? () => selectPlan(plan) : undefined}
+                        onClear={planNames.length > 1 && selected ? clearPlan : undefined}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {!showPicker && sessionData.session && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark p-4">
-            <div className="flex min-w-0 flex-col">
-              <span className="text-lg font-bold break-words">{sessionData.session}</span>
-              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                {[sessionData.plan, sessionData.week !== OPEN_WEEK ? sessionData.week : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
+          <HeroTile
+            eyebrow="Ready"
+            title={sessionData.session}
+            details={[
+              sessionData.plan,
+              sessionData.week !== OPEN_WEEK ? sessionData.week : null,
+              sourceData?.sessions?.[sessionData.session]?.date
+                ? formatSessionDate(sourceData.sessions[sessionData.session].date)
+                : null,
+            ]}
+          >
+            <div className="flex flex-wrap justify-center gap-2">
+              <button type="button" onClick={() => setPickerOpen(true)} className={upNextActionClassName}>
+                <FontAwesomeIcon icon={faShuffle} />
+                Change
+              </button>
             </div>
-            <Button label="Change" decoration="cancel" className="text-xs shrink-0" onClick={() => setPickerOpen(true)} />
-          </div>
+          </HeroTile>
         )}
 
         {lastSkipped && (
           <div
             role="status"
-            className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm"
+            className="flex items-center justify-between gap-3 min-h-14 rounded-2xl px-2 py-1.5 bg-gray-50 dark:bg-gray-800/40"
           >
-            <span className="min-w-0 break-words">Skipped {lastSkipped.session}.</span>
-            <button type="button" onClick={undoSkip} className="min-h-11 shrink-0 font-medium underline">
+            <span className="flex items-center gap-3 min-w-0">
+              <span className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 bg-gray-100 text-text-muted-light dark:bg-gray-700/60 dark:text-text-muted-dark">
+                <FontAwesomeIcon icon={faForwardStep} />
+              </span>
+              <span className="text-sm min-w-0 break-words text-text-light dark:text-text-dark">
+                Skipped {lastSkipped.session}.
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={undoSkip}
+              className={`min-h-11 px-3 shrink-0 rounded-full text-sm font-semibold text-primary hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`}
+            >
               Undo
             </button>
           </div>
         )}
 
         {!showPicker && !sessionData.session && upNext && (
-          <div
-            className="flex flex-col gap-4 rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-primary-400
-              shadow-lg shadow-primary/30"
+          <HeroTile
+            eyebrow="Up next"
+            title={upNext.session}
+            details={[
+              upNext.plan,
+              upNext.week !== OPEN_WEEK ? upNext.week : null,
+              upNext.date ? formatSessionDate(upNext.date) : null,
+            ]}
           >
-            <div className="flex items-start gap-3">
-              <span className="shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-white/15">
-                <FontAwesomeIcon icon={faDumbbell} className="text-lg" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-white/70">Up next</span>
-                <span className="text-xl font-bold line-clamp-2 break-words" title={upNext.session}>
-                  {upNext.session}
-                </span>
-              </div>
-            </div>
-            <ul aria-label="Session details" className="flex flex-wrap gap-1.5">
-              {[
-                upNext.plan,
-                upNext.week !== OPEN_WEEK ? upNext.week : null,
-                upNext.date ? formatSessionDate(upNext.date) : null,
-              ]
-                .filter(Boolean)
-                .map((detail) => (
-                  <li key={detail} className="px-3 py-1 rounded-full bg-white/15 text-xs font-semibold">
-                    {detail}
-                  </li>
-                ))}
-            </ul>
             <button
               type="button"
               onClick={() => startSession(upNext.plan, upNext.week, upNext.session)}
@@ -441,45 +776,15 @@ const SessionPage = () => {
                 {isSkipping ? "Skipping…" : "Skip"}
               </button>
             </div>
-          </div>
+          </HeroTile>
         )}
 
-        {showPicker && (
-          <>
-        {sessionData.plan && pickerOpen && (
-          <Button
-            label="Back"
-            decoration="cancel"
-            className="text-xs self-start"
-            onClick={() => setPickerOpen(false)}
-          />
-        )}
-
-        <div className="flex flex-col gap-2">
-          <span className={stepLabelClassName}>Plan</span>
-          {planNames.length === 1 ? (
-            <span className="text-base font-semibold text-text-light dark:text-text-dark">
-              {planNames[0]}
-            </span>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {planNames.map((plan) => (
-                <button
-                  key={plan}
-                  type="button"
-                  onClick={() => selectPlan(plan)}
-                  className={chipClassName(sessionData.plan === plan)}
-                >
-                  {plan}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {showPicker && sessionData.plan && (
+          <Card key={sessionData.plan} className="flex flex-col gap-4 motion-safe:animate-fade-up">
 
         {sessionData.plan && !isOpenPlan && (
           <div className="flex flex-col gap-2">
-            <span className={stepLabelClassName}>Week</span>
+            <SectionLabel>Week</SectionLabel>
             {weekOptions.length === 0 ? (
               <EmptyState message="All weeks in this plan are already completed." />
             ) : (
@@ -508,60 +813,87 @@ const SessionPage = () => {
 
         {sessionData.week && (
           <div className="flex flex-col gap-2">
-            <span className={stepLabelClassName}>Session</span>
             {sessionOptions.length === 0 ? (
+              <>
+              <SectionLabel>Session</SectionLabel>
               <div className="flex flex-col items-start gap-2">
                 <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
                   This plan has no sessions yet.
                 </span>
-                <Button
-                  label="Add sessions to this plan"
-                  decoration="cancel"
-                  className="text-xs"
+                <button
+                  type="button"
                   onClick={() => navigate("/training-planner/manage/plans")}
-                />
+                  className={OUTLINE_PILL}
+                >
+                  Add sessions to this plan
+                </button>
               </div>
+              </>
             ) : !isOpenPlan && sessionOptions.length === 1 ? (
+              <>
+              <SectionLabel>Session</SectionLabel>
               <span className="text-base font-semibold text-text-light dark:text-text-dark">
                 {sessionOptions[0]}
               </span>
+              </>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                {sessionOptions.map((session) => (
-                  <button
-                    key={session}
-                    type="button"
-                    onClick={() => selectSession(session)}
-                    className={`flex items-center gap-3 w-full min-h-11 text-left rounded-lg border p-3 transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                      sessionData.session === session
-                        ? "border-primary bg-primary-50 dark:bg-primary-800/30"
-                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark"
-                    }`}
+              <>
+              <SectionLabel>To do · {toDoSessions.length}</SectionLabel>
+              {toDoSessions.length === 0 ? (
+                <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                  You're all caught up.
+                </span>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  {toDoSessions.map((session) => (
+                    <SessionRow
+                      key={session}
+                      name={session}
+                      config={sourceData?.sessions?.[session]}
+                      status={statusOf(session)}
+                      selected={sessionData.session === session}
+                      onClick={() => selectSession(session)}
+                    />
+                  ))}
+                </div>
+              )}
+              {finishedSessions.length > 0 && (
+                <>
+                  <SectionLabel
+                    action={
+                      finishedSessions.length > DONE_PREVIEW && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllDone((prev) => !prev)}
+                          className={`min-h-11 px-3 rounded-full text-sm font-semibold text-primary
+                            hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`}
+                        >
+                          {showAllDone ? "Show less" : `Show all ${finishedSessions.length}`}
+                        </button>
+                      )
+                    }
                   >
-                    <div className="flex min-w-0 grow flex-col">
-                      <span className="font-semibold line-clamp-2 break-words" title={session}>
-                        {session}
-                      </span>
-                      <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                        {sessionMeta(session)}
-                      </span>
-                    </div>
-                    {isOpenPlan && (
-                      <SessionStatusIcon
-                        date={sourceData?.sessions?.[session]?.date}
-                        done={openDone.includes(session)}
-                        skipped={openSkipped.includes(session)}
-                        optional={sourceData?.sessions?.[session]?.optional === true}
+                    Completed · {finishedSessions.length}
+                  </SectionLabel>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                    {(showAllDone ? finishedSessions : finishedSessions.slice(0, DONE_PREVIEW)).map((session) => (
+                      <SessionRow
+                        key={session}
+                        name={session}
+                        config={sourceData?.sessions?.[session]}
+                        status={statusOf(session)}
+                        selected={sessionData.session === session}
+                        onClick={() => selectSession(session)}
                       />
-                    )}
-                  </button>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              </>
             )}
           </div>
         )}
-
-          </>
+          </Card>
         )}
 
         {sessionData.session && (
@@ -576,32 +908,35 @@ const SessionPage = () => {
         <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95 backdrop-blur">
         {selectedRun ? (
           <div className="flex gap-2">
-            <Button
+            <button
               type="button"
-              className="min-h-11 py-3 text-base grow-[3]"
-              label="View results"
+              className={`${PRIMARY_PILL} grow-[3]`}
               onClick={() => setViewingRun(selectedRun)}
-            />
-            <Button
+            >
+              View results
+            </button>
+            <button
               type="button"
-              className="min-h-11 py-3 text-base grow"
-              label="Run again"
-              decoration="cancel"
+              className={`${OUTLINE_PILL} min-h-12 text-base grow`}
               onClick={() =>
                 sessionContext.initialiseSession({ ...sessionData, moodBefore })
               }
-            />
+            >
+              Run again
+            </button>
           </div>
         ) : (
-          <Button
+          <button
             type="button"
-            className="min-h-11 py-3 text-base"
-            label="Start session"
+            className={`${PRIMARY_PILL} w-full disabled:opacity-50`}
             disabled={!sessionData.session}
             onClick={() =>
               sessionContext.initialiseSession({ ...sessionData, moodBefore })
             }
-          />
+          >
+            <FontAwesomeIcon icon={faPlay} />
+            Start session
+          </button>
         )}
         </div>
         )}

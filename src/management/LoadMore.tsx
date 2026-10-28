@@ -1,4 +1,4 @@
-import { Button } from "@dyordsabuzo/ui-components";
+import { FOCUS } from "../pages/others/AgendaRow";
 
 type Props = {
   shown: number;
@@ -6,6 +6,8 @@ type Props = {
   onLoadMore: () => void;
   onShowAll: () => void;
 };
+
+const PILL = `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors ${FOCUS}`;
 
 // Footer for paged lists; renders nothing once everything is visible.
 export const LoadMore = ({ shown, total, onLoadMore, onShowAll }: Props) => {
@@ -17,8 +19,21 @@ export const LoadMore = ({ shown, total, onLoadMore, onShowAll }: Props) => {
         Showing {shown} of {total}
       </span>
       <div className="flex gap-2">
-        <Button label="Load more" onClick={onLoadMore} />
-        <Button label="Show all" decoration="cancel" onClick={onShowAll} />
+        <button
+          type="button"
+          onClick={onLoadMore}
+          className={`${PILL} bg-primary text-white shadow-sm shadow-primary/30 hover:bg-primary-500`}
+        >
+          Load more
+        </button>
+        <button
+          type="button"
+          onClick={onShowAll}
+          className={`${PILL} border border-primary-200 dark:border-primary-700 text-primary
+            hover:bg-primary-50 dark:hover:bg-primary-800/20`}
+        >
+          Show all
+        </button>
       </div>
     </div>
   );
