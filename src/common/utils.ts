@@ -125,12 +125,55 @@ const getAudioContext = (): AudioContext => {
   return sharedAudioContext as AudioContext;
 };
 
+// Battery: a running AudioContext keeps the audio device busy even while
+// silent. It's held running for a whole workout (holdAudio, ExercisePage) so
+// timer cues never depend on resuming outside a tap; otherwise it's suspended
+// once nothing has played for a while, or as soon as the page is hidden.
+const AUDIO_IDLE_MS = 30_000;
+let audioHolds = 0;
+let audioIdleTimer: ReturnType<typeof setTimeout> | undefined;
+
+const suspendAudioIfIdle = () => {
+  if (audioHolds === 0 && sharedAudioContext?.state === "running") {
+    sharedAudioContext.suspend().catch(() => {});
+  }
+};
+
+const scheduleAudioSuspend = () => {
+  clearTimeout(audioIdleTimer);
+  if (audioHolds === 0) audioIdleTimer = setTimeout(suspendAudioIfIdle, AUDIO_IDLE_MS);
+};
+
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) suspendAudioIfIdle();
+  });
+}
+
+// Keeps audio running until the returned release is called.
+export const holdAudio = () => {
+  audioHolds += 1;
+  clearTimeout(audioIdleTimer);
+  return () => {
+    audioHolds -= 1;
+    scheduleAudioSuspend();
+  };
+};
+
+// Context for playing a sound now: resumed if idle-suspended, and the idle
+// countdown restarted.
+const activeAudioContext = () => {
+  const audioContext = getAudioContext();
+  if (audioContext.state === "suspended") {
+    audioContext.resume().catch(() => {});
+  }
+  scheduleAudioSuspend();
+  return audioContext;
+};
+
 export const unlockAudioContext = () => {
   try {
-    const audioContext = getAudioContext();
-    if (audioContext.state === "suspended") {
-      audioContext.resume();
-    }
+    activeAudioContext();
     // Preload so the first announcement isn't delayed by a network fetch.
     VOICE_CLIPS.forEach((clip) => loadVoiceClip(clip).catch(() => {}));
   } catch {}
@@ -140,7 +183,7 @@ export const unlockAudioContext = () => {
 // no-ops if AudioContext is unavailable or blocked (e.g. no user gesture yet).
 export const playCountdownWarningSound = () => {
   try {
-    const audioContext = getAudioContext();
+    const audioContext = activeAudioContext();
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
@@ -225,7 +268,7 @@ export const playVoiceClip = (clip: VoiceClip, onEnd?: () => void) => {
 
         loadVoiceClip(clip)
           .then((buffer) => {
-            const audioContext = getAudioContext();
+            const audioContext = activeAudioContext();
             const source = audioContext.createBufferSource();
             source.buffer = buffer;
             source.connect(audioContext.destination);
@@ -273,7 +316,7 @@ export const resetPageZoom = () => {
 // recorded clip.
 export const playApplauseSound = () => {
   try {
-    const audioContext = getAudioContext();
+    const audioContext = activeAudioContext();
     const duration = 2.5;
     const bufferSize = Math.floor(audioContext.sampleRate * duration);
     const buffer = audioContext.createBuffer(

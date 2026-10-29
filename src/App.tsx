@@ -19,7 +19,9 @@ function App() {
     // suspended until it's resumed inside a user-gesture handler — resume it
     // on the first tap anywhere in the app so later timer-triggered sounds
     // (rest-timer beep, workout-complete applause) are actually audible.
-    document.addEventListener("pointerdown", unlockAudioContext, { once: true });
+    // Every tap, not just the first: audio is suspended when idle to save
+    // battery (see holdAudio), and a tap is the reliable way to resume it.
+    document.addEventListener("pointerdown", unlockAudioContext);
     return () => document.removeEventListener("pointerdown", unlockAudioContext);
   }, []);
 

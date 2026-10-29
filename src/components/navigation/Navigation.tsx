@@ -241,7 +241,7 @@ const Navigation = () => {
                 bg-white dark:bg-surface-dark text-secondary dark:text-secondary-200
                 shadow-sm transition-transform duration-150 active:scale-95
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                ${isMobileNavRevealed ? "" : "animate-pulse"}
+                ${isMobileNavRevealed ? "" : "motion-safe:animate-pulse-hint"}
                 `}
             >
               <FontAwesomeIcon

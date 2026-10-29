@@ -22,6 +22,7 @@ import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { unitId } from "../resolveSessionSupersets";
 import {
+  holdAudio,
   isMobileViewport,
   lockPortraitOrientation,
   resetPageZoom,
@@ -197,6 +198,9 @@ export const ExercisePage = () => {
   }, [exerciseState.supersetCounter, exerciseState.supersetComplete]);
 
   useScrollToTopOnClose(showGroups);
+
+  // Keep audio running for the whole workout so timer cues play without a tap.
+  useEffect(() => holdAudio(), []);
 
   useEffect(() => {
     if (isMobileViewport()) {

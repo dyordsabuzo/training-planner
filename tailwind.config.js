@@ -29,6 +29,9 @@ module.exports = {
         "slide-from-right": "slide-from-right 250ms ease-out",
         "slide-from-left": "slide-from-left 250ms ease-out",
         "fade-up": "fade-up 300ms ease-out 150ms both",
+        // Mobile menu handle: a few pulses as a hint, then still (Navigation.tsx);
+        // an endless pulse keeps the screen repainting and drains battery.
+        "pulse-hint": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 3",
       },
     },
   },
