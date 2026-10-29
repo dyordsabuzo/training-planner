@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@dyordsabuzo/ui-components";
+import { PRIMARY_PILL } from "../others/HeroTile";
 import { Timer } from "../../components/others/Timer";
 import { playCountdownWarningSound, playVoiceClip } from "../../common/utils";
 
@@ -58,11 +58,13 @@ export const UnwrappedRestTimer: React.FC<Props> = ({
           </span>
         )}
       </div>
-      <Button
-        label={"RESUME"}
-        className="min-h-11 py-4 text-lg mx-4 mb-2 sm:mx-6"
+      <button
+        type="button"
+        className={`${PRIMARY_PILL} min-h-14 mx-4 mb-2 sm:mx-6 text-xl uppercase`}
         onClick={() => toggleRest(false)}
-      />
+      >
+        Resume
+      </button>
     </div>
   );
 };

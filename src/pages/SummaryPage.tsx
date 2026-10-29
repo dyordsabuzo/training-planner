@@ -4,16 +4,17 @@ import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faChevronDown, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
+import { SectionLabel } from "./others/AgendaRow";
+import { HeroTile, PRIMARY_PILL } from "./others/HeroTile";
 
 import { isTrainSessionPath } from "../routes/trainRoutes";
-import { Button } from "@dyordsabuzo/ui-components";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { playApplauseSound, playVoiceClip } from "../common/utils";
-import { pluralUnit, unitName, UnitKind } from "./resolveSessionSupersets";
+import { pluralUnit, unitName, unitTitle, UnitKind } from "./resolveSessionSupersets";
 
 type Props = {
   currentSuperset?: any;
@@ -21,6 +22,8 @@ type Props = {
   actualSupersetData?: any;
   supersetIndex?: number;
   nextPageHandler?: () => void;
+  // Unit ids skipped so far in the run.
+  skippedIds?: string[];
 };
 
 // "2 supersets · 1 exercise group", counting each kind of unit separately.
@@ -35,12 +38,23 @@ const summaryCounts = (units: any[]) => {
     .join(" · ");
 };
 
+// Pills for a unit's hero tile: kind, exercise count and sets.
+const unitDetails = (unit: any) => {
+  const exercises = (unit.exercises ?? []).filter((item: any) => item.exercise);
+  return [
+    unitTitle(unit.kind),
+    `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}`,
+    unit.targetSet ? `${unit.targetSet} set${Number(unit.targetSet) === 1 ? "" : "s"}` : null,
+  ];
+};
+
 export const SummaryPage = ({
   currentSuperset = null,
   nextSuperset = null,
   actualSupersetData = null,
   supersetIndex = 0,
   nextPageHandler = () => {},
+  skippedIds = [],
 }: Props) => {
   const sessionComplete = currentSuperset && !nextSuperset;
   const {
@@ -125,6 +139,9 @@ export const SummaryPage = ({
     }
   }, [sessionComplete, actualSupersetData]);
 
+  // What the button starts: the first unit before the run, else the next one.
+  const upNext = currentSuperset ? nextSuperset : supersets[0];
+
   return (
     <WrapperPage
       className="max-w-[32rem] sm:max-w-xl lg:max-w-2xl"
@@ -156,18 +173,24 @@ export const SummaryPage = ({
           )}
         </div>
 
-        <div
-          className="border border-gray-200 dark:border-gray-700 rounded-md p-4
-            bg-white dark:bg-surface-dark shadow-sm flex flex-col"
-        >
-          <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-3">
-            {summaryCounts(supersets)}
-          </span>
-          <SessionProgress
-            supersets={supersets}
-            doneUpToIndex={currentSuperset ? supersetIndex : -1}
-          />
-        </div>
+        {upNext && (
+          <HeroTile
+            eyebrow={currentSuperset ? "Up next" : "First up"}
+            title={upNext.name}
+            details={unitDetails(upNext)}
+          >
+            <ol className="flex flex-col gap-1.5 text-sm font-medium leading-snug">
+              {(upNext.exercises ?? [])
+                .filter((item: any) => item.exercise)
+                .map((item: any, index: number) => (
+                  <li key={index} className="flex items-baseline gap-2 rounded-xl bg-white/10 px-3 py-2">
+                    <span className="shrink-0 w-4 text-right text-xs font-bold text-white/60">{index + 1}</span>
+                    <span className="min-w-0 break-words">{item.exercise.name}</span>
+                  </li>
+                ))}
+            </ol>
+          </HeroTile>
+        )}
 
         {sessionComplete && (
           <MoodCheckIn
@@ -177,26 +200,22 @@ export const SummaryPage = ({
           />
         )}
 
-        {!sessionComplete && (
-          <div
-            className="flex justify-center text-primary/50 dark:text-primary-300/50 animate-bounce"
-            aria-hidden="true"
-          >
-            <FontAwesomeIcon icon={faChevronDown} />
-          </div>
-        )}
-
-        <Button
-          label={
-            nextSuperset
-              ? `Next ${unitName(nextSuperset.kind as UnitKind)}`
-              : currentSuperset
-                ? "Finish workout"
-                : "Start workout"
-          }
-          onClick={handleButtonClick}
-          className="min-h-11 w-full uppercase py-4 text-xl"
-        />
+        <div
+          className="rounded-2xl p-4 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700
+            shadow-sm flex flex-col"
+        >
+          <SectionLabel>
+            Session progress · {summaryCounts(supersets)}
+          </SectionLabel>
+          <SessionProgress
+            supersets={supersets}
+            doneUpToIndex={currentSuperset ? supersetIndex : -1}
+            activeIndex={upNext ? supersets.indexOf(upNext) : undefined}
+            skippedIds={skippedIds}
+            collapseDone={!sessionComplete}
+            compact
+          />
+        </div>
 
         {currentSuperset && nextSuperset && (
           <div className="flex justify-center">
@@ -211,6 +230,16 @@ export const SummaryPage = ({
             />
           </div>
         )}
+
+        <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95">
+          <button type="button" className={`${PRIMARY_PILL} w-full`} onClick={handleButtonClick}>
+            {nextSuperset
+              ? `Next ${unitName(nextSuperset.kind as UnitKind)}`
+              : currentSuperset
+                ? "Finish workout"
+                : "Start workout"}
+          </button>
+        </div>
       </div>
     </WrapperPage>
   );

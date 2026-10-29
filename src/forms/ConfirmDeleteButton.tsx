@@ -13,6 +13,8 @@ type Props = {
   impactMessage?: string;
   // Scroll the page back to the top when the confirm modal closes.
   scrollToTopOnClose?: boolean;
+  // Styles the trigger as a plain button (e.g. a pill) instead of `decoration`.
+  triggerClassName?: string;
 };
 
 export const ConfirmDeleteButton = ({
@@ -23,11 +25,19 @@ export const ConfirmDeleteButton = ({
   useModal = true,
   impactMessage,
   scrollToTopOnClose = false,
+  triggerClassName,
 }: Props) => {
   const [confirming, setConfirming] = useState(false);
   useScrollToTopOnClose(useModal && scrollToTopOnClose && confirming);
 
   const confirmMessage = impactMessage ?? "Are you sure? This can't be undone.";
+
+  // Close first: the button can stay mounted after confirming (e.g. "Skip
+  // group" moves to the next unit on the same page), leaving the modal open.
+  const confirm = () => {
+    setConfirming(false);
+    onDelete();
+  };
 
   const confirmActions = (
     <div className="flex gap-2">
@@ -41,24 +51,32 @@ export const ConfirmDeleteButton = ({
         label={`Yes, ${label.toLowerCase()}`}
         decoration="delete"
         className={useModal ? "flex-1" : undefined}
-        onClick={onDelete}
+        onClick={confirm}
       />
     </div>
+  );
+
+  const triggerContent = icon ? (
+    <span className="flex items-center gap-2">
+      <FontAwesomeIcon icon={icon} />
+      {label}
+    </span>
+  ) : (
+    label
   );
 
   if (useModal) {
     return (
       <>
-        <Button decoration={decoration} onClick={() => setConfirming(true)}>
-          {icon ? (
-            <span className="flex items-center gap-2">
-              <FontAwesomeIcon icon={icon} />
-              {label}
-            </span>
-          ) : (
-            label
-          )}
-        </Button>
+        {triggerClassName ? (
+          <button type="button" className={triggerClassName} onClick={() => setConfirming(true)}>
+            {triggerContent}
+          </button>
+        ) : (
+          <Button decoration={decoration} onClick={() => setConfirming(true)}>
+            {triggerContent}
+          </Button>
+        )}
         <Modal
           title={label}
           isOpen={confirming}
@@ -83,7 +101,7 @@ export const ConfirmDeleteButton = ({
           <Button
             label={`Yes, ${label.toLowerCase()}`}
             decoration="delete"
-            onClick={onDelete}
+            onClick={confirm}
           />
           <Button
             label={"Cancel"}

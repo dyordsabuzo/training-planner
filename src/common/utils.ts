@@ -283,6 +283,49 @@ export const playVoiceClip = (clip: VoiceClip, onEnd?: () => void) => {
   );
 };
 
+const WHISTLE_SECONDS = 0.6;
+
+// Referee-style pea whistle, synthesised like the countdown beep: a ~2.8kHz
+// tone warbled ~30 times a second. Goes through the voice queue so the next
+// announcement plays after it rather than over it.
+export const playWhistleSound = () => {
+  voiceQueue = voiceQueue.then(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, WHISTLE_SECONDS * 1000);
+        try {
+          const audioContext = activeAudioContext();
+          const now = audioContext.currentTime;
+          const tone = audioContext.createOscillator();
+          const trill = audioContext.createOscillator();
+          const trillDepth = audioContext.createGain();
+          const gain = audioContext.createGain();
+
+          tone.type = "sine";
+          tone.frequency.value = 2800;
+          trill.frequency.value = 30;
+          trillDepth.gain.value = 250;
+          trill.connect(trillDepth);
+          trillDepth.connect(tone.frequency);
+
+          // Quick attack, hold, short fade so it doesn't click.
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.7, now + 0.03);
+          gain.gain.setValueAtTime(0.7, now + WHISTLE_SECONDS - 0.08);
+          gain.gain.linearRampToValueAtTime(0, now + WHISTLE_SECONDS);
+
+          tone.connect(gain);
+          gain.connect(audioContext.destination);
+
+          tone.start(now);
+          trill.start(now);
+          tone.stop(now + WHISTLE_SECONDS);
+          trill.stop(now + WHISTLE_SECONDS);
+        } catch {}
+      })
+  );
+};
+
 // Forces mobile browsers to snap back to scale 1 (e.g. after an accidental
 // pinch-zoom), by briefly overriding the viewport meta's max-scale and then
 // restoring it so manual zoom stays available afterwards.

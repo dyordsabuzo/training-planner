@@ -46,7 +46,7 @@ export const AuthLayout = ({ children, heroHeadline, heroSubtext }: Props) => {
         </div>
       </div>
 
-      <ThemeToggle className="fixed top-4 right-4 z-30 bg-white/80 dark:bg-surface-dark/80 backdrop-blur shadow-sm" />
+      <ThemeToggle className="fixed top-4 right-4 z-30 bg-white/95 dark:bg-surface-dark/95 shadow-sm" />
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">{children}</div>

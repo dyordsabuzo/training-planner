@@ -10,6 +10,11 @@ type Props = {
   activeIndex?: number;
   // Unit ids skipped during the run; shown as passed but not done.
   skippedIds?: string[];
+  // Fold finished units into one "N done" row (SummaryPage between units).
+  collapseDone?: boolean;
+  // Unit names only, exercises on tap: SummaryPage's Up next card already
+  // lists the next unit's exercises, so this stays an outline.
+  compact?: boolean;
 };
 
 export const SessionProgress = ({
@@ -17,7 +22,15 @@ export const SessionProgress = ({
   doneUpToIndex = -1,
   activeIndex,
   skippedIds = [],
+  collapseDone = false,
+  compact = false,
 }: Props) => {
+  const [showDone, setShowDone] = useState(false);
+  const doneCount = Math.min(doneUpToIndex + 1, supersets.length);
+  const hideDone = collapseDone && !showDone && doneCount > 0;
+  const skippedCount = supersets
+    .slice(0, doneCount)
+    .filter((superset: any) => skippedIds.includes(unitId(superset))).length;
   // Completed groups hide their exercises; ids here are expanded by the user.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -34,7 +47,35 @@ export const SessionProgress = ({
 
   return (
     <div className="flex flex-col">
+      {hideDone && (
+        <div className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <div className="w-6 h-6 shrink-0 rounded-full border-2 border-success-500 bg-success-500 flex items-center justify-center">
+              <FontAwesomeIcon icon={faCheckCircle} className="text-white text-sm" />
+            </div>
+            <div className="w-0.5 flex-1 min-h-[2rem] bg-gray-200 dark:bg-gray-700 my-1" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDone(true)}
+            aria-expanded={false}
+            className="flex-1 -mt-1 mb-2 p-3 rounded-md flex items-center justify-between gap-2 text-left
+              bg-success-100 dark:bg-success-700/30
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="text-base font-bold">
+              {doneCount - skippedCount} done
+              {skippedCount > 0 && ` · ${skippedCount} skipped`}
+            </span>
+            <span className="flex items-center gap-1.5 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
+              Show
+              <FontAwesomeIcon icon={faChevronDown} />
+            </span>
+          </button>
+        </div>
+      )}
       {supersets.map((superset: any, index: number) => {
+        if (hideDone && index <= doneUpToIndex) return null;
         const id = unitId(superset);
         const isSkipped = index <= doneUpToIndex && skippedIds.includes(id);
         const isDone = index <= doneUpToIndex && !isSkipped;
@@ -42,7 +83,8 @@ export const SessionProgress = ({
         const exercises = superset.exercises.filter(
           (item: ExerciseSuperset) => item.exercise
         );
-        const showExercises = !(isDone || isSkipped) || expanded.has(id);
+        const collapsible = isDone || isSkipped || compact;
+        const showExercises = !collapsible || expanded.has(id);
 
         return (
           <div key={id} className="flex gap-3">
@@ -84,7 +126,7 @@ export const SessionProgress = ({
                       : ""
                 }`}
             >
-              {isDone || isSkipped ? (
+              {collapsible ? (
                 <button
                   type="button"
                   onClick={() => toggleExpanded(id)}
@@ -95,6 +137,9 @@ export const SessionProgress = ({
                   <span className="text-base font-bold">{superset.name}</span>
                   <span className="flex items-center gap-1.5 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
                     {isSkipped && "Skipped · "}
+                    {compact && isActive && (
+                      <span className="px-2 py-0.5 rounded-full bg-primary text-white font-semibold">Up next</span>
+                    )}
                     {!showExercises &&
                       `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}`}
                     <FontAwesomeIcon icon={showExercises ? faChevronUp : faChevronDown} />
@@ -106,7 +151,11 @@ export const SessionProgress = ({
               {showExercises && exercises.map((item: ExerciseSuperset, exIndex: number) => (
                 <span
                   key={exIndex}
-                  className="text-sm text-text-muted-light dark:text-text-muted-dark"
+                  className={`text-sm leading-snug break-words ${
+                    isDone || isSkipped
+                      ? "text-text-muted-light dark:text-text-muted-dark"
+                      : "text-text-light dark:text-text-dark"
+                  }`}
                 >
                   {item.exercise.name}
                 </span>

@@ -138,7 +138,7 @@ const Navigation = () => {
   return (
     <div>
       {!isAuthRoute && (
-        <ThemeToggle className="fixed top-4 right-4 z-30 bg-white/80 dark:bg-surface-dark/80 backdrop-blur shadow-sm" />
+        <ThemeToggle className="fixed top-4 right-4 z-30 bg-white/95 dark:bg-surface-dark/95 shadow-sm" />
       )}
 
       <nav

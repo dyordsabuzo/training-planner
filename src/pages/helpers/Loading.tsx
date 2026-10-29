@@ -6,7 +6,7 @@ export const Loading = () => {
       className={`h-[80dvh] flex flex-col place-content-center items-center opacity-60`}
     >
       <Logo
-        className="w-60 h-60 text-primary dark:text-primary-300 animate-pulse transition duration-200 ease-in-out"
+        className="w-60 h-60 text-primary dark:text-primary-300 motion-safe:animate-pulse-hint transition duration-200 ease-in-out"
       />
     </div>
   );

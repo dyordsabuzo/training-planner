@@ -3,6 +3,7 @@ import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { WeekForm } from "../forms/WeekForm";
 import { PlanForm } from "../forms/PlanForm";
+import { SessionForm } from "../forms/SessionForm";
 import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import { toDate, getCurrentWeekNumber } from "../common/planWeek";
 import { Loading } from "../pages/helpers/Loading";
@@ -55,6 +56,20 @@ const columns: DataTableColumn<PlanRow>[] = [
 
 const PAGE_SIZE = 6;
 
+const PILL = `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`;
+// Session pills shown per plan before "Show all".
+const SESSIONS_SHOWN = 3;
+
+// Newest first; undated sessions (by name) after the dated ones.
+const sessionsNewestFirst = (names: string[], sessions: any) => {
+  const sorted = sortSessionsByDate(names, sessions);
+  const dated = sorted.filter((name) => sessions?.[name]?.date).reverse();
+  return [...dated, ...sorted.filter((name) => !sessions?.[name]?.date)];
+};
+
+const PILL_GROUP_LABEL = "text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark";
+
 export const PlanListing = ({ viewMode = "card" }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
@@ -66,6 +81,20 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
 
   const [selectedWeekData, setSelectedWeekData] =
     useState<SelectedWeekData | null>(null);
+  // Session opened from a plan's session pill, edited in place.
+  const [sessionFormData, setSessionFormData] = useState<any>(null);
+  // Plans whose full session list is showing.
+  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
+  const toggleExpandedPlan = (planName: string) =>
+    setExpandedPlans((prev) => {
+      const next = new Set(prev);
+      if (next.has(planName)) {
+        next.delete(planName);
+      } else {
+        next.add(planName);
+      }
+      return next;
+    });
 
   if (!sourceData.plans) {
     return <Loading />;
@@ -88,6 +117,9 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
       onDelete={() => sourceDataContext.deletePlan(plan)}
     />
   );
+  const openSession = (session: any) =>
+    setSessionFormData({ ...session, supersets: toStringArray(session.supersets) });
+
   const entries = sortPlansByCreated(plans).filter(([planName]) =>
     planName.toLowerCase().includes(search.toLowerCase())
   );
@@ -149,6 +181,8 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
           const startDate = toDate(plan.startDate);
           const currentWeekNumber = getCurrentWeekNumber(plan);
           const sessionCount = (plan.sessions ?? []).length;
+          const sessionNames = sessionsNewestFirst(toStringArray(plan.sessions), sourceData.sessions);
+          const showAllSessions = expandedPlans.has(planName);
 
           const openPlan = () => {
             setFormData(plan);
@@ -210,78 +244,117 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
               {renderActions(plan)}
               </div>
 
-              {plan.open ? (
-                <div className="flex flex-col gap-1">
-                  {sortSessionsByDate(toStringArray(plan.sessions), sourceData.sessions).map(
-                    (sessionName) => {
-                      // Setup view only: done/skipped/overdue are per-client
-                      // progress and belong on the client's own pages.
-                      const date: string | undefined = sourceData.sessions?.[sessionName]?.date;
-                      const optional = sourceData.sessions?.[sessionName]?.optional === true;
-                      return (
-                        <div key={sessionName} className="flex items-center justify-between gap-2 text-sm">
-                          <span className="font-medium break-words min-w-0">{sessionName}</span>
-                          <span className="flex items-center gap-2 shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark">
-                            {date && formatSessionDate(date)}
-                            {optional && <Badge variant="neutral">Optional</Badge>}
-                          </span>
-                        </div>
-                      );
-                    }
-                  )}
-                  {(plan.sessions ?? []).length === 0 && (
-                    <span className="text-xs italic text-text-muted-light dark:text-text-muted-dark">
-                      No sessions added yet.
-                    </span>
-                  )}
-                </div>
-              ) : weekEntries.length === 0 ? (
+              {!plan.open &&
+                (weekEntries.length === 0 ? (
+                  <span className="text-xs italic text-text-muted-light dark:text-text-muted-dark">
+                    No weeks configured yet.
+                  </span>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <span className={PILL_GROUP_LABEL}>Weeks</span>
+                    <div className="flex flex-wrap gap-2">
+                      {weekEntries.map(([weekKey, weekData]) => {
+                        const week: any = weekData;
+                        const isCurrent = currentWeekNumber === week.weekNumber;
+                        const hasNote = !!week.annotation;
+
+                        return (
+                          <button
+                            key={weekKey}
+                            type="button"
+                            title={hasNote ? week.annotation : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWeekData({
+                                ...week,
+                                weekKey,
+                                planName,
+                              });
+                            }}
+                            className={`relative ${PILL}
+                              ${
+                                isCurrent
+                                  ? "bg-primary text-white shadow-sm shadow-primary/30"
+                                  : "bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50 dark:hover:bg-primary-800/20"
+                              }`}
+                          >
+                            {weekKey}
+                            {isCurrent && (
+                              <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide">
+                                Now
+                              </span>
+                            )}
+                            {hasNote && (
+                              <span
+                                aria-hidden="true"
+                                className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent-500"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+              {sessionCount === 0 ? (
                 <span className="text-xs italic text-text-muted-light dark:text-text-muted-dark">
-                  No weeks configured yet.
+                  No sessions added yet.
                 </span>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {weekEntries.map(([weekKey, weekData]) => {
-                    const week: any = weekData;
-                    const isCurrent = currentWeekNumber === week.weekNumber;
-                    const hasNote = !!week.annotation;
-
-                    return (
-                      <button
-                        key={weekKey}
-                        type="button"
-                        title={hasNote ? week.annotation : undefined}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedWeekData({
-                            ...week,
-                            weekKey,
-                            planName,
-                          });
-                        }}
-                        className={`relative min-h-11 px-4 rounded-full text-sm font-semibold transition-colors
-                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                          ${
-                            isCurrent
-                              ? "bg-primary text-white shadow-sm shadow-primary/30"
-                              : "bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50 dark:hover:bg-primary-800/20"
-                          }`}
-                      >
-                        {weekKey}
-                        {isCurrent && (
-                          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide">
-                            Now
-                          </span>
-                        )}
-                        {hasNote && (
-                          <span
-                            aria-hidden="true"
-                            className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent-500"
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-col gap-1.5">
+                  {!plan.open && <span className={PILL_GROUP_LABEL}>Sessions</span>}
+                  <div className="flex flex-wrap gap-2">
+                    {(showAllSessions ? sessionNames : sessionNames.slice(0, SESSIONS_SHOWN)).map(
+                      (sessionName) => {
+                        // Setup view only: done/skipped/overdue are per-client
+                        // progress and belong on the client's own pages.
+                        const session = sourceData.sessions?.[sessionName];
+                        const date: string | undefined = session?.date;
+                        return (
+                          <button
+                            key={sessionName}
+                            type="button"
+                            disabled={!session}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openSession(session);
+                            }}
+                            title={sessionName}
+                            className={`${PILL} w-full sm:w-auto sm:max-w-full flex items-center gap-2 text-left
+                              bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50 dark:hover:bg-primary-800/20
+                              disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            <span className="flex-1 min-w-0 truncate">{sessionName}</span>
+                            {session?.optional === true && (
+                              <Badge variant="warning" className="shrink-0 font-bold uppercase tracking-wide">
+                                Optional
+                              </Badge>
+                            )}
+                            {date && (
+                              <span className="shrink-0 text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
+                                {formatSessionDate(date)}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                  {sessionNames.length > SESSIONS_SHOWN && (
+                    <button
+                      type="button"
+                      aria-expanded={showAllSessions}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpandedPlan(planName);
+                      }}
+                      className="self-start min-h-11 px-1 text-sm font-semibold text-primary dark:text-primary-300 rounded
+                        hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {showAllSessions ? "Show less" : `Show all ${sessionNames.length}`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -299,6 +372,15 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
           data={formData}
           type={formType}
           closeForm={() => setFormType("")}
+        />
+      )}
+
+      {sessionFormData && (
+        <SessionForm
+          key={sessionFormData.id ?? sessionFormData.name}
+          data={sessionFormData}
+          type="edit"
+          closeForm={() => setSessionFormData(null)}
         />
       )}
 

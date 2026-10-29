@@ -1,4 +1,4 @@
-import React, { ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -28,6 +28,7 @@ import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { Card } from "@dyordsabuzo/ui-components";
 import { FOCUS, SectionLabel } from "./others/AgendaRow";
+import { HeroTile, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { resolveSession, sessionOrder } from "./resolveSessionSupersets";
 import {
@@ -77,12 +78,6 @@ const sortWeekKeys = (keys: string[]) =>
 // Secondary actions on the gradient hero tile.
 const upNextActionClassName = `flex items-center gap-2 min-h-11 px-4 rounded-full bg-white/10 text-sm font-semibold
   text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white`;
-
-const OUTLINE_PILL = `flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-full border border-primary-200
-  dark:border-primary-700 text-sm text-primary font-semibold hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`;
-
-const PRIMARY_PILL = `flex items-center justify-center gap-2 min-h-12 px-6 rounded-full bg-primary text-white text-base
-  font-bold shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
 
 const chipClassName = (isSelected: boolean, isCurrent = false) =>
   `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors ${FOCUS}
@@ -275,44 +270,6 @@ const PlanTile = ({
     <div className={className}>{body}</div>
   );
 };
-
-// Gradient tile for the session about to be started (Up next / Ready).
-const HeroTile = ({
-  eyebrow,
-  title,
-  details,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  details: (string | null | undefined)[];
-  children: ReactNode;
-}) => (
-  <div
-    className="flex flex-col gap-4 rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-primary-400
-      shadow-lg shadow-primary/30 motion-safe:animate-fade-up"
-  >
-    <div className="flex items-start gap-3">
-      <span className="shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-white/15">
-        <FontAwesomeIcon icon={faDumbbell} className="text-lg" />
-      </span>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-xs font-bold uppercase tracking-wider text-white/70">{eyebrow}</span>
-        <span className="text-xl font-bold line-clamp-2 break-words" title={title}>
-          {title}
-        </span>
-      </div>
-    </div>
-    <ul aria-label="Session details" className="flex flex-wrap gap-1.5">
-      {details.filter(Boolean).map((detail) => (
-        <li key={detail} className="px-3 py-1 rounded-full bg-white/15 text-xs font-semibold">
-          {detail}
-        </li>
-      ))}
-    </ul>
-    {children}
-  </div>
-);
 
 const SessionPage = () => {
   const sessionContext = useContext(SessionContext);
@@ -971,7 +928,7 @@ const SessionPage = () => {
         )}
 
         {sessionData.session && (
-        <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95 backdrop-blur">
+        <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95">
         {selectedRun ? (
           <div className="flex gap-2">
             <button

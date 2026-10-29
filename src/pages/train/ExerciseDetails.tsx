@@ -9,6 +9,7 @@ import { Timer } from "../../components/others/Timer";
 import { playCountdownWarningSound, playVoiceClip, toStringArray } from "../../common/utils";
 import SourceDataContext from "../../context/SourceDataContext";
 import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
+import { PRIMARY_PILL } from "../others/HeroTile";
 
 const WARNING_SECONDS_REMAINING = 5;
 const SWITCH_WARNING_SECONDS_REMAINING = 3;
@@ -344,7 +345,7 @@ export const ExerciseDetails = ({
               <SidePill label="Left" active={side === "left"} done={side !== "left"} />
               <FontAwesomeIcon
                 icon={faArrowRight}
-                className={`text-primary dark:text-primary-300 ${side === "switch" ? "animate-pulse" : ""}`}
+                className={`text-primary dark:text-primary-300 ${side === "switch" ? "motion-safe:animate-pulse-hint" : ""}`}
               />
               <SidePill label="Right" active={side === "right"} done={false} />
             </div>
@@ -454,26 +455,20 @@ export const ExerciseDetails = ({
         )}
       </div>
       {side === "switch" ? (
-        <Button
-          className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6 py-6 text-xl dark:bg-primary-400"
-          onClick={() => startRightSide(true)}
-          label="SKIP · START RIGHT"
-        />
+        <button type="button" className={`${PRIMARY_PILL} col-span-2 min-h-14 mx-4 mb-2 sm:mx-6 text-xl uppercase`} onClick={() => startRightSide(true)}>
+          Skip · start right
+        </button>
       ) : type === "Time-based" ? (
         // Hidden while the timer runs — controls move to the timer's menu.
         !isTimerRunning && (
-          <Button
-            className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6 py-6 text-xl dark:bg-primary-400"
-            onClick={() => setIsTimerRunning(true)}
-            label={leftRight ? `START ${sideName}` : "START"}
-          />
+          <button type="button" className={`${PRIMARY_PILL} col-span-2 min-h-14 mx-4 mb-2 sm:mx-6 text-xl uppercase`} onClick={() => setIsTimerRunning(true)}>
+            {leftRight ? `Start ${sideName}` : "Start"}
+          </button>
         )
       ) : (
-        <Button
-          className="col-span-2 min-h-11 mx-4 mb-2 sm:mx-6 py-6 text-xl dark:bg-primary-400"
-          onClick={finishSide}
-          label={leftRight ? `${sideName} DONE` : "DONE"}
-        />
+        <button type="button" className={`${PRIMARY_PILL} col-span-2 min-h-14 mx-4 mb-2 sm:mx-6 text-xl uppercase`} onClick={finishSide}>
+          {leftRight ? `${sideName} done` : "Done"}
+        </button>
       )}
       <Modal
         title="Timer"

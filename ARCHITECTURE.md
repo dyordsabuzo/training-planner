@@ -184,6 +184,29 @@ three shown until "Show all"). A chosen session becomes a "Ready" gradient
 tile. A header Back steps up one level (Ready → list or Up next → plans), and
 History has a Back to where it was opened from (Train if opened directly).
 
+A run alternates between the summary page (`SummaryPage.tsx`) and the
+exercise screen (`train/ExercisePage.tsx`), both in the same style; the
+gradient tile and pill styles are shared from `others/HeroTile.tsx`. Before
+the run and between units, the summary shows the next unit as a "First up" /
+"Up next" tile listing its exercises. Below it is a compact progress outline
+(`SessionProgress` with `compact`: one line per unit, exercises on tap,
+finished units folded into "N done · M skipped"). The Start / Next / Finish
+button is pinned to the bottom of the screen. On the exercise screen, the
+Targets prompt before each exercise's first set sets weight, reps (or
+distance) and the unit's sets. Tapping "Set N of M" changes the sets
+mid-unit, but never below the set in progress. These changes last for the
+run only. Skip exercise, Skip group and Cancel session sit in one row of
+pills.
+
+Timers (`components/others/Timer.tsx`) draw their own SVG ring and avoid
+waking the phone every frame, to save battery. JavaScript wakes once per
+second for the digits and cues. The ring drains through a CSS animation
+(`ring-drain` in `tailwind.config.js`) and steps once a second under reduced
+motion. A timer that runs out plays a synthesised whistle
+(`playWhistleSound`), queued with the voice clips so the next announcement
+plays after it rather than over it. Decorative pulses and bounces run a few
+times and then stop (`pulse-hint`, `bounce-hint`). They aren't infinite.
+
 Manage (`ListingPage.tsx`) is a setup view: plan cards show sessions, dates
 and Optional, never a client's done/skipped/overdue. That progress appears
 only on the user's own Home, Train and History.

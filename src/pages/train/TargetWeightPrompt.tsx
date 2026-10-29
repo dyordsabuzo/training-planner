@@ -8,6 +8,8 @@ export type Targets = {
   // Only one of these is set: distance groups use metres instead of reps.
   targetRep?: number;
   targetDistance?: number;
+  // Sets for the whole unit (superset / exercise group), not just this exercise.
+  targetSet: number;
 };
 
 type Props = {
@@ -17,6 +19,7 @@ type Props = {
   targetRep: string;
   // Set for distance groups; replaces reps with metres (as ExerciseDetails does).
   targetDistance?: string;
+  targetSet: string;
   onConfirm: (targets: Targets) => void;
   onClose: () => void;
 };
@@ -30,6 +33,7 @@ export const TargetWeightPrompt = ({
   targetWeight,
   targetRep,
   targetDistance,
+  targetSet,
   onConfirm,
   onClose,
 }: Props) => {
@@ -38,14 +42,16 @@ export const TargetWeightPrompt = ({
   const [second, setSecond] = useState(
     Number(isDistance ? targetDistance : targetRep) || 1
   );
+  const [sets, setSets] = useState(Number(targetSet) || 1);
   useScrollToTopOnClose(isOpen);
 
   useEffect(() => {
     if (isOpen) {
       setWeight(Number(targetWeight) || 0);
       setSecond(Number(isDistance ? targetDistance : targetRep) || 1);
+      setSets(Number(targetSet) || 1);
     }
-  }, [isOpen, exerciseName, targetWeight, targetRep, targetDistance, isDistance]);
+  }, [isOpen, exerciseName, targetWeight, targetRep, targetDistance, targetSet, isDistance]);
 
   return (
     <Modal
@@ -74,6 +80,16 @@ export const TargetWeightPrompt = ({
           value={second}
           updateValue={setSecond}
         />
+        <DecimalIncrementDecrement
+          label="Sets"
+          unit="sets"
+          step={1}
+          min={1}
+          fullWidth
+          large
+          value={sets}
+          updateValue={setSets}
+        />
         <div className="flex">
           <Button
             label="START"
@@ -81,6 +97,7 @@ export const TargetWeightPrompt = ({
             onClick={() =>
               onConfirm({
                 targetWeight: weight,
+                targetSet: sets,
                 ...(isDistance ? { targetDistance: second } : { targetRep: second }),
               })
             }

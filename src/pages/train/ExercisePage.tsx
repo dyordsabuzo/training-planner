@@ -1,6 +1,6 @@
 
 import { ConfirmDeleteButton } from "../../forms/ConfirmDeleteButton";
-import React, { useContext, useEffect, useReducer, useState } from "react";
+import React, { useCallback, useContext, useEffect, useReducer, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   faCircleXmark,
@@ -8,6 +8,7 @@ import {
   faForward,
   faForwardStep,
   faListCheck,
+  faPen,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SessionContext from "../../context/SessionContext";
@@ -18,9 +19,12 @@ import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
 import { TargetWeightPrompt, Targets } from "./TargetWeightPrompt";
+import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
 import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
-import { Button, Modal } from "@dyordsabuzo/ui-components";
+import { Modal } from "@dyordsabuzo/ui-components";
 import { unitId } from "../resolveSessionSupersets";
+import { FOCUS, SectionLabel } from "../others/AgendaRow";
+import { OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
 import {
   holdAudio,
   isMobileViewport,
@@ -42,6 +46,15 @@ type Action =
   | { type: "update"; payload: any }
   | { type: "continue"; payload?: any }
   | { type: "skipExercise"; payload: { exerciseLength: number; targetSet: number; position: number } };
+
+// Skip exercise / Skip group / Cancel session share one row, so the pills
+// split it evenly and shrink their text on small phones.
+const ACTION_PILL = `flex-1 min-w-0 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-full border
+  text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${FOCUS}`;
+const SKIP_PILL = `${ACTION_PILL} border-primary-200 dark:border-primary-700 text-primary
+  hover:bg-primary-50 dark:hover:bg-primary-800/20`;
+const DANGER_PILL = `${ACTION_PILL} border-danger-500/40 text-danger dark:text-danger-500
+  hover:bg-danger-50 dark:hover:bg-danger-700/20`;
 
 const pluralize = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -139,6 +152,10 @@ export const ExercisePage = () => {
 
   const [showGroups, setShowGroups] = useState(false);
   const [showSkipExercise, setShowSkipExercise] = useState(false);
+  const [showSetEditor, setShowSetEditor] = useState(false);
+  // Stable so Modal doesn't refocus its first element on every edit.
+  const closeSetEditor = useCallback(() => setShowSetEditor(false), []);
+  useScrollToTopOnClose(showSetEditor);
   // Units skipped from here, shown as "Skipped" in the progress list.
   const [skippedUnits, setSkippedUnits] = useState<string[]>([]);
 
@@ -258,7 +275,7 @@ export const ExercisePage = () => {
     );
 
     return (
-      <SummaryPage currentSuperset={supersetData} supersetIndex={supersetIndex} />
+      <SummaryPage currentSuperset={supersetData} supersetIndex={supersetIndex} skippedIds={skippedUnits} />
     );
   }
 
@@ -278,6 +295,7 @@ export const ExercisePage = () => {
         supersetIndex={supersetIndex}
         nextPageHandler={() => dispatch({ type: "reset" })}
         actualSupersetData={actualSupersetData}
+        skippedIds={skippedUnits}
       />
     );
   }
@@ -410,15 +428,37 @@ export const ExercisePage = () => {
         onClose={() => setShowSkipExercise(false)}
       >
         <div className="flex flex-col gap-2">
-          <Button label="Just this set" className="min-h-11" onClick={skipExerciseSet} />
+          <button type="button" className={PRIMARY_PILL} onClick={skipExerciseSet}>
+            Just this set
+          </button>
           {exerciseLength > 1 && (
-            <Button
-              label="For the rest of this group"
-              decoration="cancel"
-              className="min-h-11"
-              onClick={skipExerciseForUnit}
-            />
+            <button type="button" className={`${OUTLINE_PILL} min-h-12 text-base`} onClick={skipExerciseForUnit}>
+              For the rest of this group
+            </button>
           )}
+        </div>
+      </Modal>
+      <Modal
+        title="Adjust sets"
+        titleClassName="text-2xl font-bold"
+        isOpen={showSetEditor}
+        onClose={closeSetEditor}
+      >
+        <div className="flex flex-col gap-4">
+          {/* Applies to the rest of this unit; can't drop below the set in progress. */}
+          <DecimalIncrementDecrement
+            label="Sets"
+            unit="sets"
+            step={1}
+            min={exerciseState.exerciseSet + 1}
+            large
+            fullWidth
+            value={parseInt(supersetData.targetSet) || 1}
+            updateValue={(v: number) => setSupersetData({ ...supersetData, targetSet: v })}
+          />
+          <button type="button" className={`${PRIMARY_PILL} w-full`} onClick={closeSetEditor}>
+            Done
+          </button>
         </div>
       </Modal>
       <TargetWeightPrompt
@@ -427,6 +467,7 @@ export const ExercisePage = () => {
         targetWeight={targetWeight}
         targetRep={targetRep}
         targetDistance={"targetDistance" in supersetData ? targetDistance : undefined}
+        targetSet={supersetData.targetSet}
         onConfirm={({ targetWeight: weight, ...rest }: Targets) => {
           setExerciseWeight(weight, rest);
           if (rest.targetRep !== undefined) {
@@ -443,15 +484,15 @@ export const ExercisePage = () => {
           <div
             className="min-h-[calc(100dvh-6rem)] sm:min-h-[32rem] lg:min-h-[36rem]
               flex flex-col
-              gap-4 shadow-md
-              rounded-lg mx-2 mt-8 lg:mx-0
-              bg-primary dark:bg-primary-400
+              gap-4 shadow-lg shadow-primary/30
+              rounded-2xl mx-2 mt-8 lg:mx-0
+              bg-gradient-to-br from-primary to-primary-400
               relative"
           >
             <div className="flex flex-col gap-[0.2px] pt-6 pl-4 pr-4">
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0 flex flex-col gap-[0.2px]">
-                  <span className="text-white/80 text-sm font-semibold uppercase tracking-wide">
+                  <span className="text-white/70 text-xs font-bold uppercase tracking-wider">
                     {[sessionData.session, sessionData.week]
                       .filter((s: string) => typeof s === "string" && s.trim() !== "")
                       .join(" · ")}
@@ -500,10 +541,15 @@ export const ExercisePage = () => {
                 </span>
               </div>
             </div>
-            <div className="w-full flex-1 flex flex-col rounded-tl-3xl bg-white dark:bg-surface-dark">
-              <div
+            <div className="w-full flex-1 flex flex-col rounded-tl-3xl rounded-b-2xl bg-white dark:bg-surface-dark">
+              <button
+                type="button"
+                onClick={() => setShowSetEditor(true)}
+                aria-label={`Set ${exerciseState.exerciseSet + 1} of ${parseInt(supersetData.targetSet)}. Tap to adjust sets`}
                 className="self-end flex items-center gap-2 text-white text-sm font-semibold
-                  bg-primary dark:bg-primary-400 rounded-l-full mt-3 py-2 pl-5 pr-4"
+                  bg-primary dark:bg-primary-400 rounded-l-full mt-3 py-2 pl-5 pr-4 min-h-11
+                  hover:bg-primary-500 active:scale-95 transition-transform
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-live="polite"
               >
                 <span>Set</span>
@@ -517,7 +563,8 @@ export const ExercisePage = () => {
                   </span>
                 </span>
                 <span>of {parseInt(supersetData.targetSet)}</span>
-              </div>
+                <FontAwesomeIcon icon={faPen} className="text-xs text-white/70" aria-hidden="true" />
+              </button>
               {exerciseState.supersetRest && (
                 <div className="flex-1 flex flex-col animate-slide-up">
                   <UnwrappedRestTimer
@@ -579,30 +626,26 @@ export const ExercisePage = () => {
               )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 mx-2 lg:mx-0">
-            <div className="flex flex-wrap items-center gap-2">
-              {!exerciseState.supersetRest && (
-                <Button decoration="cancel" onClick={() => setShowSkipExercise(true)}>
-                  <span className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faForward} />
-                    Skip exercise
-                  </span>
-                </Button>
-              )}
-              <ConfirmDeleteButton
-                label="Skip group"
-                icon={faForwardStep}
-                decoration="cancel"
-                useModal
-                scrollToTopOnClose
-                impactMessage="Move on to the next group? Sets you've already logged in this one are kept."
-                onDelete={skipUnit}
-              />
-            </div>
+          <div className="flex items-center gap-2 mx-2 lg:mx-0">
+            {!exerciseState.supersetRest && (
+              <button type="button" className={SKIP_PILL} onClick={() => setShowSkipExercise(true)}>
+                <FontAwesomeIcon icon={faForward} />
+                Skip exercise
+              </button>
+            )}
+            <ConfirmDeleteButton
+              label="Skip group"
+              icon={faForwardStep}
+              triggerClassName={SKIP_PILL}
+              useModal
+              scrollToTopOnClose
+              impactMessage="Move on to the next group? Sets you've already logged in this one are kept."
+              onDelete={skipUnit}
+            />
             <ConfirmDeleteButton
               label="Cancel session"
               icon={faCircleXmark}
-              decoration="text-danger"
+              triggerClassName={DANGER_PILL}
               useModal
               scrollToTopOnClose
               onDelete={() => {
@@ -615,12 +658,10 @@ export const ExercisePage = () => {
 
         <aside
           className="hidden lg:flex lg:flex-col lg:w-80 shrink-0 mt-8
-            border border-gray-200 dark:border-gray-700 rounded-md p-4
+            border border-gray-200 dark:border-gray-700 rounded-2xl p-4
             bg-white dark:bg-surface-dark shadow-sm text-text-light dark:text-text-dark"
         >
-          <span className="text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-3">
-            Session progress
-          </span>
+          <SectionLabel>Session progress</SectionLabel>
           <SessionProgress
             supersets={allSupersets}
             doneUpToIndex={exerciseState.supersetCounter - 1}
