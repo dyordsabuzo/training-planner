@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Dayjs } from "dayjs";
 import SourceDataContext from "../context/SourceDataContext";
 
@@ -18,8 +18,17 @@ type Props = {
   closeForm: () => void;
 };
 
+const STATUS_TEXT = {
+  saving: "Saving…",
+  saved: "Saved",
+  error: "Couldn't save",
+  invalid: "Not saved",
+};
+
 export const SessionForm = ({ data, type, closeForm }: Props) => {
-  const formData = data;
+  // Frozen at open: callers may pass a live lookup by name, which goes
+  // undefined after an autosaved rename and would lose the id.
+  const [formData] = useState(data);
 
   const id = formData?.id;
   const sourceDataContext = useContext(SourceDataContext);
@@ -46,106 +55,134 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   // plus the name to pre-fill (search text from the dropdown, if any).
   const [newExercise, setNewExercise] = useState<{ groupId: string; name: string } | null>(null);
 
-  // Group edits on an existing session save on their own (debounced, and
-  // flushed on close) so they aren't lost without Save. Only the groups are
-  // written; the other fields keep their stored values until Save.
-  const initialGroups = useRef(groups);
-  const pendingGroups = useRef<SessionGroup[] | null>(null);
-  const persistGroups = () => {
-    const pending = pendingGroups.current;
-    pendingGroups.current = null;
-    if (!pending) return;
+  const [writeStatus, setWriteStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const status = nameError || groupsError ? "invalid" : writeStatus;
 
-    const cleanGroups = pending.map((g) => ({ ...g, name: g.name.trim() }));
-    // Wait until every group is complete, as Save would require.
-    if (cleanGroups.some((g) => !g.name || g.exercises.length === 0)) return;
+  // The fields a save writes, and what decides whether one is needed.
+  const fieldsWith = (finalTags: string[]) => ({
+    name: name.trim(),
+    tags: finalTags,
+    date: date ? date.format("YYYY-MM-DD") : null,
+    optional,
+    supersets,
+    groups: groups.map((g) => ({ ...g, name: g.name.trim() })),
+    isShareable,
+  });
+  const draftKey = JSON.stringify(fieldsWith(tags));
 
-    const stored: any =
-      Object.values(sourceData.sessions ?? {}).find((s: any) => s.id === id) ?? formData;
-    const storedSupersets = toStringArray(stored.supersets);
-    const names = [...storedSupersets, ...groupKeys(storedSupersets, cleanGroups)];
-    if (names.length === 0) return;
+  // Last value read from the tag box. The box is gone by the time the unmount
+  // flush runs, and forgetting its text there would write the tag back out.
+  const pendingTag = useRef("");
 
-    sourceDataContext.editSession({
-      ...stored,
-      id,
-      groups: cleanGroups,
+  // Validates the form, showing any errors. Returns the session to save, or
+  // null if it can't be saved yet.
+  const buildSession = () => {
+    const nameProblem = !name.trim()
+      ? "Enter a session name."
+      : findDuplicateName(sourceData.sessions, name, id)
+        ? "A session with this name already exists."
+        : undefined;
+    setNameError(nameProblem);
+
+    // TagInput only commits a tag on Enter/Tab/comma, so text still typed in
+    // its box would be lost on Save. Pick it up here.
+    const tagInput = tagFieldRef.current?.querySelector("input");
+    if (tagInput) pendingTag.current = tagInput.value.trim();
+    const finalTags =
+      pendingTag.current && !tags.includes(pendingTag.current) ? [...tags, pendingTag.current] : tags;
+
+    const fields = fieldsWith(finalTags);
+    // Groups may share a name; their identity is made unique by groupKeys.
+    const names = [...supersets, ...groupKeys(supersets, fields.groups)];
+    const groupsProblem =
+      names.length === 0
+        ? "Add at least one superset or exercise group."
+        : fields.groups.some((g) => !g.name || g.exercises.length === 0)
+          ? "Each group needs a name and at least one exercise."
+          : undefined;
+    setGroupsError(groupsProblem);
+
+    if (nameProblem || groupsProblem) return null;
+
+    return {
+      ...fields,
+      // Order for the shared link (Firestore doesn't keep map key order).
       sharedOrder: names,
-      sharedSnapshot: stored.isShareable
-        ? resolveSession(sourceData, { supersets: storedSupersets, groups: cleanGroups })
-        : null,
-    });
+      // The shared link reads this snapshot directly (unauthenticated visitors
+      // can't query the supersets/exercises collections), so it's regenerated
+      // from the form's own selections on every save while shareable is on.
+      sharedSnapshot: isShareable ? resolveSession(sourceData, { supersets, groups: fields.groups }) : null,
+    };
+  };
+
+  // Changes to an existing session save on their own (debounced, and flushed
+  // on close), writing only when the fields differ from the last save.
+  const savedKey = useRef<string | null>(draftKey);
+  const lastWrite = useRef(0);
+  const persist = async () => {
+    if (type !== "edit" || formData?.linked || !id) return;
+
+    const session = buildSession();
+    if (!session) return;
+
+    const key = JSON.stringify(fieldsWith(session.tags));
+    if (key === savedKey.current) return;
+    savedKey.current = key;
+
+    const stored: any = Object.values(sourceData.sessions ?? {}).find((s: any) => s.id === id) ?? formData;
+    const write = ++lastWrite.current;
+    setWriteStatus("saving");
+    const saved = await sourceDataContext.editSession({ ...stored, id, ...session });
+    // Retried by the next change or flush, unless a newer edit already replaced it.
+    if (!saved && savedKey.current === key) savedKey.current = null;
+    if (write === lastWrite.current) setWriteStatus(saved ? "saved" : "error");
   };
   // Timers and the unmount flush must see the latest sourceData.
-  const persistRef = useRef(persistGroups);
-  persistRef.current = persistGroups;
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
 
+  const debouncedKey = useRef(draftKey);
   useEffect(() => {
-    if (type !== "edit" || groups === initialGroups.current) return;
-    pendingGroups.current = groups;
+    if (draftKey === debouncedKey.current) return;
+    debouncedKey.current = draftKey;
     const timer = setTimeout(() => persistRef.current(), 800);
     return () => clearTimeout(timer);
-  }, [groups, type]);
+  }, [draftKey]);
 
-  useEffect(() => () => persistRef.current(), []);
+  useEffect(() => {
+    // A phone locking or switching apps may never come back to this page.
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistRef.current();
+    };
+    document.addEventListener("visibilitychange", flushWhenHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", flushWhenHidden);
+      persistRef.current();
+    };
+  }, []);
+
+  // Modal moves focus whenever onClose changes, so this must stay the same
+  // function across renders or each save would pull focus from the field being
+  // typed in. Escape is ignored while the exercise modal is open on top.
+  const closeRef = useRef(() => {});
+  closeRef.current = () => {
+    if (newExercise) return;
+    persist();
+    closeForm();
+  };
+  const handleClose = useCallback(() => closeRef.current(), []);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (findDuplicateName(sourceData.sessions, name, id)) {
-      setNameError("A session with this name already exists.");
-      return;
-    }
-    setNameError(undefined);
-
-    const cleanGroups = groups.map((g) => ({ ...g, name: g.name.trim() }));
-    // Groups may share a name; their identity is made unique by groupKeys.
-    const names = [...supersets, ...groupKeys(supersets, cleanGroups)];
-    if (names.length === 0) {
-      setGroupsError("Add at least one superset or exercise group.");
-      return;
-    }
-    if (cleanGroups.some((g) => !g.name || g.exercises.length === 0)) {
-      setGroupsError("Each group needs a name and at least one exercise.");
-      return;
-    }
-    setGroupsError(undefined);
-
-    // TagInput only commits a tag on Enter/Tab/comma, so text still typed in
-    // its box would be lost on Save. Pick it up here.
-    const pendingTag = tagFieldRef.current?.querySelector("input")?.value.trim() ?? "";
-    const finalTags = pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags;
-
-    // The shared link reads this snapshot directly (unauthenticated visitors
-    // can't query the supersets/exercises collections), so it's regenerated
-    // from the form's own selections on every save while shareable is on.
-    const sharedSnapshot = isShareable
-      ? resolveSession(sourceData, { supersets, groups: cleanGroups })
-      : null;
-
-    const session = {
-      name,
-      tags: finalTags,
-      date: date ? date.format("YYYY-MM-DD") : null,
-      optional,
-      supersets,
-      groups: cleanGroups,
-      // Order for the shared link (Firestore doesn't keep map key order).
-      sharedOrder: names,
-      isShareable,
-      sharedSnapshot,
-    };
-
-    if (type === "add") {
-      sourceDataContext.addSession(session);
-      closeForm();
-    }
-
     if (type === "edit") {
-      // Save writes everything; drop any pending group autosave so it can't
-      // overwrite this with stale stored fields on close.
-      pendingGroups.current = null;
-      sourceDataContext.editSession({ id, ...session });
+      persist();
+      return;
+    }
+
+    const session = buildSession();
+    if (session && type === "add") {
+      sourceDataContext.addSession(session);
       closeForm();
     }
   };
@@ -155,9 +192,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     <Modal
       title={type === "add" ? "Add session" : "Session"}
       isOpen={true}
-      // Modal listens for Escape on document, so ignore it while the exercise
-      // modal is open on top.
-      onClose={newExercise ? () => {} : closeForm}
+      onClose={handleClose}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -219,7 +254,25 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           </span>
         </div>
 
-        <FormButtons onCancel={closeForm} />
+        {type === "edit" ? (
+          <div className="flex items-center gap-3 py-4">
+            <Button label="Done" type="button" decoration="save" onClick={handleClose} />
+            {status !== "idle" && (
+              <span
+                role="status"
+                className={`text-xs ${
+                  status === "error" || status === "invalid"
+                    ? "text-danger"
+                    : "text-text-muted-light dark:text-text-muted-dark"
+                }`}
+              >
+                {STATUS_TEXT[status]}
+              </span>
+            )}
+          </div>
+        ) : (
+          <FormButtons onCancel={closeForm} />
+        )}
       </form>
     </Modal>
 

@@ -49,7 +49,7 @@ export const ExistingSession: StoryObj<typeof SessionForm> = {
           superset3: { name: 'superset3' },
         },
       },
-      editSession: () => {},
+      editSession: async (session: any) => session,
       deleteSession: () => {},
     }),
   ]

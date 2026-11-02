@@ -108,7 +108,8 @@ type SourceDataContextValue = {
   editSuperset: (superset: any) => void;
   deleteSuperset: (superset: any) => void;
   addSession: (session: any) => void;
-  editSession: (session: any) => void;
+  // Resolves to the saved session, or null if the write failed.
+  editSession: (session: any) => Promise<any>;
   deleteSession: (session: any) => void;
   addPlan: (plan: any) => void;
   editPlan: (plan: any) => void;
@@ -154,7 +155,7 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   editSuperset: noop,
   deleteSuperset: noop,
   addSession: noop,
-  editSession: noop,
+  editSession: async () => null,
   deleteSession: noop,
   addPlan: noop,
   editPlan: noop,
@@ -593,51 +594,34 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     }));
   };
 
-  // Renaming an entity keeps its old dictionary key around unless explicitly
-  // removed — updateSourceData alone only ever adds/overwrites a key, never
-  // deletes one, so a rename would otherwise leave a stale duplicate entry.
-  const renameSourceData = (
-    dbReference: SourceDbReferences,
-    oldName: string,
-    data: any
-  ) => {
+  const findPrevious = (dict: any, id?: string) =>
+    Object.values(dict ?? {}).find((entity: any) => entity.id === id) as any;
+
+  // Saving an edit overwrites its key, and a rename must also drop the old
+  // one (other entities reference this one by id, so nothing else changes).
+  // Matched by id because autosaved renames can overlap: a name from this
+  // render's closure may already be out of date.
+  const saveRenamedEntity = (dbReference: SourceDbReferences, data: any) => {
     if (!data) {
       return;
     }
     queryClient.setQueriesData({ queryKey: contentKey(dbReference) }, (prev: any) => {
       const sourceDataElement = { ...(prev ?? {}) };
-      delete sourceDataElement[oldName];
+      Object.keys(sourceDataElement).forEach((key) => {
+        if (key !== data.name && sourceDataElement[key]?.id === data.id) {
+          delete sourceDataElement[key];
+        }
+      });
       sourceDataElement[data.name] = data;
       return sourceDataElement;
     });
   };
 
-  const findPrevious = (dict: any, id?: string) =>
-    Object.values(dict ?? {}).find((entity: any) => entity.id === id) as any;
-
-  const saveRenamedEntity = async (
-    dbReference: SourceDbReferences,
-    previous: any,
-    data: any
-  ) => {
-    if (!data) {
-      return;
-    }
-    // Other entities reference this one by id, so a rename needs nothing
-    // beyond re-keying the cache.
-    if (previous && previous.name !== data.name) {
-      renameSourceData(dbReference, previous.name, data);
-    } else {
-      updateSourceData(dbReference, data);
-    }
-  };
-
   const updateExerciseMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (exercise: any) => {
-      const previous = findPrevious(sourceData.exercises, exercise.id);
       const data = await save(SourceDbReferences.EXERCISES, exercise);
-      await saveRenamedEntity(SourceDbReferences.EXERCISES, previous, data);
+      saveRenamedEntity(SourceDbReferences.EXERCISES, data);
       if (data) linkExerciseWithSupersets(data.id, exercise.supersets);
     },
   });
@@ -668,7 +652,6 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const editSupersetMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: async (superset: any) => {
-      const previous = findPrevious(sourceData.supersets, superset.id);
       const exercises = Object.keys(sourceData.exercises ?? {});
       superset = {
         ...superset,
@@ -677,7 +660,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         ),
       };
       const data = await save(SourceDbReferences.SUPERSETS, superset);
-      await saveRenamedEntity(SourceDbReferences.SUPERSETS, previous, data);
+      saveRenamedEntity(SourceDbReferences.SUPERSETS, data);
       if (data) linkSupersetWithSessions(data.id, superset.sessions);
     },
   });
@@ -696,11 +679,14 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   });
 
   const editSessionMutation = useMutation({
-    onSuccess: markContentChanged,
+    // saveToDB swallows write errors, so a failure still lands here as no data.
+    onSuccess: (data) => {
+      if (data) markContentChanged();
+    },
     mutationFn: async (session: any) => {
-      const previous = findPrevious(sourceData.sessions, session.id);
       const data = await save(SourceDbReferences.SESSIONS, session);
-      await saveRenamedEntity(SourceDbReferences.SESSIONS, previous, data);
+      saveRenamedEntity(SourceDbReferences.SESSIONS, data);
+      return data ?? null;
     },
   });
 
@@ -821,7 +807,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         ...plan,
         weeks: plan.open ? {} : currentWeeks,
       });
-      await saveRenamedEntity(SourceDbReferences.PLANS, previous, data);
+      saveRenamedEntity(SourceDbReferences.PLANS, data);
     },
   });
 
@@ -877,7 +863,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         editSuperset: editSupersetMutation.mutate,
         deleteSuperset: deleteSupersetMutation.mutate,
         addSession: addSessionMutation.mutate,
-        editSession: editSessionMutation.mutate,
+        // Callers may ignore the result, so this never rejects.
+        editSession: (session) => editSessionMutation.mutateAsync(session).catch(() => null),
         deleteSession: deleteSessionMutation.mutate,
         addPlan: addPlanMutation.mutate,
         editPlan: editPlanMutation.mutate,
