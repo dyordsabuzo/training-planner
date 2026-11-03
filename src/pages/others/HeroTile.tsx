@@ -4,7 +4,7 @@ import { faDumbbell } from "@fortawesome/free-solid-svg-icons";
 import { FOCUS } from "./AgendaRow";
 
 export const OUTLINE_PILL = `flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-full border border-primary-200
-  dark:border-primary-700 text-sm text-primary font-semibold hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`;
+  dark:border-primary-700 text-sm text-primary dark:text-primary-300 font-semibold hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`;
 
 export const PRIMARY_PILL = `flex items-center justify-center gap-2 min-h-12 px-6 rounded-full bg-primary text-white text-base
   font-bold shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
