@@ -176,7 +176,7 @@ export const LibraryBrowser = () => {
             return (
               <div
                 key={key}
-                className="flex flex-col gap-2 p-3 rounded-md border border-gray-200 dark:border-gray-700
+                className="flex flex-col gap-2 p-3 rounded-2xl border border-gray-200 dark:border-gray-700
                   bg-white dark:bg-surface-dark text-text-light dark:text-text-dark"
               >
                 <div className="flex items-start justify-between gap-2">

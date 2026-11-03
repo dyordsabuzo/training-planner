@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { faPlus, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FOCUS } from "../pages/others/AgendaRow";
@@ -10,6 +11,7 @@ type Props = {
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
+  trailing?: ReactNode;
 };
 
 export const ManageListHeader = ({
@@ -20,6 +22,7 @@ export const ManageListHeader = ({
   search,
   onSearchChange,
   searchPlaceholder = "Search...",
+  trailing,
 }: Props) => {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -49,6 +52,8 @@ export const ManageListHeader = ({
               text-sm rounded-full focus:bg-white dark:focus:bg-surface-dark focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
+
+        {trailing}
 
         {addLabel && onAdd && (
           <button

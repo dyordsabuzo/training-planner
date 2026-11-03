@@ -1,5 +1,7 @@
 import dayjs from "dayjs";
-import React, { useContext, useState } from "react";
+import React, { ReactNode, useContext, useState } from "react";
+import { faCalendarDays, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import SourceDataContext from "../context/SourceDataContext";
 import { WeekForm } from "../forms/WeekForm";
 import { PlanForm } from "../forms/PlanForm";
@@ -11,12 +13,18 @@ import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
 import { LoadMore } from "./LoadMore";
 import { useLoadMore } from "../common/useLoadMore";
-import { EntityActions, ActionsVariant } from "./EntityActions";
+import { EntityActions, ActionsVariant, plural } from "./EntityActions";
+import { summaryLine } from "./EntityCard";
+import { SECTION_ICONS } from "./ManageHero";
+import { countListed } from "./setupSummary";
+import { isListed } from "../common/sharing";
+import { AgendaRow, DateTile, FOCUS, StatusChip, Tone } from "../pages/others/AgendaRow";
+import { chipClassName } from "../pages/others/HeroTile";
+import { sessionUnitNames } from "../pages/resolveSessionSupersets";
 import { clonePlan } from "./cloneEntity";
 import BaseListing from "./BaseListing";
-import { Badge, DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
+import { DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
 import {
-  formatSessionDate,
   sortPlansByCreated,
   sortSessionsByDate,
 } from "../common/planSessions";
@@ -33,6 +41,7 @@ type SelectedWeekData = {
 
 type Props = {
   viewMode?: "card" | "table";
+  headerTrailing?: ReactNode;
 };
 
 type PlanRow = {
@@ -56,9 +65,13 @@ const columns: DataTableColumn<PlanRow>[] = [
 
 const PAGE_SIZE = 6;
 
-const PILL = `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors
-  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`;
-// Session pills shown per plan before "Show all".
+const STATUS_TONE: Record<string, Tone> = {
+  Completed: "success",
+  Active: "primary",
+  Archived: "warning",
+};
+
+// Session rows shown per plan before "Show all".
 const SESSIONS_SHOWN = 3;
 
 // Newest first; undated sessions (by name) after the dated ones.
@@ -70,7 +83,7 @@ const sessionsNewestFirst = (names: string[], sessions: any) => {
 
 const PILL_GROUP_LABEL = "text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark";
 
-export const PlanListing = ({ viewMode = "card" }: Props) => {
+export const PlanListing = ({ viewMode = "card", headerTrailing }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
@@ -120,19 +133,20 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
   const openSession = (session: any) =>
     setSessionFormData({ ...session, supersets: toStringArray(session.supersets) });
 
-  const entries = sortPlansByCreated(plans).filter(([planName]) =>
-    planName.toLowerCase().includes(search.toLowerCase())
+  const entries = sortPlansByCreated(plans).filter(
+    ([planName, plan]) => isListed(plan) && planName.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <BaseListing>
       <ManageListHeader
         title="Plans"
-        count={Object.keys(plans).length}
+        count={countListed(plans)}
         addLabel="Create plan"
         searchPlaceholder="Search plans..."
         search={search}
         onSearchChange={setSearch}
+        trailing={headerTrailing}
         onAdd={() => {
           setFormData({});
           setFormType("add");
@@ -194,54 +208,33 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
               key={planName}
               onClick={openPlan}
               className="flex flex-col gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer
-                bg-white dark:bg-surface-dark text-text-light dark:text-text-dark
-                p-4 rounded-2xl text-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+                bg-white dark:bg-transparent text-text-light dark:text-text-dark
+                p-4 rounded-2xl text-sm hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between gap-2">
-              <div className="flex flex-col gap-1 min-w-0">
-                <button
-                  type="button"
-                  onClick={openPlan}
-                  className="font-bold text-base text-left break-words rounded
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  {planName}
-                </button>
-                {plan.status && (
-                  <Badge
-                    variant={
-                      plan.status === "Completed"
-                        ? "success"
-                        : plan.status === "Active"
-                          ? "primary"
-                          : plan.status === "Archived"
-                            ? "warning"
-                            : "neutral"
-                    }
-                    className="w-fit"
-                  >
-                    {plan.status}
-                  </Badge>
-                )}
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                  {plan.createdAt && (
-                    <span>Created {dayjs(plan.createdAt).format("ddd, MMM D YYYY")}</span>
-                  )}
-                  {!plan.open && (
-                    <span>
-                      {weekEntries.length}{" "}
-                      {weekEntries.length === 1 ? "week" : "weeks"}
+              <div className="flex items-start gap-3">
+                <span className="flex items-center justify-center w-11 h-11 rounded-xl shrink-0 bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-300">
+                  <FontAwesomeIcon icon={plan.open ? faCalendarDays : faLayerGroup} />
+                </span>
+                <div className="flex flex-col items-start gap-1 min-w-0 grow sm:flex-row sm:justify-between sm:gap-3">
+                  <div className="flex flex-col min-w-0">
+                    <button
+                      type="button"
+                      onClick={openPlan}
+                      className={`font-bold text-base text-left break-words rounded ${FOCUS}`}
+                    >
+                      {planName}
+                    </button>
+                    <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                      {summaryLine([
+                        plan.open ? "Open plan" : plural(weekEntries.length, "week"),
+                        plural(sessionCount, "session"),
+                        startDate && `Starts ${startDate.format("MMM D, YYYY")}`,
+                      ])}
                     </span>
-                  )}
-                  <span>
-                    {sessionCount} {sessionCount === 1 ? "session" : "sessions"}
-                  </span>
-                  {startDate && (
-                    <span>Starts {startDate.format("MMM D, YYYY")}</span>
-                  )}
+                  </div>
+                  {plan.status && <StatusChip tone={STATUS_TONE[plan.status] ?? "neutral"}>{plan.status}</StatusChip>}
                 </div>
-              </div>
-              {renderActions(plan)}
+                {renderActions(plan)}
               </div>
 
               {!plan.open &&
@@ -271,12 +264,7 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                                 planName,
                               });
                             }}
-                            className={`relative ${PILL}
-                              ${
-                                isCurrent
-                                  ? "bg-primary text-white shadow-sm shadow-primary/30"
-                                  : "bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50 dark:hover:bg-primary-800/20"
-                              }`}
+                            className={`relative ${chipClassName(isCurrent)}`}
                           >
                             {weekKey}
                             {isCurrent && (
@@ -304,7 +292,8 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
               ) : (
                 <div className="flex flex-col gap-1.5">
                   {!plan.open && <span className={PILL_GROUP_LABEL}>Sessions</span>}
-                  <div className="flex flex-wrap gap-2">
+                  {/* Rows open the session, not the plan card around them. */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
                     {(showAllSessions ? sessionNames : sessionNames.slice(0, SESSIONS_SHOWN)).map(
                       (sessionName) => {
                         // Setup view only: done/skipped/overdue are per-client
@@ -312,31 +301,23 @@ export const PlanListing = ({ viewMode = "card" }: Props) => {
                         const session = sourceData.sessions?.[sessionName];
                         const date: string | undefined = session?.date;
                         return (
-                          <button
+                          <AgendaRow
                             key={sessionName}
-                            type="button"
-                            disabled={!session}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openSession(session);
-                            }}
-                            title={sessionName}
-                            className={`${PILL} w-full sm:w-auto sm:max-w-full flex items-center gap-2 text-left
-                              bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50 dark:hover:bg-primary-800/20
-                              disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            <span className="flex-1 min-w-0 truncate">{sessionName}</span>
-                            {session?.optional === true && (
-                              <Badge variant="warning" className="shrink-0 font-bold uppercase tracking-wide">
-                                Optional
-                              </Badge>
-                            )}
-                            {date && (
-                              <span className="shrink-0 text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
-                                {formatSessionDate(date)}
-                              </span>
-                            )}
-                          </button>
+                            icon={SECTION_ICONS.Sessions}
+                            tone="primary"
+                            tile={<DateTile date={date} icon={SECTION_ICONS.Sessions} />}
+                            title={<span title={sessionName}>{sessionName}</span>}
+                            subtitle={
+                              session &&
+                              summaryLine([
+                                date && dayjs(date).format("dddd"),
+                                plural(sessionUnitNames(session).length, "group"),
+                              ])
+                            }
+                            onClick={session ? () => openSession(session) : undefined}
+                            dimmed={!session}
+                            trailing={session?.optional === true && <StatusChip tone="warning">Optional</StatusChip>}
+                          />
                         );
                       }
                     )}

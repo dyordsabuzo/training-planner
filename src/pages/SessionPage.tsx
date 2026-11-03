@@ -27,8 +27,8 @@ import { Loading } from "./helpers/Loading";
 import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { Card } from "@dyordsabuzo/ui-components";
-import { FOCUS, SectionLabel } from "./others/AgendaRow";
-import { HeroTile, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
+import { DateTile, FOCUS, SectionLabel } from "./others/AgendaRow";
+import { chipClassName, HeroTile, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { resolveSession, sessionOrder } from "./resolveSessionSupersets";
 import {
@@ -79,16 +79,6 @@ const sortWeekKeys = (keys: string[]) =>
 const upNextActionClassName = `flex items-center gap-2 min-h-11 px-4 rounded-full bg-white/10 text-sm font-semibold
   text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white`;
 
-const chipClassName = (isSelected: boolean, isCurrent = false) =>
-  `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors ${FOCUS}
-   ${
-     isSelected
-       ? "bg-primary text-white shadow-sm shadow-primary/30"
-       : isCurrent
-         ? "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200"
-         : "bg-gray-50 dark:bg-gray-800/40 text-text-light dark:text-text-dark hover:bg-primary-50 dark:hover:bg-primary-800/20"
-   }`;
-
 // Completed sessions shown before "Show all".
 const DONE_PREVIEW = 3;
 
@@ -137,19 +127,11 @@ const SessionRow = ({
         bg-gray-50 dark:bg-gray-800/40 hover:bg-primary-50/60 dark:hover:bg-primary-800/20 ${FOCUS}
         ${selected ? "ring-2 ring-primary" : ""} ${finished ? "opacity-75" : ""}`}
     >
-      <span
-        className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl shrink-0 ${DATE_TILE[status]}`}
-        title={date ? formatSessionDate(config.date) : undefined}
-      >
-        {date ? (
-          <>
-            <span className="text-[10px] font-bold uppercase leading-none opacity-80">{date.format("MMM")}</span>
-            <span className="text-lg font-bold leading-tight">{date.format("D")}</span>
-          </>
-        ) : (
-          <FontAwesomeIcon icon={status === "done" ? faCheck : faDumbbell} />
-        )}
-      </span>
+      <DateTile
+        date={config?.date}
+        icon={status === "done" ? faCheck : faDumbbell}
+        className={DATE_TILE[status]}
+      />
       <span className="flex flex-col min-w-0 grow">
         <span className="font-semibold truncate text-text-light dark:text-text-dark" title={name}>
           {name}

@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from "react";
+import React, { ReactNode, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { faChevronDown, faChevronRight, faPlay, faShareNodes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -9,14 +9,16 @@ import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
-import { EntityCard } from "./EntityCard";
+import { EntityCard, summaryLine } from "./EntityCard";
 import { LoadMore } from "./LoadMore";
 import { useLoadMore } from "../common/useLoadMore";
 import { isListed } from "../common/sharing";
-import { EntityActions, ActionsVariant } from "./EntityActions";
+import { EntityActions, ActionsVariant, plural, sharingNotes } from "./EntityActions";
+import { SECTION_ICONS } from "./ManageHero";
+import { countListed } from "./setupSummary";
+import { DateTile, FOCUS, SectionLabel } from "../pages/others/AgendaRow";
 import { cloneSession } from "./cloneEntity";
 import { resolveSession, sessionUnitKeys, sessionUnitNames } from "../pages/resolveSessionSupersets";
-import dayjs from "dayjs";
 
 import { DataTable, DataTableColumn, Badge, Button, Modal } from "@dyordsabuzo/ui-components";
 import {
@@ -27,6 +29,7 @@ import {
 
 type Props = {
   viewMode?: "card" | "table";
+  headerTrailing?: ReactNode;
 };
 
 type SessionRow = {
@@ -79,20 +82,13 @@ const columns: DataTableColumn<SessionRow>[] = [
 
 const PAGE_SIZE = 12;
 
-export const SessionListing = ({ viewMode = "card" }: Props) => {
+export const SessionListing = ({ viewMode = "card", headerTrailing }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
   const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
-  // Sections start collapsed; the user opens the kind they want to see.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggleSection = (title: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(title)) next.delete(title);
-      else next.add(title);
-      return next;
-    });
+  // Null until the user toggles a section; see openTitles below.
+  const [expanded, setExpanded] = useState<Set<string> | null>(null);
   const [shareDialog, setShareDialog] = useState<{
     session: any;
     step: "confirm" | "copied" | "failed";
@@ -138,14 +134,24 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
     return { title, rows: title === "Exercise groups" ? rows.sort(byDateDesc) : rows };
   });
   const rows = grouped.flatMap((section) => section.rows);
+  // The first section with anything in it starts open, so the tab never looks
+  // empty. Worked out per render because sessions load after the first one.
+  const firstWithRows = grouped.find((section) => section.rows.length > 0)?.title;
+  const openTitles = expanded ?? new Set(firstWithRows ? [firstWithRows] : []);
+  const toggleSection = (title: string) => {
+    const next = new Set(openTitles);
+    if (next.has(title)) next.delete(title);
+    else next.add(title);
+    setExpanded(next);
+  };
   const openTotal = grouped
-    .filter((section) => expanded.has(section.title))
+    .filter((section) => openTitles.has(section.title))
     .reduce((sum, section) => sum + section.rows.length, 0);
   let offset = 0;
   const sections = grouped
     .filter((section) => section.rows.length > 0)
     .map((section) => {
-      const isOpen = expanded.has(section.title);
+      const isOpen = openTitles.has(section.title);
       const shown = isOpen ? section.rows.slice(0, Math.max(0, limit - offset)) : [];
       if (isOpen) offset += section.rows.length;
       return { title: section.title, count: section.rows.length, isOpen, rows: shown };
@@ -226,11 +232,12 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
     <BaseListing>
       <ManageListHeader
         title="Sessions"
-        count={Object.keys(sessions).length}
+        count={countListed(sessions)}
         addLabel="Add Session"
         searchPlaceholder="Search sessions..."
         search={search}
         onSearchChange={setSearch}
+        trailing={headerTrailing}
         onAdd={() => {
           setFormData({});
           setFormType("add");
@@ -254,19 +261,18 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
             index > 0 ? "mt-6 pt-6 border-t border-gray-200 dark:border-gray-700" : ""
           }`}
         >
-          <h2>
+          <SectionLabel>
             <button
               type="button"
               aria-expanded={section.isOpen}
               onClick={() => toggleSection(section.title)}
-              className="flex items-center gap-2 min-h-11 text-xs font-medium uppercase tracking-wide
-                text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-300
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              className={`flex items-center gap-2 min-h-11 uppercase rounded
+                hover:text-primary dark:hover:text-primary-300 ${FOCUS}`}
             >
               <FontAwesomeIcon icon={section.isOpen ? faChevronDown : faChevronRight} className="w-3" />
               {section.title} ({section.count})
             </button>
-          </h2>
+          </SectionLabel>
           {!section.isOpen ? null : viewMode === "table" ? (
             <DataTable
               columns={[
@@ -277,21 +283,25 @@ export const SessionListing = ({ viewMode = "card" }: Props) => {
               getRowKey={(row) => row.key}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               {section.rows.map((row) => {
                 const { key, session, usageCount } = row;
                 return (
                 <EntityCard
                   key={key}
                   title={key}
-                  relatedLabel="Groups"
-                  relatedItems={sessionUnitNames(session)}
-                  meta={session.date ? dayjs(session.date).format("ddd, MMM D, YYYY") : undefined}
+                  icon={SECTION_ICONS.Sessions}
+                  tile={session.date ? <DateTile date={session.date} /> : undefined}
+                  summary={summaryLine([
+                    ...sharingNotes(session),
+                    plural(sessionUnitNames(session).length, "group"),
+                    usageCount > 0 && plural(usageCount, "plan"),
+                    ...toStringArray(session.tags),
+                  ])}
                   tags={session.tags}
-                  usageCount={usageCount}
-                  usageLabel="plan"
+                  unused={usageCount === 0}
                   onOpen={() => openSession(session)}
-                  actions={renderActions(row)}
+                  actions={renderActions(row, "row")}
                 />
                 );
               })}

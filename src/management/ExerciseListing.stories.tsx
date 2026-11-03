@@ -1,10 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentType } from "react";
+import { MemoryRouter } from "react-router";
 import { ExerciseListing } from "./ExerciseListing";
 import { withMockSourceDataContext } from "./__mock__/MockContext";
 
 const meta: Meta<typeof ExerciseListing> = {
   title: "management/ExerciseListing",
   component: ExerciseListing,
+  // The Unused filter lives in the URL (useSearchParams).
+  decorators: [
+    (Story: ComponentType) => (
+      <MemoryRouter>
+        <Story />
+      </MemoryRouter>
+    ),
+  ],
 };
 
 export default meta;

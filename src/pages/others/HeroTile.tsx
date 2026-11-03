@@ -9,6 +9,16 @@ export const OUTLINE_PILL = `flex items-center justify-center gap-1.5 min-h-11 p
 export const PRIMARY_PILL = `flex items-center justify-center gap-2 min-h-12 px-6 rounded-full bg-primary text-white text-base
   font-bold shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
 
+export const chipClassName = (isSelected: boolean, isCurrent = false) =>
+  `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors ${FOCUS}
+   ${
+     isSelected
+       ? "bg-primary text-white shadow-sm shadow-primary/30"
+       : isCurrent
+         ? "bg-primary-50 text-primary dark:bg-primary-800/30 dark:text-primary-200"
+         : "bg-gray-50 dark:bg-gray-800/40 text-text-light dark:text-text-dark hover:bg-primary-50 dark:hover:bg-primary-800/20"
+   }`;
+
 // Gradient tile for what's about to start: a session (Up next / Ready on
 // Train) or the next unit mid-run (SummaryPage).
 export const HeroTile = ({

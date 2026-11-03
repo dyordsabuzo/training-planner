@@ -1,15 +1,17 @@
-import React, { useContext, useMemo, useState } from "react";
+import React, { ReactNode, useContext, useMemo, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 import { SupersetForm } from "../forms/SupersetForm";
 import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
-import { EntityCard } from "./EntityCard";
+import { EntityCard, summaryLine } from "./EntityCard";
 import { LoadMore } from "./LoadMore";
 import { useLoadMore } from "../common/useLoadMore";
 import { isListed } from "../common/sharing";
-import { EntityActions, ActionsVariant } from "./EntityActions";
+import { EntityActions, ActionsVariant, plural, sharingNotes } from "./EntityActions";
+import { SECTION_ICONS } from "./ManageHero";
+import { countListed } from "./setupSummary";
 import { cloneSuperset } from "./cloneEntity";
 
 import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
@@ -21,6 +23,7 @@ import {
 
 type Props = {
   viewMode?: "card" | "table";
+  headerTrailing?: ReactNode;
 };
 
 type SupersetRow = {
@@ -80,7 +83,7 @@ const columns: DataTableColumn<SupersetRow>[] = [
 
 const PAGE_SIZE = 12;
 
-export const SupersetListing = ({ viewMode = "card" }: Props) => {
+export const SupersetListing = ({ viewMode = "card", headerTrailing }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
@@ -139,11 +142,12 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
     <BaseListing>
       <ManageListHeader
         title="Supersets"
-        count={Object.keys(supersets).length}
+        count={countListed(supersets)}
         addLabel="Add Superset"
         searchPlaceholder="Search supersets..."
         search={search}
         onSearchChange={setSearch}
+        trailing={headerTrailing}
         onAdd={() => {
           setFormData({});
           setFormType("add");
@@ -176,20 +180,24 @@ export const SupersetListing = ({ viewMode = "card" }: Props) => {
             />
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {rows.slice(0, limit).map((row) => {
               const { key, superset, sessions, usageCount } = row;
               return (
               <EntityCard
                 key={key}
                 title={superset.name ?? key}
-                relatedLabel="Exercises"
-                relatedItems={toStringArray(superset.exercises)}
+                icon={SECTION_ICONS.Supersets}
+                summary={summaryLine([
+                  ...sharingNotes(superset),
+                  plural(toStringArray(superset.exercises).length, "exercise"),
+                  usageCount > 0 && plural(usageCount, "session"),
+                  ...toStringArray(superset.tags),
+                ])}
                 tags={superset.tags}
-                usageCount={usageCount}
-                usageLabel="session"
+                unused={usageCount === 0}
                 onOpen={() => openSuperset(superset, sessions)}
-                actions={renderActions(row)}
+                actions={renderActions(row, "row")}
               />
               );
             })}
