@@ -9,7 +9,7 @@ import { SessionGroupEditor } from "./SessionGroupEditor";
 import { findDuplicateName } from "../common/nameValidation";
 import { toDate } from "../common/planWeek";
 import { toStringArray } from "../common/utils";
-import { Button, DateInput, Input, ReorderableSelect, TagInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
+import { Button, DateInput, Input, MultiSelect, ReorderableSelect, TagInput, Modal, Toggle } from "@dyordsabuzo/ui-components";
 import { SessionGroup, groupId, groupKeys, resolveSession } from "../pages/resolveSessionSupersets";
 
 type Props = {
@@ -50,6 +50,16 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const [groupsError, setGroupsError] = useState<string>();
   const [isShareable, setIsShareable] = useState(formData?.isShareable ?? false);
   const [optional, setOptional] = useState(formData?.optional ?? false);
+  // Plans list their sessions, so these are saved to the plans, not the session.
+  // Linked plans belong to another org and can't be changed here.
+  const editablePlans: any[] = Object.values(sourceData.plans ?? {}).filter(
+    (plan: any) => !plan.linked && !plan.archived
+  );
+  const [planIds, setPlanIds] = useState<string[]>(() =>
+    editablePlans
+      .filter((plan) => toStringArray(plan.sessions).some((ref) => id && sourceData.sessions?.[ref]?.id === id))
+      .map((plan) => plan.id)
+  );
   const tagFieldRef = useRef<HTMLDivElement>(null);
   // Group waiting for an exercise created from the nested exercise modal,
   // plus the name to pre-fill (search text from the dropdown, if any).
@@ -68,7 +78,8 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     groups: groups.map((g) => ({ ...g, name: g.name.trim() })),
     isShareable,
   });
-  const draftKey = JSON.stringify(fieldsWith(tags));
+  const fieldsKey = JSON.stringify(fieldsWith(tags));
+  const draftKey = JSON.stringify([fieldsKey, [...planIds].sort()]);
 
   // Last value read from the tag box. The box is gone by the time the unmount
   // flush runs, and forgetting its text there would write the tag back out.
@@ -117,7 +128,9 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
 
   // Changes to an existing session save on their own (debounced, and flushed
   // on close), writing only when the fields differ from the last save.
-  const savedKey = useRef<string | null>(draftKey);
+  const savedKey = useRef<string | null>(fieldsKey);
+  const savedPlanIds = useRef(planIds);
+  const retryPlanIds = useRef<string[]>([]);
   const lastWrite = useRef(0);
   const persist = async () => {
     if (type !== "edit" || formData?.linked || !id) return;
@@ -126,16 +139,33 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
     if (!session) return;
 
     const key = JSON.stringify(fieldsWith(session.tags));
-    if (key === savedKey.current) return;
+    const sessionChanged = key !== savedKey.current;
+    const changedPlans = Array.from(new Set([...planIds, ...savedPlanIds.current, ...retryPlanIds.current])).filter(
+      (plan) =>
+        retryPlanIds.current.includes(plan) || planIds.includes(plan) !== savedPlanIds.current.includes(plan)
+    );
+    if (!sessionChanged && changedPlans.length === 0) return;
     savedKey.current = key;
+    savedPlanIds.current = planIds;
+    retryPlanIds.current = [];
 
     const stored: any = Object.values(sourceData.sessions ?? {}).find((s: any) => s.id === id) ?? formData;
     const write = ++lastWrite.current;
     setWriteStatus("saving");
-    const saved = await sourceDataContext.editSession({ ...stored, id, ...session });
+    // Only what changed: a session write and a plan write each bump the version.
+    const [savedSession, savedPlans] = await Promise.all([
+      sessionChanged ? sourceDataContext.editSession({ ...stored, id, ...session }) : true,
+      changedPlans.length > 0
+        ? sourceDataContext.setSessionPlans(
+            id,
+            Object.fromEntries(changedPlans.map((plan) => [plan, planIds.includes(plan)]))
+          )
+        : true,
+    ]);
     // Retried by the next change or flush, unless a newer edit already replaced it.
-    if (!saved && savedKey.current === key) savedKey.current = null;
-    if (write === lastWrite.current) setWriteStatus(saved ? "saved" : "error");
+    if (!savedSession && savedKey.current === key) savedKey.current = null;
+    if (!savedPlans) retryPlanIds.current.push(...changedPlans);
+    if (write === lastWrite.current) setWriteStatus(savedSession && savedPlans ? "saved" : "error");
   };
   // Timers and the unmount flush must see the latest sourceData.
   const persistRef = useRef(persist);
@@ -182,7 +212,12 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
 
     const session = buildSession();
     if (session && type === "add") {
-      sourceDataContext.addSession(session);
+      // Plans reference the session by id, so they're updated once it has one.
+      sourceDataContext.addSession(session).then((saved) => {
+        if (saved?.id && planIds.length > 0) {
+          sourceDataContext.setSessionPlans(saved.id, Object.fromEntries(planIds.map((plan) => [plan, true])));
+        }
+      });
       closeForm();
     }
   };
@@ -229,6 +264,16 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
         <div ref={tagFieldRef}>
           <TagInput label={"Tags"} list={tags} options={[]} updateList={setTags} />
         </div>
+
+        {!formData?.linked && (
+          <MultiSelect
+            label={"Plans"}
+            options={editablePlans.map((plan) => ({ value: plan.id, label: plan.name }))}
+            selected={planIds}
+            onChange={setPlanIds}
+            placeholder="Add to a plan"
+          />
+        )}
 
         <ReorderableSelect
           label={"Supersets"}

@@ -1,5 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import {
+  arrayRemove,
+  arrayUnion,
   deleteDoc,
   deleteField,
   doc,
@@ -107,10 +109,14 @@ type SourceDataContextValue = {
   addSuperset: (superset: any) => void;
   editSuperset: (superset: any) => void;
   deleteSuperset: (superset: any) => void;
-  addSession: (session: any) => void;
+  // Resolves to the saved session, or null if the write failed.
+  addSession: (session: any) => Promise<any>;
   // Resolves to the saved session, or null if the write failed.
   editSession: (session: any) => Promise<any>;
   deleteSession: (session: any) => void;
+  // Adds a session to (true) or removes it from (false) plans, by plan id.
+  // Resolves to whether the write succeeded.
+  setSessionPlans: (sessionId: string, changes: Record<string, boolean>) => Promise<boolean>;
   addPlan: (plan: any) => void;
   editPlan: (plan: any) => void;
   deletePlan: (plan: any) => void;
@@ -154,9 +160,10 @@ const SourceDataContext = createContext<SourceDataContextValue>({
   addSuperset: noop,
   editSuperset: noop,
   deleteSuperset: noop,
-  addSession: noop,
+  addSession: async () => null,
   editSession: async () => null,
   deleteSession: noop,
+  setSessionPlans: async () => false,
   addPlan: noop,
   editPlan: noop,
   deletePlan: noop,
@@ -675,6 +682,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     mutationFn: async (session: any) => {
       const data = await save(SourceDbReferences.SESSIONS, session);
       updateSourceData(SourceDbReferences.SESSIONS, data);
+      return data ?? null;
     },
   });
 
@@ -693,6 +701,39 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
   const deleteSessionMutation = useMutation({
     onSuccess: markContentChanged,
     mutationFn: (session: any) => deleteFromDB(SourceDbReferences.SESSIONS, session),
+  });
+
+  // One batch touching only each plan's session list. Array operations rather
+  // than a rewritten list, so overlapping calls apply in order and a plan
+  // cached before another trainer's edit doesn't undo that edit.
+  const setSessionPlansMutation = useMutation({
+    onSuccess: markContentChanged,
+    mutationFn: async ({ sessionId, changes }: { sessionId: string; changes: Record<string, boolean> }) => {
+      const stored = getStored();
+      const toId = idLookup(stored);
+      const isThisSession = (ref: string) => toId(SourceDbReferences.SESSIONS, ref) === sessionId;
+      const plans: any[] = Object.values(stored.plans ?? {});
+
+      const batch = writeBatch(database);
+      Object.entries(changes).forEach(([planId, included]) => {
+        const refs = toStringArray(plans.find((plan) => plan?.id === planId)?.sessions).filter(isThisSession);
+        batch.update(getDocumentReference(collectionPath(SourceDbReferences.PLANS, activeOrgId), planId), {
+          // Removing also covers references saved by name, before ids were used.
+          sessions: included ? arrayUnion(sessionId) : arrayRemove(sessionId, ...refs),
+        });
+      });
+      await batch.commit();
+
+      queryClient.setQueriesData({ queryKey: contentKey(SourceDbReferences.PLANS) }, (prev: any) =>
+        Object.fromEntries(
+          Object.entries(prev ?? {}).map(([key, plan]: [string, any]) => {
+            if (!(plan?.id in changes)) return [key, plan];
+            const others = toStringArray(plan.sessions).filter((ref) => !isThisSession(ref));
+            return [key, { ...plan, sessions: changes[plan.id] ? [...others, sessionId] : others }];
+          })
+        )
+      );
+    },
   });
 
   const addPlanMutation = useMutation({
@@ -862,10 +903,15 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
         addSuperset: addSupersetMutation.mutate,
         editSuperset: editSupersetMutation.mutate,
         deleteSuperset: deleteSupersetMutation.mutate,
-        addSession: addSessionMutation.mutate,
+        addSession: (session) => addSessionMutation.mutateAsync(session).catch(() => null),
         // Callers may ignore the result, so this never rejects.
         editSession: (session) => editSessionMutation.mutateAsync(session).catch(() => null),
         deleteSession: deleteSessionMutation.mutate,
+        setSessionPlans: (sessionId, changes) =>
+          setSessionPlansMutation.mutateAsync({ sessionId, changes }).then(
+            () => true,
+            () => false
+          ),
         addPlan: addPlanMutation.mutate,
         editPlan: editPlanMutation.mutate,
         deletePlan: deletePlanMutation.mutate,

@@ -211,6 +211,14 @@ Manage (`ListingPage.tsx`) is a setup view: plan cards show sessions, dates
 and Optional, never a client's done/skipped/overdue. That progress appears
 only on the user's own Home, Train and History.
 
+The session form (`SessionForm.tsx`) saves an existing session on its own, 800ms
+after the last change and straight away on close, unmount or the page being
+hidden. There's no revert: Done just closes. It writes only what changed, and
+nothing while the form is invalid. New sessions and clones wait for Save. Its
+Plans field edits the plans' own `sessions[]` (`setSessionPlans`), one batch of
+array operations by session id, so a rename or a stale cached plan can't undo
+another edit. Plan changes reach assigned clients as soon as they save.
+
 Clients can add their own regular events (e.g. on-water training every
 Tue/Thu) from the Events section's "+ Add" (`RecurringEventForm.tsx`,
 validated with Zod in `src/common/recurringEvents.ts`). An event shows on each

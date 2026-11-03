@@ -50,6 +50,7 @@ export const ExistingSession: StoryObj<typeof SessionForm> = {
         },
       },
       editSession: async (session: any) => session,
+      setSessionPlans: async () => true,
       deleteSession: () => {},
     }),
   ]

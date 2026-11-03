@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SourceDataContext from "../context/SourceDataContext";
 import { SessionForm } from "./SessionForm";
@@ -24,25 +24,38 @@ const sourceData = {
     Lunges: { id: "ss2", name: "Lunges", exercises: [] },
   },
   exercises: {},
+  plans: {
+    Strength: { id: "p1", name: "Strength", sessions: ["Legs"] },
+    Hypertrophy: { id: "p2", name: "Hypertrophy", sessions: ["Arms"] },
+    Shared: { id: "p3", name: "Shared", sessions: ["Legs"], linked: true },
+    Old: { id: "p4", name: "Old", sessions: ["Legs"], archived: true },
+  },
 };
 
 const setup = (data: any = session, type = "edit") => {
   const editSession = vi.fn(async (saved: any) => saved);
-  const addSession = vi.fn();
+  const addSession = vi.fn(async (saved: any): Promise<any> => ({ ...saved, id: "new" }));
+  const setSessionPlans = vi.fn(async (_id: string, _changes: Record<string, boolean>) => true);
   const closeForm = vi.fn();
   const tree = (formData: any, onClose = closeForm, source: any = sourceData) => (
-    <SourceDataContext.Provider value={{ sourceData: source, editSession, addSession } as any}>
+    <SourceDataContext.Provider value={{ sourceData: source, editSession, addSession, setSessionPlans } as any}>
       <SessionForm data={formData} type={type} closeForm={onClose} />
     </SourceDataContext.Provider>
   );
   const view = render(tree(data));
-  return { editSession, addSession, closeForm, tree, rerender: view.rerender };
+  return { editSession, addSession, setSessionPlans, closeForm, tree, rerender: view.rerender };
 };
 
 const nameInput = () => screen.getByLabelText("Session name") as HTMLInputElement;
 const tagInput = () =>
   screen.getByText("Tags").parentElement!.querySelector("input") as HTMLInputElement;
 const rename = (value: string) => fireEvent.change(nameInput(), { target: { value } });
+const openPlans = () => {
+  const trigger = screen.getByText("Plans").parentElement!.querySelector('[aria-haspopup="listbox"]')!;
+  if (trigger.getAttribute("aria-expanded") !== "true") fireEvent.click(trigger);
+  return within(screen.getByRole("listbox"));
+};
+const togglePlan = (name: string) => fireEvent.click(openPlans().getByRole("button", { name }));
 const elapse = (ms = 800) => act(() => vi.advanceTimersByTimeAsync(ms));
 
 beforeEach(() => {
@@ -329,6 +342,123 @@ describe("SessionForm autosave", () => {
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(editSession).not.toHaveBeenCalled();
     expect(closeForm).toHaveBeenCalledOnce();
+  });
+});
+
+describe("SessionForm plans", () => {
+  it("writes only the plan when just a plan changes", async () => {
+    const { editSession, setSessionPlans } = setup();
+    togglePlan("Hypertrophy");
+    await elapse();
+    expect(setSessionPlans).toHaveBeenCalledOnce();
+    expect(setSessionPlans).toHaveBeenCalledWith("s1", { p2: true });
+    expect(editSession).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+  });
+
+  it("writes only the session when just a field changes", async () => {
+    const { editSession, setSessionPlans } = setup();
+    rename("Leg day");
+    await elapse();
+    expect(editSession).toHaveBeenCalledOnce();
+    expect(setSessionPlans).not.toHaveBeenCalled();
+  });
+
+  it("removes the session from a plan", async () => {
+    const { setSessionPlans } = setup();
+    togglePlan("Strength");
+    await elapse();
+    expect(setSessionPlans).toHaveBeenCalledWith("s1", { p1: false });
+  });
+
+  it("writes nothing when a plan change is undone before the debounce ends", async () => {
+    const { setSessionPlans } = setup();
+    togglePlan("Hypertrophy");
+    togglePlan("Hypertrophy");
+    await elapse(2000);
+    expect(setSessionPlans).not.toHaveBeenCalled();
+  });
+
+  it("flushes a pending plan change on Done", () => {
+    const { setSessionPlans, closeForm } = setup();
+    togglePlan("Hypertrophy");
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(setSessionPlans).toHaveBeenCalledWith("s1", { p2: true });
+    expect(closeForm).toHaveBeenCalledOnce();
+  });
+
+  it("sends only the newest change while an earlier one is in flight", async () => {
+    const { setSessionPlans } = setup();
+    setSessionPlans.mockImplementation(() => new Promise(() => {}));
+    togglePlan("Hypertrophy");
+    await elapse();
+    togglePlan("Hypertrophy");
+    await elapse();
+    expect(setSessionPlans.mock.calls.map(([, changes]) => changes)).toEqual([{ p2: true }, { p2: false }]);
+  });
+
+  it("doesn't write a plan change while the form is invalid", async () => {
+    const { setSessionPlans } = setup();
+    rename("");
+    togglePlan("Hypertrophy");
+    await elapse();
+    expect(setSessionPlans).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Not saved");
+  });
+
+  it("reports a failed plan write and retries it on the next flush", async () => {
+    const { setSessionPlans } = setup();
+    setSessionPlans.mockResolvedValueOnce(false);
+    togglePlan("Hypertrophy");
+    await elapse();
+    expect(screen.getByRole("status")).toHaveTextContent("Couldn't save");
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(setSessionPlans).toHaveBeenCalledTimes(2);
+    expect(setSessionPlans.mock.calls[1]).toEqual(["s1", { p2: true }]);
+  });
+
+  it("doesn't offer linked or archived plans", () => {
+    setup();
+    const options = openPlans().getAllByRole("button").map((o) => o.textContent);
+    expect(options).toEqual(["Hypertrophy", "Strength"]);
+    expect(screen.queryByText("Old")).not.toBeInTheDocument();
+    expect(screen.queryByText("Shared")).not.toBeInTheDocument();
+  });
+
+  it("hides plans for a linked session", () => {
+    setup({ ...session, linked: true });
+    expect(screen.queryByText("Plans")).not.toBeInTheDocument();
+  });
+
+  it("links a new session to its plans once it has an id", async () => {
+    const { addSession, setSessionPlans, closeForm } = setup({ name: "New", supersets: ["Squats"] }, "add");
+    togglePlan("Hypertrophy");
+    await elapse(2000);
+    expect(setSessionPlans).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(addSession).toHaveBeenCalledOnce();
+    expect(addSession.mock.calls[0][0]).not.toHaveProperty("plans");
+    expect(closeForm).toHaveBeenCalledOnce();
+    await elapse(0);
+    expect(setSessionPlans).toHaveBeenCalledWith("new", { p2: true });
+  });
+
+  it("starts a clone with no plans", async () => {
+    const { addSession, setSessionPlans } = setup({ name: "Legs (copy)", supersets: ["Squats"] }, "add");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await elapse(0);
+    expect(addSession).toHaveBeenCalledOnce();
+    expect(setSessionPlans).not.toHaveBeenCalled();
+  });
+
+  it("creates nothing when adding is cancelled", async () => {
+    const { addSession, setSessionPlans } = setup({ name: "New", supersets: ["Squats"] }, "add");
+    togglePlan("Hypertrophy");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await elapse(2000);
+    expect(addSession).not.toHaveBeenCalled();
+    expect(setSessionPlans).not.toHaveBeenCalled();
   });
 });
 
