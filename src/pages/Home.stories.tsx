@@ -7,7 +7,7 @@ import { OPEN_WEEK } from "../common/planCycle";
 import AuthContext from "../context/AuthContext";
 import UserManagementContext from "../context/UserManagementContext";
 import {
-  withMockAuthContext,
+  withMockAuthContext as withAuthValue,
   withMockSourceDataContext,
   withMockUserManagementContext,
 } from "../management/__mock__/MockContext";
@@ -31,6 +31,9 @@ const meta: Meta<typeof Home> = {
 };
 
 export default meta;
+
+// The mock replaces the whole context, and Home reads these lists on every render.
+const withMockAuthContext = (customData: any) => withAuthValue({ orgs: [], suspendedOrgs: [], ...customData });
 
 const weeksOf = (count: number) =>
   Object.fromEntries(Array.from({ length: count }, (_, i) => [`Week ${i + 1}`, {}]));
@@ -101,6 +104,8 @@ const DelayedAdminAuth = ({ children }: { children: ReactNode }) => {
         {
           user: { email: "admin@trainingplanner.com" },
           userPermission,
+          orgs: [],
+          suspendedOrgs: [],
           isLoading: false,
         } as any
       }
@@ -342,6 +347,58 @@ export const WithCheckIns: StoryObj<typeof Home> = {
         [dateAgo(0)]: { mood: 4, sleepHours: 7.5, sleepQuality: 4, energy: 4, soreness: 2 },
         [dateAgo(1)]: { mood: 2, sleepHours: 5, energy: 2, soreness: 4 },
       },
+      saveCheckin: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+// The hero's fallback lines: nothing left to start today.
+const todayOnlySourceData = (userdata: any, sessions: any) => ({
+  plans: { "Mobility Plan": { id: "plan-2", name: "Mobility Plan", open: true, sessions: Object.keys(sessions), weeks: {} } },
+  sessions,
+  userdata: { "uid-user-1": { "Mobility Plan": { [OPEN_WEEK]: userdata } } },
+});
+
+export const AllDoneToday: StoryObj<typeof Home> = {
+  name: "Everything done today",
+  decorators: [
+    richHistoryAuth,
+    withMockSourceDataContext({
+      sourceData: todayOnlySourceData(
+        { "Hip Flow": { meta: { completedAt: timeAgo(0, 7) } } },
+        { "Hip Flow": { date: dateAgo(0) } }
+      ),
+      checkins: {},
+      saveCheckin: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+export const OnlyMissedSessions: StoryObj<typeof Home> = {
+  name: "Only missed sessions",
+  decorators: [
+    richHistoryAuth,
+    withMockSourceDataContext({
+      sourceData: todayOnlySourceData({}, { "Hip Flow": { date: dateAgo(2) }, "Shoulder Flow": { date: dateAgo(1) } }),
+      checkins: {},
+      saveCheckin: async () => {},
+      initialise: () => {},
+    }),
+  ],
+};
+
+export const ManyMissedSessions: StoryObj<typeof Home> = {
+  name: "Many missed sessions",
+  decorators: [
+    richHistoryAuth,
+    withMockSourceDataContext({
+      sourceData: todayOnlySourceData(
+        {},
+        Object.fromEntries([1, 2, 3, 4, 5, 6].map((days) => [`Session ${days}`, { date: dateAgo(days) }]))
+      ),
+      checkins: {},
       saveCheckin: async () => {},
       initialise: () => {},
     }),

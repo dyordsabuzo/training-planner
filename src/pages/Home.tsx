@@ -13,7 +13,11 @@ import { StartOrgForm } from "./others/StartOrgForm";
 import { DayStrip } from "./others/DayStrip";
 import { DayAgendaCard } from "./others/DayAgendaCard";
 import { DayEvents } from "./others/DayEvents";
-import { dayAgenda, dayStatus, missedSessions } from "../common/dayAgenda";
+import { AgendaRow } from "./others/AgendaRow";
+import { OUTLINE_PILL } from "./others/HeroTile";
+import { HeroStats, HomeHero } from "./others/HomeHero";
+import { DayAgenda, dayAgenda, dayStatus, missedSessions, upNext } from "../common/dayAgenda";
+import { trainingMomentum } from "../common/trainingMomentum";
 import { checkinId } from "../common/checkins";
 import { eventDay, RecurringEvent } from "../common/recurringEvents";
 import { RecurringEventForm } from "../forms/RecurringEventForm";
@@ -23,21 +27,22 @@ import { PENDING_INVITE_KEY } from "./JoinPage";
 
 import { EmptyState } from "../management/EmptyState";
 import { LoadMore } from "../management/LoadMore";
+import { ON_GRADIENT_FOCUS } from "../management/ManageHero";
 import { openPlanDoneSessions, openPlanSkippedSessions, sortPlansByCreated } from "../common/planSessions";
-import { isSkipped } from "../common/sessionStats";
+import { historyRuns, isSkipped } from "../common/sessionStats";
 import { useLoadMore } from "../common/useLoadMore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDumbbell,
   faListCheck,
-  faCalendarWeek,
   faUsers,
-  faUserShield,
   faLayerGroup,
   faClipboardList,
   faClockRotateLeft,
   faCircleCheck,
   faCircleExclamation,
+  faChevronRight,
+  faPlay,
   IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
 import { Card, Button, Input } from "@dyordsabuzo/ui-components";
@@ -52,58 +57,86 @@ type PlanStats = {
   sessionsLogged: number;
 };
 
-const StatCard = ({
-  icon,
-  label,
-  value,
-}: {
-  icon: IconDefinition;
-  label: string;
-  value: string | number;
-}) => (
-  <Card className="flex flex-col gap-1 items-start">
-    <span className="text-primary dark:text-primary-300">
-      <FontAwesomeIcon icon={icon} />
-    </span>
-    <span className="text-xl font-bold text-text-light dark:text-text-dark">
-      {value}
-    </span>
-    <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-      {label}
-    </span>
-  </Card>
-);
+type QuickAction = { icon: IconDefinition; title: string; description: string; to: string };
 
-// Used for both the admin dashboard's management shortcuts and the regular
-// user's "Quick actions" (Train/History) — nothing here is admin-specific.
-const ActionCard = ({
-  icon,
-  title,
-  description,
-  buttonLabel,
-  onClick,
-}: {
-  icon: IconDefinition;
-  title: string;
-  description: string;
-  buttonLabel: string;
-  onClick: () => void;
-}) => (
-  <Card className="flex flex-col gap-3">
-    <div className="flex items-center gap-3">
-      <span className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800/40 text-primary dark:text-primary-300">
-        <FontAwesomeIcon icon={icon} />
-      </span>
-      <span className="text-base font-bold text-text-light dark:text-text-dark">
-        {title}
-      </span>
+const COACH_ACTIONS: QuickAction[] = [
+  { icon: faDumbbell, title: "Manage training plans", description: "Create and edit your plans", to: "/training-planner/manage/plans" },
+  { icon: faListCheck, title: "Manage exercises", description: "The library every plan uses", to: "/training-planner/manage/exercises" },
+  { icon: faLayerGroup, title: "Manage supersets", description: "Group exercises to reuse", to: "/training-planner/manage/supersets" },
+  { icon: faClipboardList, title: "Manage sessions", description: "Build workouts from supersets", to: "/training-planner/manage/sessions" },
+  { icon: faUsers, title: "Manage clients", description: "Progress, plans and invites", to: "/training-planner/admin" },
+];
+
+const CLIENT_ACTIONS: QuickAction[] = [
+  { icon: faDumbbell, title: "Start training", description: "Pick up where you left off", to: "/training-planner/train" },
+  { icon: faClockRotateLeft, title: "Training history", description: "See what you've done", to: "/training-planner/history" },
+];
+
+const QuickActions = ({ actions }: { actions: QuickAction[] }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+        Quick actions
+      </h2>
+      {/* Rows are gray-50, the same as the light page, so they need a white surface. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-2xl bg-white dark:bg-transparent shadow-sm dark:shadow-none">
+        {actions.map(({ icon, title, description, to }) => (
+          <AgendaRow
+            key={title}
+            icon={icon}
+            tone="primary"
+            title={title}
+            subtitle={description}
+            onClick={() => navigate(to)}
+            trailing={
+              <FontAwesomeIcon icon={faChevronRight} className="text-xs text-text-muted-light dark:text-text-muted-dark" />
+            }
+          />
+        ))}
+      </div>
     </div>
-    <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-      {description}
-    </p>
-    <Button label={buttonLabel} onClick={onClick} className="min-h-11" />
-  </Card>
-);
+  );
+};
+
+// Today's main action, whichever day is selected in the strip: the next
+// session with Start, or else one line on where the day stands.
+const HeroToday = ({ agenda, missedCount }: { agenda: DayAgenda; missedCount: number }) => {
+  const navigate = useNavigate();
+  const next = upNext(agenda);
+  if (!next) {
+    const missedLine = missedCount === 1 ? "1 missed session" : `${missedCount} missed sessions`;
+    return (
+      <p className="text-sm font-semibold text-white/90">
+        {agenda.scheduled.length > 0 || agenda.completed.length > 0
+          ? "All done today — great work"
+          : missedCount > 0
+            ? `${missedLine} to catch up`
+            : "Rest day — recover and recharge"}
+      </p>
+    );
+  }
+  return (
+    <div className="flex items-center gap-4 rounded-xl bg-white/10 p-3">
+      <div className="flex flex-col flex-1 min-w-0">
+        <span className="text-xs font-bold uppercase tracking-wider text-white/70">Up next</span>
+        <span className="text-lg font-bold truncate">{next.session}</span>
+        <span className="text-sm text-white/80 truncate">
+          {[next.plan, next.optional && "Optional", next.overdue && "Overdue"].filter(Boolean).join(" · ")}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={() => navigate("/training-planner/train", { state: { plan: next.plan, session: next.session } })}
+        className={`flex items-center gap-2 shrink-0 min-h-12 px-5 rounded-full bg-white text-primary font-bold shadow-md
+          hover:bg-primary-50 transition-colors ${ON_GRADIENT_FOCUS}`}
+      >
+        <FontAwesomeIcon icon={faPlay} />
+        Start
+      </button>
+    </div>
+  );
+};
 
 const PLAN_PAGE_SIZE = 6;
 
@@ -124,8 +157,7 @@ const OrgHint = () => {
             key={org.id}
             type="button"
             onClick={() => switchOrg(org.id)}
-            className="min-h-11 px-3 rounded-full border border-primary-200 dark:border-primary-700 text-primary font-semibold
-              hover:bg-primary-50 dark:hover:bg-primary-800/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className={OUTLINE_PILL}
           >
             {org.name}
           </button>
@@ -149,7 +181,7 @@ const SuspendedNotice = () => {
         {suspendedOrgs.map((org) => (
           <span key={org.id}>
             <strong>{org.name}</strong> is suspended. Contact{" "}
-            <a href={`mailto:${adminEmail}`} className="text-primary font-semibold underline">
+            <a href={`mailto:${adminEmail}`} className="text-primary dark:text-primary-300 font-semibold underline">
               {adminEmail}
             </a>
             .
@@ -256,7 +288,7 @@ export const Home = () => {
 
   const { limit: planLimit, loadMore: loadMorePlans, showAll: showAllPlans } = useLoadMore(PLAN_PAGE_SIZE);
   const totalSessionsLogged = planStats.reduce((sum, p) => sum + p.sessionsLogged, 0);
-  const totalWeeksCompleted = planStats.reduce((sum, p) => sum + p.completedWeeks, 0);
+  const momentum = useMemo(() => trainingMomentum(historyRuns(userdata), dayjs()), [userdata]);
 
   const avgMoodInfo = useMemo(() => {
     const ratings: number[] = [];
@@ -283,6 +315,8 @@ export const Home = () => {
     return <Loading />;
   }
 
+  const heroDate = dayjs().format("dddd, MMM D");
+
   if (role === "admin") {
     if (!sourceData?.plans || !users) {
       return <Loading />;
@@ -296,81 +330,27 @@ export const Home = () => {
     return (
       <WrapperPage className="max-w-[32rem] sm:max-w-3xl">
         <div className="flex flex-col gap-6 pt-6 w-full text-text-light dark:text-text-dark">
-          <h1 className="text-2xl font-bold">
-            {`Welcome back, ${getDisplayName(
+          <HomeHero
+            eyebrow={heroDate}
+            title={`Welcome back, ${getDisplayName(
               userPermission?.firstName,
               userPermission?.lastName,
               user?.email ?? undefined
             )}`}
-          </h1>
+          >
+            <HeroStats
+              stats={[
+                { label: planCount === 1 ? "Plan" : "Plans", value: planCount },
+                { label: exerciseCount === 1 ? "Exercise" : "Exercises", value: exerciseCount },
+                { label: userCount === 1 ? "User" : "Users", value: userCount },
+                { label: adminCount === 1 ? "Admin" : "Admins", value: adminCount },
+              ]}
+            />
+          </HomeHero>
 
           <SuspendedNotice />
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard
-              icon={faDumbbell}
-              label={planCount === 1 ? "Training plan" : "Training plans"}
-              value={planCount}
-            />
-            <StatCard
-              icon={faListCheck}
-              label={exerciseCount === 1 ? "Exercise in library" : "Exercises in library"}
-              value={exerciseCount}
-            />
-            <StatCard
-              icon={faUsers}
-              label={userCount === 1 ? "Registered user" : "Registered users"}
-              value={userCount}
-            />
-            <StatCard
-              icon={faUserShield}
-              label={adminCount === 1 ? "Administrator" : "Administrators"}
-              value={adminCount}
-            />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
-              Quick actions
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <ActionCard
-                icon={faDumbbell}
-                title="Manage training plans"
-                description="Create and edit exercises, supersets, sessions, and training plans."
-                buttonLabel="Go to training setup"
-                onClick={() => navigate("/training-planner/manage/plans")}
-              />
-              <ActionCard
-                icon={faListCheck}
-                title="Manage exercises"
-                description="Create and edit the exercise library used across every plan."
-                buttonLabel="Go to exercises"
-                onClick={() => navigate("/training-planner/manage/exercises")}
-              />
-              <ActionCard
-                icon={faLayerGroup}
-                title="Manage supersets"
-                description="Group exercises into supersets to reuse across sessions."
-                buttonLabel="Go to supersets"
-                onClick={() => navigate("/training-planner/manage/supersets")}
-              />
-              <ActionCard
-                icon={faClipboardList}
-                title="Manage sessions"
-                description="Build workout sessions from your supersets."
-                buttonLabel="Go to sessions"
-                onClick={() => navigate("/training-planner/manage/sessions")}
-              />
-              <ActionCard
-                icon={faUsers}
-                title="Manage clients"
-                description="See how your clients are going, assign plans and trainers, and invite people."
-                buttonLabel="Go to clients"
-                onClick={() => navigate("/training-planner/admin")}
-              />
-            </div>
-          </div>
+          <QuickActions actions={COACH_ACTIONS} />
         </div>
       </WrapperPage>
     );
@@ -383,15 +363,32 @@ export const Home = () => {
   return (
     <WrapperPage className="max-w-[25rem] sm:max-w-3xl">
       <div className="flex flex-col gap-6 pt-6 w-full text-text-light dark:text-text-dark">
-        <h1 className="text-2xl font-bold">
-          {user
-            ? `Welcome back, ${getDisplayName(
-                userPermission?.firstName,
-                userPermission?.lastName,
-                user.email ?? undefined
-              )}`
-            : "Welcome to Training Planner"}
-        </h1>
+        <HomeHero
+          eyebrow={heroDate}
+          title={
+            user
+              ? `Welcome back, ${getDisplayName(
+                  userPermission?.firstName,
+                  userPermission?.lastName,
+                  user.email ?? undefined
+                )}`
+              : "Welcome to Training Planner"
+          }
+        >
+          {user && grantedPlans.length > 0 && (
+            <>
+              <HeroToday agenda={agendaFor(dayjs())} missedCount={missed.length} />
+              <HeroStats
+                stats={[
+                  { label: "Week streak", value: momentum.weekStreak },
+                  { label: "This week", value: momentum.sessionsThisWeek },
+                  { label: "Logged", value: totalSessionsLogged },
+                  { label: "Mood", value: avgMoodInfo?.label ?? "—" },
+                ]}
+              />
+            </>
+          )}
+        </HomeHero>
 
         {user && <SuspendedNotice />}
 
@@ -447,7 +444,7 @@ export const Home = () => {
 
             <a
               href={`mailto:${adminEmail}`}
-              className="self-start min-h-11 flex items-center text-sm font-semibold text-primary underline"
+              className="self-start min-h-11 flex items-center text-sm font-semibold text-primary dark:text-primary-300 underline"
             >
               Contact us
             </a>
@@ -501,65 +498,7 @@ export const Home = () => {
 
         {user && grantedPlans.length > 0 && (
           <>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard
-                icon={faDumbbell}
-                label={planStats.length === 1 ? "Training plan" : "Training plans"}
-                value={planStats.length}
-              />
-              <StatCard
-                icon={faCalendarWeek}
-                label={totalWeeksCompleted === 1 ? "Week done" : "Weeks done"}
-                value={totalWeeksCompleted}
-              />
-              <StatCard
-                icon={faListCheck}
-                label={totalSessionsLogged === 1 ? "Session logged" : "Sessions logged"}
-                value={totalSessionsLogged}
-              />
-              <Card className="flex flex-col gap-1 items-start">
-                {avgMoodInfo ? (
-                  <>
-                    <span className="text-primary dark:text-primary-300 text-lg">
-                      <FontAwesomeIcon icon={avgMoodInfo.icon} />
-                    </span>
-                    <span className="text-xl font-bold text-text-light dark:text-text-dark">
-                      {avgMoodInfo.label}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-xl font-bold text-text-light dark:text-text-dark">
-                    —
-                  </span>
-                )}
-                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                  Average mood
-                </span>
-              </Card>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
-                Quick actions
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ActionCard
-                  icon={faDumbbell}
-                  title="Start training"
-                  description="Pick up where you left off, or start a new session."
-                  buttonLabel="Go to Train"
-                  onClick={() => navigate("/training-planner/train")}
-                />
-                <ActionCard
-                  icon={faClockRotateLeft}
-                  title="Training history"
-                  description="See what you've done, and what was used for each exercise."
-                  buttonLabel="View history"
-                  onClick={() => navigate("/training-planner/history")}
-                />
-              </div>
-            </div>
+            <QuickActions actions={CLIENT_ACTIONS} />
 
             <div className="flex flex-col gap-3">
               <h2 className="text-lg font-bold text-text-light dark:text-text-dark">

@@ -147,12 +147,24 @@ over the runs grouped by plan (`HistoryRunList.tsx`, shared with the client
 page). Opening a run shows `SessionStats.tsx`: the run's date and totals
 (time, sets logged of planned, volume, sets improved), then one card per unit
 with each set as a chip of its value, green with ↑ when it beat the same set
-last time and dashed when not logged. The Train page's Up next, Home's Up
-next tile and these summaries share one style: a primary gradient tile with
-white chips and a white Start.
+last time and dashed when not logged. The Train page's Up next, Home's hero
+and these summaries share one style: a primary gradient tile with white chips
+and a white Start.
 
-Client Home opens on a day strip (`DayStrip.tsx`, one week on phones, two
-from 768px up) with today selected.
+Home opens on a gradient hero (`HomeHero.tsx`) with the date and a greeting.
+For a client it always shows today, whichever day is selected below: the next
+session with Start (`upNext` in `dayAgenda.ts`, also used by the day card so
+they can't disagree) or, without one, a single line (all done today, then N
+missed to catch up, then rest day). No granted plans means greeting only. Stat
+tiles follow: week streak, sessions this week, logged and average mood. Streak
+and this week come from `trainingMomentum.ts`, derived from logged runs, so
+nothing extra is stored. Weeks run Monday to Sunday, and a current week with
+no run yet doesn't break the streak. A coach's hero has the plan, exercise,
+user and admin counts instead. Quick actions follow as compact rows, then for
+a client the plans as cards tappable as a whole (`PlanProgressCard.tsx`).
+
+Below the hero and check-in, client Home has a day strip (`DayStrip.tsx`, one
+week on phones, two from 768px up) with today selected.
 Tapping a day fills the card under it (`DayAgendaCard.tsx`) with the plan
 sessions whose `date` falls on it and the runs whose `meta.completedAt` does.
 `src/common/dayAgenda.ts` derives this from the same data, so nothing extra
@@ -161,15 +173,16 @@ top to bottom by what needs doing:
 
 - a progress ring over the day's training and events, and a past day's
   check-in as chips;
-- on today, the first session still to do as an "Up next" tile with Start;
-- **Training**: the rest still to do (Start when due today or overdue), then
+- **Training**: what's still to do (Start when due today or overdue; today's
+  next session is left out, since the hero shows it), then
   what's done, each with its time and a link to History. A run of a session
   scheduled that day shows once, as its done row;
 - **Catch up** (today only): every missed session (dated before today and
-  not done), each with Start;
+  not done), newest first, each with Start. More than three start collapsed
+  behind Show, with the count still in the heading;
 - **Events** (`DayEvents.tsx`, below).
 
-Tapping a training item (its row, Start, or the Up next tile) opens the
+Tapping a training item (its row, or Start here or on the hero) opens the
 Train page on that session, passed as router state (plan, session, and the
 run's week for done ones): a "Ready" tile with Start session, or View results
 and Run again when it has a run. Rows share `AgendaRow.tsx` (icon tile, title, trailing

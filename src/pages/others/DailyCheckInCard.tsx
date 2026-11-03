@@ -114,7 +114,7 @@ const SleepStepper = ({
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className={`min-h-11 px-2 text-sm text-primary font-semibold underline rounded ${FOCUS}`}
+            className={`min-h-11 px-2 text-sm text-primary dark:text-primary-300 font-semibold underline rounded ${FOCUS}`}
           >
             Clear
           </button>

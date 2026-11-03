@@ -29,7 +29,7 @@ export const LoadMore = ({ shown, total, onLoadMore, onShowAll }: Props) => {
         <button
           type="button"
           onClick={onShowAll}
-          className={`${PILL} border border-primary-200 dark:border-primary-700 text-primary
+          className={`${PILL} border border-primary-200 dark:border-primary-700 text-primary dark:text-primary-300
             hover:bg-primary-50 dark:hover:bg-primary-800/20`}
         >
           Show all

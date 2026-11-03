@@ -1,5 +1,5 @@
 import dayjs, { Dayjs } from "dayjs";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,11 +11,15 @@ import {
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { Badge, Card } from "@dyordsabuzo/ui-components";
-import { DayAgenda, MissedSession, ScheduledSession } from "../../common/dayAgenda";
+import { DayAgenda, MissedSession, ScheduledSession, upNext } from "../../common/dayAgenda";
 import { Checkin, checkinSummary } from "../../common/checkins";
 import { HistoryRun } from "../../common/sessionStats";
 import { EventOccurrence } from "../../common/recurringEvents";
 import { AgendaRow, FOCUS, SectionLabel } from "./AgendaRow";
+import { OUTLINE_PILL } from "./HeroTile";
+
+// Longer catch-up lists start collapsed so they don't bury the rest of the page.
+const CATCH_UP_VISIBLE_MAX = 3;
 
 const START_PILL = `flex items-center gap-1.5 min-h-11 px-4 rounded-full bg-primary text-white text-sm font-semibold
   shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
@@ -49,9 +53,9 @@ const ProgressRing = ({ done, total }: { done: number; total: number }) => {
 };
 
 // The day picked in the DayStrip: a progress ring over training and events,
-// a past day's check-in, today's next session as a hero with Start, the rest
-// of the training (done last), today's catch-up list and the children (e.g.
-// the events section). Without an agenda (no plans) training is left out.
+// a past day's check-in, the training (done last), today's catch-up list and
+// the children (e.g. the events section). Today's next session is left to the
+// Home hero. Without an agenda (no plans) training is left out.
 export const DayAgendaCard = ({
   day,
   agenda,
@@ -68,13 +72,14 @@ export const DayAgendaCard = ({
   children?: ReactNode;
 }) => {
   const navigate = useNavigate();
+  const [catchUpOpen, setCatchUpOpen] = useState(false);
   const isToday = day.isSame(dayjs(), "day");
   const { scheduled, completed: runs } = agenda ?? { scheduled: [], completed: [] };
   const isRun = (s: ScheduledSession) => (run: HistoryRun) => run.plan === s.plan && run.session === s.session;
   const todo = scheduled.filter((s) => !s.done);
-  // Today's first session to do becomes the "Up next" hero.
-  const next = isToday ? todo[0] : undefined;
-  const rest = next ? todo.slice(1) : todo;
+  // Today's next session is on the Home hero, so it isn't listed again.
+  const next = isToday && agenda ? upNext(agenda) : undefined;
+  const rest = todo.filter((s) => s !== next);
   // Scheduled sessions done (with that day's run time, if any), then runs of
   // sessions not scheduled on this day.
   const done = [
@@ -98,6 +103,7 @@ export const DayAgendaCard = ({
     total === 0 ? "Nothing planned" : doneCount >= total ? "All done — great work" : `${total - doneCount} to go`;
   const checkinParts = isToday ? [] : checkinSummary(checkin);
   const showCatchUp = isToday && missed.length > 0;
+  const catchUpCollapsible = missed.length > CATCH_UP_VISIBLE_MAX;
   // Opens Train on this session (Ready, or View results / Run again once run).
   const open = (plan: string, session: string, week?: string) =>
     navigate("/training-planner/train", { state: { plan, session, week } });
@@ -131,30 +137,6 @@ export const DayAgendaCard = ({
             </li>
           ))}
         </ul>
-      )}
-
-      {next && (
-        <div
-          className="flex items-center gap-4 rounded-2xl p-4 text-white bg-gradient-to-br from-primary to-primary-400
-            shadow-lg shadow-primary/30"
-        >
-          <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-xs font-bold uppercase tracking-wider text-white/70">Up next</span>
-            <span className="text-lg font-bold truncate">{next.session}</span>
-            <span className="text-sm text-white/80 truncate">
-              {[next.plan, next.optional && "Optional", next.overdue && "Overdue"].filter(Boolean).join(" · ")}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => open(next.plan, next.session)}
-            className="flex items-center gap-2 min-h-12 px-5 rounded-full bg-white text-primary font-bold shadow-md
-              hover:bg-primary-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <FontAwesomeIcon icon={faPlay} />
-            Start
-          </button>
-        </div>
       )}
 
       {agenda && (rest.length > 0 || done.length > 0 || !next) && (
@@ -214,10 +196,23 @@ export const DayAgendaCard = ({
 
       {showCatchUp && (
         <section aria-label="Catch up" className="flex flex-col gap-2">
-          <SectionLabel>
+          <SectionLabel
+            action={
+              catchUpCollapsible && (
+                <button
+                  type="button"
+                  aria-expanded={catchUpOpen}
+                  onClick={() => setCatchUpOpen((open) => !open)}
+                  className={OUTLINE_PILL}
+                >
+                  {catchUpOpen ? "Hide" : "Show"}
+                </button>
+              )
+            }
+          >
             Catch up · {missed.length === 1 ? "1 missed session" : `${missed.length} missed sessions`}
           </SectionLabel>
-          {missed.map(({ plan, session, date }) => (
+          {(!catchUpCollapsible || catchUpOpen) && missed.map(({ plan, session, date }) => (
             <AgendaRow
               key={`${plan}/${session}`}
               icon={faTriangleExclamation}

@@ -23,7 +23,7 @@ export const SECTION_ICONS = {
 export const BUILD_SECTIONS = ["Exercises", "Supersets", "Sessions", "Plans"] as const;
 export const MORE_SECTIONS = ["Library", "Relationships"] as const;
 
-const ON_GRADIENT_FOCUS = `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
+export const ON_GRADIENT_FOCUS = `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
   focus-visible:ring-offset-2 focus-visible:ring-offset-primary`;
 
 const FILLED_PILL = `flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-full border border-primary bg-primary
