@@ -25,8 +25,9 @@ export type ActionItem = {
   onClick: () => void;
 };
 
-// Kept for callers that pass a variant; both now render the same ⋮ menu.
-export type ActionsVariant = "card" | "menu";
+// All render the same ⋮ menu. "row" leaves out the badges, which would crowd
+// out a row's title; those rows show sharingNotes in their summary instead.
+export type ActionsVariant = "card" | "menu" | "row";
 
 type Props = {
   onEdit: () => void;
@@ -216,7 +217,16 @@ const SharingIcon = ({ entity }: { entity: any }) => {
   );
 };
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+export const sharingNotes = (entity: any): string[] => {
+  if (entity?.linked) return [`Owned by ${entity.linked.ownerName}`];
+  const linkCount: number = entity?.linkCount ?? 0;
+  return [
+    ...(isBlocked(entity) ? ["Blocked from marketplace"] : []),
+    ...(linkCount > 0 ? [`Used by ${plural(linkCount, "org")}`] : []),
+  ];
+};
 
 // Action set per entity: a single ⋮ menu (Edit, Clone, extras, Visibility, Delete).
 // An item linked from another org is read-only: Details, Convert to copy, Unlink.
@@ -227,8 +237,10 @@ export const EntityActions = ({
   onDelete,
   deleteImpactMessage,
   extraActions = [],
+  variant,
   sharing,
 }: Props) => {
+  const showBadges = variant !== "row";
   const [settingVisibility, setSettingVisibility] = useState(false);
   const [linkedMode, setLinkedMode] = useState<LinkedMode | null>(null);
   const linked = sharing?.entity?.linked;
@@ -242,7 +254,7 @@ export const EntityActions = ({
     ];
     return (
       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-        <Badge variant="neutral">Owned by {linked.ownerName}</Badge>
+        {showBadges && <Badge variant="neutral">Owned by {linked.ownerName}</Badge>}
         <ActionMenu items={linkedItems} />
         {linkedMode && (
           <LinkedItemModal db={sharing.db} entity={sharing.entity} mode={linkedMode} onClose={() => setLinkedMode(null)} />
@@ -262,12 +274,12 @@ export const EntityActions = ({
   return (
     <div className="flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
       {sharing && <SharingIcon entity={sharing.entity} />}
-      {sharing && isBlocked(sharing.entity) && (
+      {showBadges && sharing && isBlocked(sharing.entity) && (
         <span title={sharing.entity.moderation?.reason || undefined}>
           <Badge variant="danger">Blocked from marketplace</Badge>
         </span>
       )}
-      {linkCount > 0 && <Badge variant="primary">Used by {plural(linkCount, "org")}</Badge>}
+      {showBadges && linkCount > 0 && <Badge variant="primary">Used by {plural(linkCount, "org")}</Badge>}
       <ActionMenu
         items={menuItems}
         onDelete={onDelete}

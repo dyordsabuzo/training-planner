@@ -1,17 +1,20 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import SourceDataContext from "../context/SourceDataContext";
 import { ExerciseForm } from "../forms/ExerciseForm";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
 import { sortObject, toStringArray, SourceDbReferences } from "../common/utils";
 import { useLoadMore } from "../common/useLoadMore";
-import { useMediaQuery } from "../common/useMediaQuery";
 import BaseListing from "./BaseListing";
 import { ManageListHeader } from "./ManageListHeader";
 import { EmptyState } from "./EmptyState";
-import { EntityCard, usageText } from "./EntityCard";
+import { EntityCard, summaryLine, usageText } from "./EntityCard";
 import { LoadMore } from "./LoadMore";
 import { isListed } from "../common/sharing";
-import { EntityActions, ActionsVariant } from "./EntityActions";
+import { EntityActions, ActionsVariant, plural, sharingNotes } from "./EntityActions";
+import { SECTION_ICONS } from "./ManageHero";
+import { ScrollRow } from "./ScrollRow";
+import { chipClassName } from "../pages/others/HeroTile";
 import { cloneExercise } from "./cloneEntity";
 import {
   buildRelationshipGraph,
@@ -26,11 +29,11 @@ import {
   DataTableColumn,
   Input,
   SingleSelect,
-  Toggle,
 } from "@dyordsabuzo/ui-components";
 
 type Props = {
   viewMode?: "card" | "table";
+  headerTrailing?: ReactNode;
 };
 
 type ExerciseRow = {
@@ -42,7 +45,6 @@ type ExerciseRow = {
 const PAGE_SIZE = 12;
 const SORT_NAME = "Name A–Z";
 const SORT_USAGE = "Most used";
-const ALL_TAGS = "All tags";
 const ALL_SUPERSETS = "All supersets";
 
 const tagsOf = (exercise: any) => toStringArray(exercise.tags);
@@ -51,20 +53,25 @@ const alternativesOf = (exercise: any) => toStringArray(exercise.alternatives);
 
 const stop = (e: React.MouseEvent) => e.stopPropagation();
 
-export const ExerciseListing = ({ viewMode = "card" }: Props) => {
+export const ExerciseListing = ({ viewMode = "card", headerTrailing }: Props) => {
   const [formData, setFormData] = useState<any>({});
   const [formType, setFormType] = useState("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState(SORT_NAME);
   const [tagFilter, setTagFilter] = useState("");
   const [supersetFilter, setSupersetFilter] = useState("");
-  const [unusedOnly, setUnusedOnly] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // In the URL so the hero's unused hint can link straight to this filter.
+  const unusedOnly = searchParams.get("unused") === "1";
+  const setUnusedOnly = (on: boolean) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (on) next.set("unused", "1");
+      else next.delete("unused");
+      return next;
+    });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkTag, setBulkTag] = useState("");
-
-  // Phones get cards instead of the five-column table.
-  const isNarrow = useMediaQuery("(max-width: 639px)");
-  const showTable = viewMode === "table" && !isNarrow;
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -256,36 +263,52 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
         searchPlaceholder="Search name, tag, superset..."
         search={search}
         onSearchChange={setSearch}
+        trailing={headerTrailing}
         onAdd={() => {
           setFormData({});
           setFormType("add");
         }}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <ScrollRow ariaLabel="Filter exercises">
+        <button
+          type="button"
+          aria-pressed={unusedOnly}
+          onClick={() => setUnusedOnly(!unusedOnly)}
+          className={`${chipClassName(unusedOnly)} shrink-0 whitespace-nowrap`}
+        >
+          Unused
+        </button>
+        {allTags.map((tag) => (
+          <button
+            key={tag}
+            type="button"
+            aria-pressed={tagFilter === tag}
+            onClick={() => setTagFilter(tagFilter === tag ? "" : tag)}
+            className={`${chipClassName(tagFilter === tag)} shrink-0 whitespace-nowrap`}
+          >
+            {tag}
+          </button>
+        ))}
+      </ScrollRow>
+
+      <div className="flex items-center gap-2">
         <SingleSelect
           options={[SORT_NAME, SORT_USAGE]}
           selected={sortBy}
           onChange={setSortBy}
-          className="w-40"
-        />
-        <SingleSelect
-          options={[ALL_TAGS, ...allTags]}
-          selected={tagFilter || ALL_TAGS}
-          onChange={(v) => setTagFilter(v === ALL_TAGS ? "" : v)}
-          className="w-40"
+          className="min-w-0 flex-1 sm:flex-none sm:w-40"
         />
         <SingleSelect
           options={[ALL_SUPERSETS, ...allSupersets]}
           selected={supersetFilter || ALL_SUPERSETS}
           onChange={(v) => setSupersetFilter(v === ALL_SUPERSETS ? "" : v)}
-          className="w-44"
+          className="min-w-0 flex-1 sm:flex-none sm:w-44"
         />
-        <Toggle label="Unused only" labelDirection="row" value={unusedOnly} toggle={setUnusedOnly} />
       </div>
 
       {selectedRows.length > 0 && (
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-3 rounded-md border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark shadow-sm">
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-3 rounded-2xl border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark shadow-sm">
           <span className="text-sm font-bold">{selectedRows.length} selected</span>
           <div className="w-44">
             <Input value={bulkTag} placeholder="Tag to add" changeValue={setBulkTag} />
@@ -318,7 +341,7 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
         </div>
       )}
 
-      {showTable ? (
+      {viewMode === "table" ? (
         <DataTable
           columns={columns}
           rows={visible}
@@ -330,20 +353,23 @@ export const ExerciseListing = ({ viewMode = "card" }: Props) => {
         <>
           {rows.length === 0 && <EmptyState message={emptyMessage} />}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {visible.map((row) => (
               <EntityCard
                 key={row.key}
                 title={row.key}
-                relatedLabel="Supersets"
-                relatedItems={supersetsOf(row.exercise)}
+                icon={SECTION_ICONS.Exercises}
+                summary={summaryLine([
+                  ...sharingNotes(row.exercise),
+                  row.usageCount > 0 && `In ${plural(row.usageCount, "superset")}`,
+                  ...tagsOf(row.exercise),
+                ])}
                 tags={tagsOf(row.exercise)}
-                usageCount={row.usageCount}
-                usageLabel="superset"
+                unused={row.usageCount === 0}
                 onOpen={() => openExercise(row.exercise)}
                 selected={selected.has(row.key)}
                 onToggleSelect={() => toggleSelect(row.key)}
-                actions={renderActions(row)}
+                actions={renderActions(row, "row")}
               />
             ))}
           </div>

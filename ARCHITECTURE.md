@@ -209,7 +209,10 @@ times and then stop (`pulse-hint`, `bounce-hint`). They aren't infinite.
 
 Manage (`ListingPage.tsx`) is a setup view: plan cards show sessions, dates
 and Optional, never a client's done/skipped/overdue. That progress appears
-only on the user's own Home, Train and History.
+only on the user's own Home, Train and History. `ManageHero.tsx` is its section
+nav, with counts from `setupSummary.ts` that match the list headers. The unused
+hint links to `/manage/exercises?unused=1`, and the list reads that filter from
+the URL. Lists render as `AgendaRow`s; the table view is desktop-only.
 
 The session form (`SessionForm.tsx`) saves an existing session on its own, 800ms
 after the last change and straight away on close, unmount or the page being
