@@ -160,7 +160,7 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
       if (dragFrom !== null) moveGroup(dragFrom, index);
       endDrag();
     },
-    className: `rounded-md border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark transition-shadow ${
+    className: `rounded-xl border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark transition-shadow ${
       dragOver === index && dragFrom !== index ? "ring-2 ring-primary" : ""
     } ${dragFrom === index ? "opacity-60" : ""}`,
   });

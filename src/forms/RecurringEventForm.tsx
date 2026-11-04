@@ -82,7 +82,7 @@ export const RecurringEventForm = ({ event, closeForm }: Props) => {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggleWeekday(day)}
-                  className={`min-h-11 min-w-11 px-2 rounded-md text-sm font-semibold border
+                  className={`min-h-11 min-w-11 px-2 rounded-full text-sm font-semibold border
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       selected
                         ? "bg-primary text-white border-primary"

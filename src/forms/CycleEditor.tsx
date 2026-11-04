@@ -45,7 +45,7 @@ export const CycleEditor = ({ value, onChange }: Props) => {
         return (
           <div
             key={index}
-            className="flex flex-col gap-2 rounded-md border border-primary-200 dark:border-primary-700 p-3"
+            className="flex flex-col gap-2 rounded-xl border border-primary-200 dark:border-primary-700 p-3"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-bold">Week {index + 1}</span>

@@ -18,6 +18,7 @@ import { canShare, isBlocked, sharingOf, VISIBILITY_LABELS } from "../common/sha
 import { Dependency } from "../context/SourceDataContext";
 import { VisibilityModal } from "./VisibilityModal";
 import { LinkedItemModal, LinkedMode } from "./LinkedItemModal";
+import { MENU_ITEM, MENU_ITEM_DANGER, MENU_PANEL } from "../components/others/menuStyles";
 
 export type ActionItem = {
   label: string;
@@ -39,10 +40,6 @@ type Props = {
   // Library item whose visibility can be set from the menu (Phase 4).
   sharing?: { db: Dependency["db"]; entity: any };
 };
-
-const menuItemClass = `w-full min-h-11 px-3 flex items-center gap-3 text-left text-sm
-  hover:bg-gray-100 dark:hover:bg-gray-700
-  focus-visible:outline-none focus-visible:bg-gray-100 dark:focus-visible:bg-gray-700`;
 
 const getMenuItems = (menu: HTMLElement | null) =>
   Array.from(menu?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
@@ -157,8 +154,7 @@ const ActionMenu = ({
             role="menu"
             onKeyDown={onMenuKeyDown}
             style={{ position: "fixed", top: pos.top, right: pos.right }}
-            className="z-50 min-w-44 py-1 rounded-md border border-primary-200 dark:border-primary-700
-              bg-white dark:bg-surface-dark text-text-light dark:text-text-dark shadow-lg"
+            className={`z-50 min-w-44 ${MENU_PANEL}`}
           >
             {items.map(({ label, icon, onClick }) => (
               <button
@@ -166,7 +162,7 @@ const ActionMenu = ({
                 type="button"
                 role="menuitem"
                 onClick={() => run(onClick)}
-                className={menuItemClass}
+                className={MENU_ITEM}
               >
                 <FontAwesomeIcon icon={icon} className="w-4" />
                 {label}
@@ -177,7 +173,7 @@ const ActionMenu = ({
                 type="button"
                 role="menuitem"
                 onClick={() => run(() => setConfirming(true))}
-                className={`${menuItemClass} text-danger`}
+                className={`${MENU_ITEM} ${MENU_ITEM_DANGER}`}
               >
                 <FontAwesomeIcon icon={faTrash} className="w-4" />
                 Delete

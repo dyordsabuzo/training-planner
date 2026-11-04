@@ -64,10 +64,10 @@ export const InviteForm = ({ closeForm }: Props) => {
         ) : (
           <>
             <p className="text-sm">Send this link to the person you're inviting, or let them scan the code:</p>
-            <div className="self-center rounded-md bg-white p-3">
+            <div className="self-center rounded-xl bg-white p-3">
               <QRCodeSVG value={link} size={192} aria-label="Invite QR code" />
             </div>
-            <code className="text-xs break-all rounded-md bg-gray-100 dark:bg-gray-800 p-2">{link}</code>
+            <code className="text-xs break-all rounded-xl bg-gray-100 dark:bg-gray-800 p-2">{link}</code>
             <Button label={copied ? "Copied" : "Copy link"} className="min-h-11 self-start" onClick={copy} />
           </>
         )}

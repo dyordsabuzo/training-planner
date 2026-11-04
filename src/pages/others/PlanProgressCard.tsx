@@ -31,7 +31,7 @@ export const PlanProgressCard = ({
     <button
       type="button"
       onClick={onContinue}
-      className={`flex flex-col gap-3 w-full min-h-11 p-4 text-left rounded-lg shadow-md bg-white dark:bg-surface-dark
+      className={`flex flex-col gap-3 w-full min-h-11 p-4 text-left rounded-2xl shadow-sm bg-white dark:bg-surface-dark
         hover:bg-primary-50 dark:hover:bg-primary-800/20 transition-colors ${FOCUS}`}
     >
       <span className="flex items-center justify-between gap-2 w-full">

@@ -173,7 +173,7 @@ const SuspendedNotice = () => {
   const { adminEmail } = useContext(AppSettingsContext);
   if (suspendedOrgs.length === 0) return null;
   return (
-    <div role="status" className="flex items-start gap-3 rounded-md bg-amber-50 dark:bg-amber-700/20 p-3 text-sm">
+    <div role="status" className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-700/20 p-3 text-sm">
       <span className="text-amber-700 dark:text-amber-400 mt-0.5">
         <FontAwesomeIcon icon={faCircleExclamation} />
       </span>
@@ -404,7 +404,7 @@ export const Home = () => {
             </p>
 
             {userPermission?.accessRequested ? (
-              <div className="flex items-start gap-3 rounded-md bg-success-50 dark:bg-success-700/20 p-3">
+              <div className="flex items-start gap-3 rounded-xl bg-success-50 dark:bg-success-700/20 p-3">
                 <span className="text-success-700 dark:text-success-500 mt-0.5">
                   <FontAwesomeIcon icon={faCircleCheck} />
                 </span>

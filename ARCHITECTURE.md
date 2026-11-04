@@ -151,6 +151,10 @@ last time and dashed when not logged. The Train page's Up next, Home's hero
 and these summaries share one style: a primary gradient tile with white chips
 and a white Start.
 
+The app opts in to the library's soft style with `UiStyleProvider` in
+`src/index.tsx`: rounder surfaces and controls, and pill buttons. Storybook's
+`preview.ts` does the same. The profile and ⋮ menus share `menuStyles.ts`.
+
 Home opens on a gradient hero (`HomeHero.tsx`) with the date and a greeting.
 For a client it always shows today, whichever day is selected below: the next
 session with Start (`upNext` in `dayAgenda.ts`, also used by the day card so

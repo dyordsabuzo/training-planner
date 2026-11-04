@@ -59,7 +59,7 @@ export const SessionProgress = ({
             type="button"
             onClick={() => setShowDone(true)}
             aria-expanded={false}
-            className="flex-1 -mt-1 mb-2 p-3 rounded-md flex items-center justify-between gap-2 text-left
+            className="flex-1 -mt-1 mb-2 p-3 rounded-xl flex items-center justify-between gap-2 text-left
               bg-success-100 dark:bg-success-700/30
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
@@ -117,7 +117,7 @@ export const SessionProgress = ({
               <div className="w-0.5 flex-1 min-h-[2rem] bg-gray-200 dark:bg-gray-700 my-1" />
             </div>
             <div
-              className={`flex-1 -mt-1 mb-2 p-3 rounded-md flex flex-col gap-1
+              className={`flex-1 -mt-1 mb-2 p-3 rounded-xl flex flex-col gap-1
                 ${
                   isDone
                     ? "bg-success-100 dark:bg-success-700/30"

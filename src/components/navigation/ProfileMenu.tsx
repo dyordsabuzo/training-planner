@@ -6,7 +6,9 @@ import {
   faEye,
   faEyeSlash,
   faBuilding,
+  faCheck,
 } from "@fortawesome/free-solid-svg-icons";
+import { MENU_ITEM, MENU_ITEM_DANGER, MENU_PANEL } from "../others/menuStyles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ProfileIcon } from "./ProfileIcon";
 import { getDisplayName } from "../../common/utils";
@@ -86,7 +88,7 @@ export const ProfileMenu = ({
         aria-expanded={isOpen}
         aria-label={showEmail ? undefined : `Account menu for ${email ?? "user"}`}
         onClick={() => setIsOpen((open) => !open)}
-        className={`min-h-11 flex items-center gap-2 rounded-lg
+        className={`min-h-11 flex items-center gap-2 rounded-xl
           hover:bg-gray-50 dark:hover:bg-gray-800
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
           ${showEmail ? "flex-1 min-w-0 px-2" : "justify-center"}`}
@@ -106,16 +108,14 @@ export const ProfileMenu = ({
         <div
           role="menu"
           aria-label="Account menu"
-          className={`absolute z-30 bottom-full mb-2 w-56 rounded-lg border
-            border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark
-            shadow-lg py-1 ${menuAlign === "right" ? "right-0" : "left-0"}`}
+          className={`absolute z-30 bottom-full mb-2 w-56 ${MENU_PANEL} ${menuAlign === "right" ? "right-0" : "left-0"}`}
         >
           <Link
             to="/training-planner/profile"
             role="menuitem"
             onClick={() => setIsOpen(false)}
             className="block px-3 py-2 border-b border-gray-100 dark:border-gray-700
-              hover:bg-gray-50 dark:hover:bg-gray-800
+              hover:bg-primary-50 dark:hover:bg-primary-800/20
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
           >
             <div className="text-sm font-bold text-text-light dark:text-text-dark truncate">
@@ -138,11 +138,11 @@ export const ProfileMenu = ({
                     onSwitchOrg(org.id);
                     setIsOpen(false);
                   }}
-                  className="w-full min-h-11 flex items-center gap-2 px-3 text-sm text-left text-text-light dark:text-text-dark
-                    hover:bg-gray-50 dark:hover:bg-gray-800
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                  className={MENU_ITEM}
                 >
-                  <span className="w-4 text-primary">{org.id === activeOrgId ? "✓" : ""}</span>
+                  <span className="w-4 text-primary dark:text-primary-300">
+                    {org.id === activeOrgId && <FontAwesomeIcon icon={faCheck} />}
+                  </span>
                   <span className="truncate">{org.name}</span>
                 </button>
               ))}
@@ -154,9 +154,7 @@ export const ProfileMenu = ({
               to="/training-planner/admin"
               role="menuitem"
               onClick={() => setIsOpen(false)}
-              className="min-h-11 flex items-center gap-2 px-3 text-sm text-text-light dark:text-text-dark
-                hover:bg-gray-50 dark:hover:bg-gray-800
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+              className={MENU_ITEM}
             >
               <FontAwesomeIcon icon={faUserShield} fixedWidth />
               Admin
@@ -168,9 +166,7 @@ export const ProfileMenu = ({
               to="/training-planner/platform"
               role="menuitem"
               onClick={() => setIsOpen(false)}
-              className="min-h-11 flex items-center gap-2 px-3 text-sm text-text-light dark:text-text-dark
-                hover:bg-gray-50 dark:hover:bg-gray-800
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+              className={MENU_ITEM}
             >
               <FontAwesomeIcon icon={faBuilding} fixedWidth />
               Platform
@@ -185,9 +181,7 @@ export const ProfileMenu = ({
                 onTogglePreview();
                 setIsOpen(false);
               }}
-              className="min-h-11 w-full flex items-center gap-2 px-3 text-sm text-left text-text-light dark:text-text-dark
-                hover:bg-gray-50 dark:hover:bg-gray-800
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+              className={MENU_ITEM}
             >
               <FontAwesomeIcon icon={isPreviewingAsUser ? faEyeSlash : faEye} fixedWidth />
               {isPreviewingAsUser ? "Exit user preview" : "Preview as user"}
@@ -198,9 +192,7 @@ export const ProfileMenu = ({
             to="/logout"
             role="menuitem"
             onClick={() => setIsOpen(false)}
-            className="min-h-11 flex items-center gap-2 px-3 text-sm text-danger
-              hover:bg-gray-50 dark:hover:bg-gray-800
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+            className={`${MENU_ITEM} ${MENU_ITEM_DANGER}`}
           >
             <FontAwesomeIcon icon={faRightFromBracket} fixedWidth />
             Log out

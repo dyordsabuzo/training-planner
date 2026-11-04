@@ -43,7 +43,7 @@ const tabs = [
 const sidebarLinkClassName =
   (isCollapsed: boolean) =>
   ({ isActive }: { isActive: boolean }) =>
-    `min-h-11 flex items-center gap-3 rounded-lg text-sm font-medium ${
+    `min-h-11 flex items-center gap-3 rounded-xl text-sm font-medium ${
       isCollapsed ? "justify-center px-0" : "px-3"
     } ${
       isActive
@@ -168,7 +168,7 @@ const Navigation = () => {
           onClick={() => navigate("/")}
           title={isCollapsed ? "Training Planner" : undefined}
           className={`flex items-center gap-2 min-h-11 mt-4 mb-2 focus-visible:outline-none
-                     focus-visible:ring-2 focus-visible:ring-primary rounded-md
+                     focus-visible:ring-2 focus-visible:ring-primary rounded-xl
                      ${isCollapsed ? "justify-center mx-2" : "mx-4"}`}
         >
           <Logo className="w-9 h-9 shrink-0 text-primary dark:text-primary-300" />

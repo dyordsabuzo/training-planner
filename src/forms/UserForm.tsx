@@ -105,7 +105,7 @@ export const UserForm = ({ data, closeForm, onSave, trainers = [], onSaveTrainer
       headerAction={headerAction}
     >
       {hasPendingAccessRequest(data) && (
-        <div className="mb-4 flex flex-col gap-2 rounded-md border border-warning-200 dark:border-warning-700 bg-warning-50 dark:bg-warning-800/20 p-3">
+        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-warning-200 dark:border-warning-700 bg-warning-50 dark:bg-warning-800/20 p-3">
           <div className="flex items-center justify-between gap-2">
             <Badge variant="warning">Access requested</Badge>
             <Button label="Dismiss" decoration="cancel" className="text-xs" onClick={dismissRequest} />
