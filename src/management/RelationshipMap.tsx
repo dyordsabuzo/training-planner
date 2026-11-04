@@ -157,7 +157,7 @@ export const RelationshipMap = () => {
       {totalNodes === 0 ? (
         <EmptyState message="Add some exercises, supersets, sessions and plans to see how they connect." />
       ) : (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark">
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark">
           <div className="flex items-center justify-between gap-2 px-3 pt-3">
             <button
               type="button"
@@ -268,7 +268,7 @@ export const RelationshipMap = () => {
                           onClick={() => setSelectedId(isSelected(node.id) ? null : node.id)}
                           onDoubleClick={() => setEditingNode({ type: node.type, name: node.label })}
                           title={node.label}
-                          className={`min-h-11 w-full text-left pl-3 pr-8 py-2 rounded-lg text-sm font-medium
+                          className={`min-h-11 w-full text-left pl-3 pr-8 py-2 rounded-xl text-sm font-medium
                             break-words transition-all duration-150
                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
                             ${

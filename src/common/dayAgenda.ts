@@ -53,13 +53,17 @@ export const dayAgenda = (day: Dayjs, sources: AgendaSources, events: RecurringE
   return { scheduled, completed, events: occurrencesOn(events, day) };
 };
 
+// The first scheduled session not done, shown as Up next.
+export const upNext = ({ scheduled }: Pick<DayAgenda, "scheduled">): ScheduledSession | undefined =>
+  scheduled.find((s) => !s.done);
+
 export type MissedSession = ScheduledSession & { date: string };
 
-// Sessions whose date has passed without being done, oldest first.
+// Sessions whose date has passed without being done, newest first.
 export const missedSessions = (sources: AgendaSources): MissedSession[] =>
   datedSessions(sources)
     .filter((s) => s.overdue)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.session.localeCompare(b.session));
+    .sort((a, b) => b.date.localeCompare(a.date) || a.session.localeCompare(b.session));
 
 // Overdue wins, then anything still planned, then done. An optional session
 // left undone on a past day leaves no mark. An unconfirmed past event is

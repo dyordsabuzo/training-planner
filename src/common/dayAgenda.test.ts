@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import dayjs from "dayjs";
-import { dayAgenda, dayStatus, missedSessions, weekDays } from "./dayAgenda";
+import { dayAgenda, dayStatus, missedSessions, upNext, weekDays } from "./dayAgenda";
 import { OPEN_WEEK } from "./planCycle";
 import { RecurringEvent } from "./recurringEvents";
 
@@ -65,7 +65,7 @@ describe("dayAgenda", () => {
     ]);
   });
 
-  it("lists missed sessions across plans, oldest first", () => {
+  it("lists missed sessions across plans, newest first", () => {
     const older = dayjs().subtract(3, "day").format("YYYY-MM-DD");
     const withOlder = {
       ...ctx,
@@ -73,8 +73,8 @@ describe("dayAgenda", () => {
       sessions: { ...sessions, Arms: { date: older } },
     };
     expect(missedSessions(withOlder)).toEqual([
-      { plan: "Weekly", session: "Arms", date: older, done: false, overdue: true, optional: false },
       { plan: "Open", session: "Missed", date: yesterday, done: false, overdue: true, optional: false },
+      { plan: "Weekly", session: "Arms", date: older, done: false, overdue: true, optional: false },
     ]);
   });
 
@@ -137,5 +137,18 @@ describe("dayAgenda with recurring events", () => {
     expect(dayAgenda(day, sources, [event]).events).toEqual([{ event, status: "overdue" }]);
     expect(dayAgenda(day.add(1, "day"), sources, [event]).events).toEqual([]);
     expect(dayAgenda(day, sources).events).toEqual([]);
+  });
+});
+
+describe("upNext", () => {
+  const session = (name: string, done: boolean) => ({ plan: "P", session: name, done, overdue: false, optional: false });
+
+  it("skips done sessions", () => {
+    expect(upNext({ scheduled: [session("A", true), session("B", false), session("C", false)] })?.session).toBe("B");
+  });
+
+  it("returns nothing when all are done", () => {
+    expect(upNext({ scheduled: [session("A", true)] })).toBeUndefined();
+    expect(upNext({ scheduled: [] })).toBeUndefined();
   });
 });

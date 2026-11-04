@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendarWeek, faListCheck } from "@fortawesome/free-solid-svg-icons";
-import { Card, Badge, Button } from "@dyordsabuzo/ui-components";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { Badge } from "@dyordsabuzo/ui-components";
+import { FOCUS } from "./AgendaRow";
 
 type Props = {
   planName: string;
@@ -25,39 +26,41 @@ export const PlanProgressCard = ({
   const percent =
     totalWeeks > 0 ? Math.min(100, Math.round((completedWeeks / totalWeeks) * 100)) : 0;
 
+  // Same surface as Card, which can't take a click.
   return (
-    <Card className="flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-base font-bold text-text-light dark:text-text-dark">
+    <button
+      type="button"
+      onClick={onContinue}
+      className={`flex flex-col gap-3 w-full min-h-11 p-4 text-left rounded-2xl shadow-sm bg-white dark:bg-surface-dark
+        hover:bg-primary-50 dark:hover:bg-primary-800/20 transition-colors ${FOCUS}`}
+    >
+      <span className="flex items-center justify-between gap-2 w-full">
+        <span className="min-w-0 text-base font-bold break-words text-text-light dark:text-text-dark">
           {planName}
         </span>
-        {currentWeekIndex !== null && (
-          <Badge variant="primary">Week {currentWeekIndex + 1}</Badge>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <div className="flex justify-between text-xs text-text-muted-light dark:text-text-muted-dark">
-          <span>
-            <FontAwesomeIcon icon={faCalendarWeek} className="mr-1" />
-            {completedWeeks} of {totalWeeks} {unitLabel} done
-          </span>
-          <span>{percent}%</span>
-        </div>
-        <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-[width]"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      </div>
-
-      <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-        <FontAwesomeIcon icon={faListCheck} className="mr-1" />
-        {sessionsLogged} {sessionsLogged === 1 ? "session" : "sessions"} logged
+        <span className="flex items-center gap-2 shrink-0">
+          {currentWeekIndex !== null && (
+            <Badge variant="primary">Week {currentWeekIndex + 1}</Badge>
+          )}
+          <FontAwesomeIcon icon={faChevronRight} className="text-xs text-text-muted-light dark:text-text-muted-dark" />
+        </span>
       </span>
 
-      <Button label="Continue training" onClick={onContinue} className="min-h-11" />
-    </Card>
+      <span className="flex flex-col gap-1 w-full">
+        <span className="flex justify-between gap-2 text-xs text-text-muted-light dark:text-text-muted-dark">
+          <span>
+            {completedWeeks} of {totalWeeks} {unitLabel} done · {sessionsLogged}{" "}
+            {sessionsLogged === 1 ? "session" : "sessions"} logged
+          </span>
+          <span>{percent}%</span>
+        </span>
+        <span className="block w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <span
+            className="block h-full rounded-full bg-primary transition-[width]"
+            style={{ width: `${percent}%` }}
+          />
+        </span>
+      </span>
+    </button>
   );
 };

@@ -164,7 +164,7 @@ export const ClientDetailPage = () => {
             return (
               <div
                 key={plan.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
+                className="flex items-center justify-between gap-3 rounded-xl border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
               >
                 <span className="flex flex-col items-start gap-1 min-w-0">
                   <span className="font-semibold break-words">{planName}</span>
@@ -211,7 +211,7 @@ export const ClientDetailPage = () => {
               {checkinDays.map((day) => (
                 <div
                   key={day}
-                  className="flex flex-col gap-0.5 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
+                  className="flex flex-col gap-0.5 rounded-xl border border-primary-200 dark:border-primary-700 bg-white dark:bg-surface-dark px-3 py-2.5"
                 >
                   <span className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">
                     {dayjs(day).format("ddd, MMM D")}
