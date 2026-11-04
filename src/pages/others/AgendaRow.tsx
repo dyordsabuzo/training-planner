@@ -29,7 +29,7 @@ export const StatusChip = ({
   </span>
 );
 
-// Month and day of a session, or an icon when it has no date.
+// Weekday, day and month of a session, or an icon when it has no date.
 export const DateTile = ({
   date,
   icon = faDumbbell,
@@ -47,8 +47,9 @@ export const DateTile = ({
     >
       {day ? (
         <>
-          <span className="text-[10px] font-bold uppercase leading-none opacity-80">{day.format("MMM")}</span>
+          <span className="text-[10px] font-bold uppercase leading-none opacity-80">{day.format("ddd")}</span>
           <span className="text-lg font-bold leading-tight">{day.format("D")}</span>
+          <span className="text-[10px] font-bold uppercase leading-none opacity-80">{day.format("MMM")}</span>
         </>
       ) : (
         <FontAwesomeIcon icon={icon} />
