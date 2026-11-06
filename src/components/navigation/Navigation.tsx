@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router";
 import {
   faDumbbell,
-  faGear,
+  faPenRuler,
   faHome,
   faUser,
   faChevronLeft,
@@ -29,7 +29,7 @@ const tabs = [
   {
     role: "admin",
     route: "/training-planner/manage",
-    icon: faGear,
+    icon: faPenRuler,
     label: "Manage",
   },
   {
