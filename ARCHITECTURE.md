@@ -126,7 +126,7 @@ userdata/{uid}/plans/{planId}
       {unitId}        superset id or exercise-group id
         {exerciseId}
           {set}       { targetRep, targetWeight, ... }
-      mood, meta { completedAt, startedAt, labels, incomplete? }
+      mood, meta { completedAt, startedAt, labels, incomplete?, skipped?, skippedAt? }
 userdata/{uid}/checkins/{YYYY-MM-DD}
   orgId, updatedAt    org it was saved in
   mood?, sleepHours?, sleepQuality?, energy?, soreness?   ratings 1-5
@@ -141,6 +141,12 @@ userdata/{uid}/events/{eventId}
 `meta.incomplete` marks a run ended early from the between-unit summary
 ("End session"): the sets logged so far are kept and the run still counts
 as done; history shows it as "Incomplete".
+
+"Mark complete" (`completeSession` in `SessionContext`) saves a run with
+`meta.completedAt` and no units, for a session trained without logging. No
+flag is stored: it counts as done and appears in History and momentum like any
+run, its results reading "Nothing was recorded", and it clears an earlier skip.
+A fixed plan's week comes from `resolveSessionWeek` when none was chosen.
 
 History (`HistoryPage.tsx`) opens with totals (sessions, last 7 days, time)
 over the runs grouped by plan (`HistoryRunList.tsx`, shared with the client
@@ -157,7 +163,7 @@ The app opts in to the library's soft style with `UiStyleProvider` in
 
 Home opens on a gradient hero (`HomeHero.tsx`) with the date and a greeting.
 For a client it always shows today, whichever day is selected below: the next
-session with Start (`upNext` in `dayAgenda.ts`, also used by the day card so
+session with Start and Complete (`upNext` in `dayAgenda.ts`, also used by the day card so
 they can't disagree) or, without one, a single line (all done today, then N
 missed to catch up, then rest day). No granted plans means greeting only. Stat
 tiles follow: week streak, sessions this week, logged and average mood. Streak
@@ -182,7 +188,8 @@ top to bottom by what needs doing:
   what's done, each with its time and a link to History. A run of a session
   scheduled that day shows once, as its done row;
 - **Catch up** (today only): every missed session (dated before today and
-  not done), newest first, each with Start. More than three start collapsed
+  not done), newest first, each with Start and a check button that marks it
+  complete. Home has no Undo; the run is deleted in History. More than three start collapsed
   behind Show, with the count still in the heading;
 - **Events** (`DayEvents.tsx`, below).
 
@@ -198,7 +205,8 @@ top with progress ("3 of 8 weeks done"); choosing one folds the others away
 next tile, or a picker with week pills and the sessions split into **To do**
 (soonest first, with Today / Overdue chips) and **Completed** (newest first,
 three shown until "Show all"). A chosen session becomes a "Ready" gradient
-tile. A header Back steps up one level (Ready → list or Up next → plans), and
+tile. Up next has Complete and Ready has Mark complete; on Train, a banner
+offers Undo after a skip or a mark complete. A header Back steps up one level (Ready → list or Up next → plans), and
 History has a Back to where it was opened from (Train if opened directly).
 
 A run alternates between the summary page (`SummaryPage.tsx`) and the
@@ -213,7 +221,8 @@ Targets prompt before each exercise's first set sets weight, reps (or
 distance) and the unit's sets. Tapping "Set N of M" changes the sets
 mid-unit, but never below the set in progress. These changes last for the
 run only. Skip exercise, Skip group and Cancel session sit in one row of
-pills.
+pills. On phones the bottom menu is hidden during a run and opened from a menu
+button at the top right, so nothing floats over these bottom actions.
 
 Timers (`components/others/Timer.tsx`) draw their own SVG ring and avoid
 waking the phone every frame, to save battery. JavaScript wakes once per

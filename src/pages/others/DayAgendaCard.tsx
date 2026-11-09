@@ -24,6 +24,10 @@ const CATCH_UP_VISIBLE_MAX = 3;
 const START_PILL = `flex items-center gap-1.5 min-h-11 px-4 rounded-full bg-primary text-white text-sm font-semibold
   shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
 
+const COMPLETE_CHECK = `flex items-center justify-center w-11 h-11 shrink-0 rounded-full border border-gray-300
+  dark:border-gray-600 text-text-muted-light dark:text-text-muted-dark hover:bg-success-50 hover:text-success
+  dark:hover:bg-success-500/20 dark:hover:text-success-500 transition-colors ${FOCUS}`;
+
 // Day progress as a ring; turns green once everything is done.
 const ProgressRing = ({ done, total }: { done: number; total: number }) => {
   const r = 22;
@@ -62,6 +66,7 @@ export const DayAgendaCard = ({
   events = [],
   missed = [],
   checkin,
+  onComplete,
   children,
 }: {
   day: Dayjs;
@@ -69,6 +74,8 @@ export const DayAgendaCard = ({
   events?: EventOccurrence[];
   missed?: MissedSession[];
   checkin?: Checkin;
+  // Marks a catch-up session complete without running it.
+  onComplete?: (plan: string, session: string) => void;
   children?: ReactNode;
 }) => {
   const navigate = useNavigate();
@@ -220,7 +227,21 @@ export const DayAgendaCard = ({
               title={session}
               subtitle={`${plan} · was ${dayjs(date).format("ddd, MMM D")}`}
               onClick={() => open(plan, session)}
-              trailing={startPill(plan, session)}
+              trailing={
+                <>
+                  {onComplete && (
+                    <button
+                      type="button"
+                      aria-label={`Mark ${session} complete`}
+                      onClick={() => onComplete(plan, session)}
+                      className={COMPLETE_CHECK}
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                    </button>
+                  )}
+                  {startPill(plan, session)}
+                </>
+              }
             />
           ))}
         </section>

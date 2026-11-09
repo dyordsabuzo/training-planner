@@ -60,6 +60,7 @@ const SimulateSessionPage = () => {
       saveRun: async () => {},
       deleteRuns: async () => {},
       skipSession: async () => {},
+      completeSession: async () => {},
       // Cancel/finish handlers in ExercisePage/SummaryPage already navigate
       // to exitPath right after calling wrapSession, so this only needs to
       // clear local state — navigating here too would double-push history.

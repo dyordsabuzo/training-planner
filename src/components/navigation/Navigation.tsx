@@ -6,8 +6,8 @@ import {
   faUser,
   faChevronLeft,
   faChevronRight,
-  faChevronUp,
-  faChevronDown,
+  faBars,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -75,8 +75,7 @@ const Navigation = () => {
   const isSessionRoute = isTrainSessionPath(location.pathname);
 
   const [isMobileNavRevealed, setIsMobileNavRevealed] = useState(false);
-  const dragStartY = useRef<number | null>(null);
-  const chevronRef = useRef<HTMLButtonElement | null>(null);
+  const menuToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -91,7 +90,7 @@ const Navigation = () => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       if (
-        chevronRef.current?.contains(target) ||
+        menuToggleRef.current?.contains(target) ||
         mobileNavRef.current?.contains(target)
       ) {
         return;
@@ -108,26 +107,6 @@ const Navigation = () => {
     };
   }, [isMobileNavRevealed]);
 
-  const DRAG_THRESHOLD = 15;
-
-  const handleHandleTouchStart = (e: React.TouchEvent) => {
-    dragStartY.current = e.touches[0].clientY;
-  };
-
-  const handleHandleTouchEnd = (e: React.TouchEvent) => {
-    if (dragStartY.current === null) {
-      return;
-    }
-    const deltaY = e.changedTouches[0].clientY - dragStartY.current;
-    dragStartY.current = null;
-
-    if (deltaY < -DRAG_THRESHOLD) {
-      setIsMobileNavRevealed(true);
-    } else if (deltaY > DRAG_THRESHOLD) {
-      setIsMobileNavRevealed(false);
-    }
-  };
-
   const visibleTabs = tabs.filter(
     (t) =>
       !t.role ||
@@ -139,6 +118,23 @@ const Navigation = () => {
     <div>
       {!isAuthRoute && (
         <ThemeToggle className="fixed top-4 right-4 z-30 bg-white/95 dark:bg-surface-dark/95 shadow-sm" />
+      )}
+
+      {/* Top right with the other utilities: the bottom of a workout screen
+          belongs to its main actions. */}
+      {isSessionRoute && !isAuthRoute && (
+        <button
+          ref={menuToggleRef}
+          type="button"
+          onClick={() => setIsMobileNavRevealed((revealed) => !revealed)}
+          aria-label={isMobileNavRevealed ? "Hide menu" : "Show menu"}
+          aria-expanded={isMobileNavRevealed}
+          className="lg:hidden fixed top-4 right-[4.25rem] z-30 w-11 h-11 flex items-center justify-center rounded-full
+            bg-white/95 dark:bg-surface-dark/95 text-secondary dark:text-text-dark shadow-sm
+            active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <FontAwesomeIcon icon={isMobileNavRevealed ? faXmark : faBars} size="lg" />
+        </button>
       )}
 
       <nav
@@ -226,32 +222,6 @@ const Navigation = () => {
       </nav>
 
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-20">
-        {isSessionRoute && !isAuthRoute && (
-          <div className="flex justify-center">
-            <button
-              ref={chevronRef}
-              type="button"
-              onClick={() => setIsMobileNavRevealed((revealed) => !revealed)}
-              onTouchStart={handleHandleTouchStart}
-              onTouchEnd={handleHandleTouchEnd}
-              aria-label={isMobileNavRevealed ? "Hide menu" : "Show menu"}
-              aria-expanded={isMobileNavRevealed}
-              className={`w-20 h-10 flex items-center justify-center rounded-t-full
-                border border-b-0 border-gray-200 dark:border-gray-700
-                bg-white dark:bg-surface-dark text-secondary dark:text-secondary-200
-                shadow-sm transition-transform duration-150 active:scale-95
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                ${isMobileNavRevealed ? "" : "motion-safe:animate-pulse-hint"}
-                `}
-            >
-              <FontAwesomeIcon
-                icon={isMobileNavRevealed ? faChevronDown : faChevronUp}
-                className="text-xl transition-transform duration-300"
-              />
-            </button>
-          </div>
-        )}
-
         <div
           ref={mobileNavRef}
           className={`transition-[max-height] duration-300 ease-in-out

@@ -4,6 +4,7 @@ import {
   openPlanDoneSessions,
   openPlanSkippedSessions,
   isLapsedOptional,
+  resolveSessionWeek,
   sessionDueStatus,
   sortPlansByCreated,
   sortSessionsByDate,
@@ -29,6 +30,28 @@ describe("skipped sessions", () => {
   it("aren't completed runs or history", () => {
     expect(completedRuns(userdata, "Plan").map((r) => r.session)).toEqual(["Ran"]);
     expect(historyRuns(userdata).map((r) => r.session)).toEqual(["Ran"]);
+  });
+});
+
+describe("resolveSessionWeek", () => {
+  const twoWeeksIn = dayjs().subtract(8, "day").format("YYYY-MM-DD");
+  const plan = { startDate: twoWeeksIn, weeks: { "Week 1": {}, "Week 2": {}, "Week 3": {} } };
+  const userdata = { Plan: { "Week 1": { Ran: { meta: { completedAt: "2026-10-01T00:00:00.000Z" } } } } };
+
+  it("uses the open week for an open plan, whatever week is given", () => {
+    expect(resolveSessionWeek(userdata, "Plan", { open: true }, "Ran", "Week 1")).toBe(OPEN_WEEK);
+  });
+
+  it("prefers an explicit week", () => {
+    expect(resolveSessionWeek(userdata, "Plan", plan, "Ran", "Week 3")).toBe("Week 3");
+  });
+
+  it("uses the week a session was last run in", () => {
+    expect(resolveSessionWeek(userdata, "Plan", plan, "Ran")).toBe("Week 1");
+  });
+
+  it("falls back to the current week", () => {
+    expect(resolveSessionWeek(userdata, "Plan", plan, "New")).toBe("Week 2");
   });
 });
 

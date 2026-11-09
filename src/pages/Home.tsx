@@ -3,6 +3,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
+import SessionContext from "../context/SessionContext";
 import UserManagementContext from "../context/UserManagementContext";
 import AppSettingsContext from "../context/AppSettingsContext";
 import { Loading } from "./helpers/Loading";
@@ -28,11 +29,12 @@ import { PENDING_INVITE_KEY } from "./JoinPage";
 import { EmptyState } from "../management/EmptyState";
 import { LoadMore } from "../management/LoadMore";
 import { ON_GRADIENT_FOCUS } from "../management/ManageHero";
-import { openPlanDoneSessions, openPlanSkippedSessions, sortPlansByCreated } from "../common/planSessions";
+import { openPlanDoneSessions, openPlanSkippedSessions, resolveSessionWeek, sortPlansByCreated } from "../common/planSessions";
 import { historyRuns, isSkipped } from "../common/sessionStats";
 import { useLoadMore } from "../common/useLoadMore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faCheck,
   faDumbbell,
   faListCheck,
   faUsers,
@@ -100,8 +102,18 @@ const QuickActions = ({ actions }: { actions: QuickAction[] }) => {
 };
 
 // Today's main action, whichever day is selected in the strip: the next
-// session with Start, or else one line on where the day stands.
-const HeroToday = ({ agenda, missedCount }: { agenda: DayAgenda; missedCount: number }) => {
+// session with Start and Complete, or else one line on where the day stands.
+const HeroToday = ({
+  agenda,
+  missedCount,
+  onComplete,
+  isCompleting,
+}: {
+  agenda: DayAgenda;
+  missedCount: number;
+  onComplete?: (plan: string, session: string) => void;
+  isCompleting: boolean;
+}) => {
   const navigate = useNavigate();
   const next = upNext(agenda);
   if (!next) {
@@ -117,23 +129,37 @@ const HeroToday = ({ agenda, missedCount }: { agenda: DayAgenda; missedCount: nu
     );
   }
   return (
-    <div className="flex items-center gap-4 rounded-xl bg-white/10 p-3">
-      <div className="flex flex-col flex-1 min-w-0">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-white/10 p-3">
+      <div className="flex flex-col flex-1 basis-40 min-w-0">
         <span className="text-xs font-bold uppercase tracking-wider text-white/70">Up next</span>
         <span className="text-lg font-bold truncate">{next.session}</span>
         <span className="text-sm text-white/80 truncate">
           {[next.plan, next.optional && "Optional", next.overdue && "Overdue"].filter(Boolean).join(" · ")}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={() => navigate("/training-planner/train", { state: { plan: next.plan, session: next.session } })}
-        className={`flex items-center gap-2 shrink-0 min-h-12 px-5 rounded-full bg-white text-primary font-bold shadow-md
-          hover:bg-primary-50 transition-colors ${ON_GRADIENT_FOCUS}`}
-      >
-        <FontAwesomeIcon icon={faPlay} />
-        Start
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        {onComplete && (
+          <button
+            type="button"
+            disabled={isCompleting}
+            onClick={() => onComplete(next.plan, next.session)}
+            className={`flex items-center gap-2 min-h-12 px-4 rounded-full bg-white/10 text-sm font-semibold
+              text-white/90 hover:bg-white/20 transition-colors disabled:opacity-50 ${ON_GRADIENT_FOCUS}`}
+          >
+            <FontAwesomeIcon icon={faCheck} />
+            {isCompleting ? "Saving…" : "Complete"}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => navigate("/training-planner/train", { state: { plan: next.plan, session: next.session } })}
+          className={`flex items-center gap-2 min-h-12 px-5 rounded-full bg-white text-primary font-bold shadow-md
+            hover:bg-primary-50 transition-colors ${ON_GRADIENT_FOCUS}`}
+        >
+          <FontAwesomeIcon icon={faPlay} />
+          Start
+        </button>
+      </div>
     </div>
   );
 };
@@ -196,6 +222,7 @@ export const Home = () => {
   const authContext = useContext(AuthContext);
   const sourceDataContext = useContext(SourceDataContext);
   const userManagementContext = useContext(UserManagementContext);
+  const sessionContext = useContext(SessionContext);
   const { user, userPermission, isLoading, requestAccess, orgs, isImpersonating, activeOrgId } = authContext;
   const { sourceData, checkins = {}, saveCheckin, events = [], setAttendance } = sourceDataContext;
   const { users, fetchUsers } = userManagementContext;
@@ -204,6 +231,7 @@ export const Home = () => {
   const navigate = useNavigate();
   const [requestNote, setRequestNote] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Dayjs>(() => dayjs());
   // The recurring event being edited, or "new" while adding one.
   const [eventForm, setEventForm] = useState<RecurringEvent | "new" | null>(null);
@@ -236,6 +264,19 @@ export const Home = () => {
     () => Object.values(sourceData?.userdata ?? {})[0] ?? {},
     [sourceData?.userdata]
   );
+
+  // One save at a time: a double tap must not land on the next session once
+  // the list refreshes, and Home has no Undo.
+  const completeSession = async (plan: string, session: string) => {
+    if (isCompleting) return;
+    setIsCompleting(true);
+    try {
+      const week = resolveSessionWeek(userdata, plan, sourceData.plans[plan], session);
+      await sessionContext.completeSession({ plan, week, session });
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   const agendaFor = (day: Dayjs) =>
     dayAgenda(day, { plans: sourceData?.plans, sessions: sourceData?.sessions, userdata }, events);
@@ -377,7 +418,12 @@ export const Home = () => {
         >
           {user && grantedPlans.length > 0 && (
             <>
-              <HeroToday agenda={agendaFor(dayjs())} missedCount={missed.length} />
+              <HeroToday
+                agenda={agendaFor(dayjs())}
+                missedCount={missed.length}
+                isCompleting={isCompleting}
+                {...(!isImpersonating && { onComplete: completeSession })}
+              />
               <HeroStats
                 stats={[
                   { label: "Week streak", value: momentum.weekStreak },
@@ -476,6 +522,7 @@ export const Home = () => {
               events={agendaFor(selectedDay).events}
               missed={missed}
               checkin={checkins[checkinId(selectedDay)]}
+              {...(!isImpersonating && { onComplete: completeSession })}
             >
               {(activeOrgId || events.length > 0) && (
                 <DayEvents

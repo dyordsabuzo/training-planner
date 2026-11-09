@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { OPEN_WEEK } from "./planCycle";
-import { isSkipped } from "./sessionStats";
+import { getCurrentWeekNumber } from "./planWeek";
+import { completedRuns, isSkipped } from "./sessionStats";
 
 // Open plans log every completed run under the OPEN_WEEK key in userdata.
 // Includes skipped sessions: they're handled, just not done.
@@ -11,6 +12,21 @@ export const openPlanSkippedSessions = (userdata: any, planName: string): string
   Object.entries(userdata?.[planName]?.[OPEN_WEEK] ?? {})
     .filter(([, logged]) => isSkipped(logged))
     .map(([session]) => session);
+
+// The week a session belongs to when none is chosen: open plans use OPEN_WEEK;
+// a fixed plan uses the week it was last run in, else the current week.
+export const resolveSessionWeek = (
+  userdata: any,
+  planName: string,
+  plan: any,
+  session: string,
+  week?: string
+): string =>
+  plan.open
+    ? OPEN_WEEK
+    : week ??
+      completedRuns(userdata, planName).find((run) => run.session === session)?.week ??
+      `Week ${(getCurrentWeekNumber(plan) ?? 0) + 1}`;
 
 // Orders sessions by their date ("YYYY-MM-DD"); undated ones go last by name.
 export const sortSessionsByDate = (names: string[], sessions: any): string[] =>

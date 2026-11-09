@@ -29,6 +29,8 @@ const SessionContext = createContext({
   deleteRuns: (runs: any[]) => {},
   // Marks a session as skipped (see isSkipped); undone with deleteRuns.
   skipSession: async (session: { plan: string; week: string; session: string }) => {},
+  // Saves a run with no results; undone with deleteRuns.
+  completeSession: async (session: { plan: string; week: string; session: string }) => {},
   wrapSession: () => {},
 });
 
@@ -263,6 +265,22 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     );
   };
 
+  const completeSession = async (info: { plan: string; week: string; session: string }) => {
+    const keys = progressKeys(storedContent());
+    await saveSessionUserData(
+      {
+        meta: {
+          completedAt: new Date().toISOString(),
+          labels: keys.labels({ plan: info.plan, session: info.session, run: {} }),
+          // This write merges into meta, so an earlier skip must be cleared explicitly.
+          skipped: deleteField(),
+          skippedAt: deleteField(),
+        },
+      },
+      info
+    );
+  };
+
   return (
     <SessionContext.Provider
       value={{
@@ -281,6 +299,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
         saveRun,
         deleteRuns,
         skipSession,
+        completeSession,
       }}
     >
       {children}

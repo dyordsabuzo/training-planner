@@ -165,7 +165,8 @@ export const SummaryPage = ({
         {sessionComplete && <Celebration />}
 
         <div>
-          <h1 className="text-2xl font-bold">{(sessionData as any).session}</h1>
+          {/* Right padding keeps a long name clear of the fixed top-right buttons. */}
+          <h1 className="text-2xl font-bold pr-24 lg:pr-0">{(sessionData as any).session}</h1>
           {subtitle && (
             <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
               {subtitle}

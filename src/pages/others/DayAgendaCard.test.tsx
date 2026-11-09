@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import dayjs from "dayjs";
 import { DayAgendaCard } from "./DayAgendaCard";
@@ -54,5 +54,21 @@ describe("DayAgendaCard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Hide" }));
     expect(screen.queryByText("Missed 1")).toBeNull();
+  });
+
+  it("marks a catch-up session complete from its check button", () => {
+    const onComplete = vi.fn();
+    render(
+      <MemoryRouter>
+        <DayAgendaCard day={dayjs()} agenda={agenda} missed={missedList(1)} onComplete={onComplete} />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Mark Missed 1 complete" }));
+    expect(onComplete).toHaveBeenCalledWith("Strength", "Missed 1");
+  });
+
+  it("has no check button without onComplete", () => {
+    renderCard(dayjs(), missedList(1));
+    expect(screen.queryByRole("button", { name: "Mark Missed 1 complete" })).toBeNull();
   });
 });

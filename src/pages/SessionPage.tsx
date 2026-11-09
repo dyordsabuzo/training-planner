@@ -48,6 +48,7 @@ import {
   sessionDueStatus,
   sortSessionsByDate,
   isLapsedOptional,
+  resolveSessionWeek,
 } from "../common/planSessions";
 
 // Weights start from the last session of the plan that included the exercise.
@@ -76,6 +77,9 @@ const sortWeekKeys = (keys: string[]) =>
   });
 
 // Secondary actions on the gradient hero tile.
+type SessionTarget = { plan: string; week: string; session: string };
+type SessionAction = "skip" | "complete";
+
 const upNextActionClassName = `flex items-center gap-2 min-h-11 px-4 rounded-full bg-white/10 text-sm font-semibold
   text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white`;
 
@@ -265,9 +269,9 @@ const SessionPage = () => {
   const [viewingRun, setViewingRun] = useState<CompletedRun | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moodBefore, setMoodBefore] = useState<MoodValue>({});
-  // The session just skipped from Up next, so it can be undone.
-  const [lastSkipped, setLastSkipped] = useState<{ plan: string; week: string; session: string } | null>(null);
-  const [isSkipping, setIsSkipping] = useState(false);
+  // The session just skipped or marked complete, so it can be undone.
+  const [lastAction, setLastAction] = useState<(SessionTarget & { action: SessionAction }) | null>(null);
+  const [pendingAction, setPendingAction] = useState<SessionAction | null>(null);
   const [showAllDone, setShowAllDone] = useState(false);
   // Whether the chosen session came from the list (vs. Up next), for Back.
   const [sessionFromPicker, setSessionFromPicker] = useState(false);
@@ -278,20 +282,20 @@ const SessionPage = () => {
     units: Record<string, any>;
   } | null>(null);
 
-  const skip = async (target: { plan: string; week: string; session: string }) => {
-    setIsSkipping(true);
+  const applyAction = async (action: SessionAction, target: SessionTarget) => {
+    setPendingAction(action);
     try {
-      await sessionContext.skipSession(target);
-      setLastSkipped(target);
+      await (action === "skip" ? sessionContext.skipSession(target) : sessionContext.completeSession(target));
+      setLastAction({ ...target, action });
     } finally {
-      setIsSkipping(false);
+      setPendingAction(null);
     }
   };
 
-  const undoSkip = async () => {
-    if (!lastSkipped) return;
-    await sessionContext.deleteRuns([lastSkipped]);
-    setLastSkipped(null);
+  const undoAction = async () => {
+    if (!lastAction) return;
+    await sessionContext.deleteRuns([lastAction]);
+    setLastAction(null);
   };
 
   useEffect(() => {
@@ -383,7 +387,7 @@ const SessionPage = () => {
       supersets,
     });
     setPickerOpen(false);
-    setLastSkipped(null);
+    setLastAction(null);
     setSessionFromPicker(false);
   };
 
@@ -499,7 +503,7 @@ const SessionPage = () => {
   const clearPlan = () => {
     setSessionData({});
     setPickerOpen(false);
-    setLastSkipped(null);
+    setLastAction(null);
   };
   const back = (() => {
     if (sessionData.session && !autoSelectedSession) {
@@ -563,11 +567,7 @@ const SessionPage = () => {
     const plan: any = plans[target.plan];
     if (!plan || !sourceData?.sessions?.[target.session]) return;
     const userdata: any = Object.values(sourceData?.userdata ?? {})[0];
-    const week = plan.open
-      ? OPEN_WEEK
-      : target.week ??
-        completedRuns(userdata, target.plan).find((run) => run.session === target.session)?.week ??
-        `Week ${(getCurrentWeekNumber(plan) ?? 0) + 1}`;
+    const week = resolveSessionWeek(userdata, target.plan, plan, target.session, target.week);
     startSession(target.plan, week, target.session);
     navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -705,22 +705,22 @@ const SessionPage = () => {
           </HeroTile>
         )}
 
-        {lastSkipped && (
+        {lastAction && (
           <div
             role="status"
             className="flex items-center justify-between gap-3 min-h-14 rounded-2xl px-2 py-1.5 bg-gray-50 dark:bg-gray-800/40"
           >
             <span className="flex items-center gap-3 min-w-0">
               <span className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 bg-gray-100 text-text-muted-light dark:bg-gray-700/60 dark:text-text-muted-dark">
-                <FontAwesomeIcon icon={faForwardStep} />
+                <FontAwesomeIcon icon={lastAction.action === "skip" ? faForwardStep : faCheck} />
               </span>
               <span className="text-sm min-w-0 break-words text-text-light dark:text-text-dark">
-                Skipped {lastSkipped.session}.
+                {lastAction.action === "skip" ? `Skipped ${lastAction.session}.` : `Marked ${lastAction.session} complete.`}
               </span>
             </span>
             <button
               type="button"
-              onClick={undoSkip}
+              onClick={undoAction}
               className={`min-h-11 px-3 shrink-0 rounded-full text-sm font-semibold text-primary hover:bg-primary-50 dark:hover:bg-primary-800/20 ${FOCUS}`}
             >
               Undo
@@ -773,12 +773,21 @@ const SessionPage = () => {
               </button>
               <button
                 type="button"
-                disabled={isSkipping}
-                onClick={() => skip({ plan: upNext.plan, week: upNext.week, session: upNext.session })}
+                disabled={!!pendingAction}
+                onClick={() => applyAction("skip", { plan: upNext.plan, week: upNext.week, session: upNext.session })}
                 className={`${upNextActionClassName} disabled:opacity-50`}
               >
                 <FontAwesomeIcon icon={faForwardStep} />
-                {isSkipping ? "Skipping…" : "Skip"}
+                {pendingAction === "skip" ? "Skipping…" : "Skip"}
+              </button>
+              <button
+                type="button"
+                disabled={!!pendingAction}
+                onClick={() => applyAction("complete", { plan: upNext.plan, week: upNext.week, session: upNext.session })}
+                className={`${upNextActionClassName} disabled:opacity-50`}
+              >
+                <FontAwesomeIcon icon={faCheck} />
+                {pendingAction === "complete" ? "Saving…" : "Complete"}
               </button>
             </div>
           </HeroTile>
@@ -931,17 +940,33 @@ const SessionPage = () => {
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            className={`${PRIMARY_PILL} w-full disabled:opacity-50`}
-            disabled={!sessionData.session}
-            onClick={() =>
-              sessionContext.initialiseSession({ ...sessionData, moodBefore })
-            }
-          >
-            <FontAwesomeIcon icon={faPlay} />
-            Start session
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`${PRIMARY_PILL} grow-[3] disabled:opacity-50`}
+              disabled={!sessionData.session}
+              onClick={() =>
+                sessionContext.initialiseSession({ ...sessionData, moodBefore })
+              }
+            >
+              <FontAwesomeIcon icon={faPlay} />
+              Start session
+            </button>
+            <button
+              type="button"
+              className={`${OUTLINE_PILL} min-h-12 text-base grow disabled:opacity-50`}
+              disabled={!!pendingAction}
+              onClick={() =>
+                applyAction("complete", {
+                  plan: sessionData.plan,
+                  week: sessionData.week,
+                  session: sessionData.session,
+                })
+              }
+            >
+              {pendingAction === "complete" ? "Saving…" : "Mark complete"}
+            </button>
+          </div>
         )}
         </div>
         )}
