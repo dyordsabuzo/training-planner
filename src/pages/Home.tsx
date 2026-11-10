@@ -15,6 +15,7 @@ import { DayStrip } from "./others/DayStrip";
 import { DayAgendaCard } from "./others/DayAgendaCard";
 import { DayEvents } from "./others/DayEvents";
 import { AgendaRow } from "./others/AgendaRow";
+import { UnsavedRunBanner } from "./others/UnsavedRunBanner";
 import { OUTLINE_PILL } from "./others/HeroTile";
 import { HeroStats, HomeHero } from "./others/HomeHero";
 import { DayAgenda, dayAgenda, dayStatus, missedSessions, upNext } from "../common/dayAgenda";
@@ -439,6 +440,8 @@ export const Home = () => {
         {user && <SuspendedNotice />}
 
         {user && <OrgHint />}
+
+        {user && grantedPlans.length > 0 && <UnsavedRunBanner />}
 
         {user && grantedPlans.length === 0 && (
           <Card className="flex flex-col gap-3">

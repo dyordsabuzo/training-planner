@@ -31,6 +31,9 @@ const SessionContext = createContext({
   skipSession: async (session: { plan: string; week: string; session: string }) => {},
   // Saves a run with no results; undone with deleteRuns.
   completeSession: async (session: { plan: string; week: string; session: string }) => {},
+  // Saves or drops the sets of a run that never finished (see unsavedRun).
+  recoverRun: async (run: { plan: string; week: string; session: string; data: any; savedAt?: string }) => {},
+  discardProgress: async () => {},
   wrapSession: () => {},
 });
 
@@ -124,6 +127,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
       week: sessionData.week,
       session: keys.session(sessionData.session),
       data: keys.run(toFirestoreData(data), sessionData.session),
+      savedAt: new Date().toISOString(),
     };
     try {
       await updateDoc(ref, "inProgress", payload);
@@ -132,8 +136,21 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     }
   };
 
+  // The cached copy can hold a slot just cleared on the server, which would
+  // briefly offer the finished run for recovery.
+  const dropCachedProgress = () =>
+    queryClient.setQueriesData(
+      { queryKey: ["sourceData", SourceDbReferences.USERDATA, user!.uid] },
+      (data: any) =>
+        data &&
+        Object.fromEntries(
+          Object.entries(data).map(([uid, { inProgress, ...doc }]: [string, any]) => [uid, doc])
+        )
+    );
+
   const clearProgress = async () => {
     if (!user) return;
+    dropCachedProgress();
     try {
       await updateDoc(
         getDocumentReference(SourceDbReferences.USERDATA, user.uid),
@@ -145,27 +162,12 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     }
   };
 
-  // Saves a finished run. Its units replace the earlier run's units for this
-  // session (so a re-run doesn't keep stale sets) while mood check-ins stay.
-  // An incomplete run (ended early) is flagged in meta but still counts.
-  const saveRun = async (rawData: any, options?: { incomplete?: boolean }) => {
-    if (!user || !sessionData) return;
-    const keys = progressKeys(storedContent());
-    const named = toFirestoreData(rawData);
-    const data = keys.run(named, sessionData.session);
-    const week = sessionData.week;
-    const plan = keys.plan(sessionData.plan);
-    const session = keys.session(sessionData.session);
+  // Writes a run under stored ids and clears the in-progress slot. Its units
+  // replace the earlier run's units for this session (so a re-run doesn't keep
+  // stale sets) while mood check-ins stay.
+  const writeRun = async (plan: string, week: string, session: string, data: any, meta: any) => {
     const ref = planRef(plan);
     const snapshot = await getDoc(ref);
-    const meta = {
-      completedAt: new Date().toISOString(),
-      ...(sessionData.startedAt && { startedAt: sessionData.startedAt }),
-      ...(options?.incomplete && { incomplete: true }),
-      // Keeps history readable after anything here is renamed or deleted.
-      labels: keys.labels({ plan: sessionData.plan, session: sessionData.session, run: named }),
-    };
-
     const batch = writeBatch(database);
     if (snapshot.exists()) {
       const existing = snapshot.data()?.[week]?.[session] ?? {};
@@ -185,8 +187,53 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     batch.set(rootRef(), { inProgress: deleteField() }, { merge: true });
     await batch.commit();
 
+    dropCachedProgress();
     queryClient.invalidateQueries({
-      queryKey: ["sourceData", SourceDbReferences.USERDATA, user.uid],
+      queryKey: ["sourceData", SourceDbReferences.USERDATA, user!.uid],
+    });
+  };
+
+  // Saves a finished run. An incomplete run (ended early) is flagged in meta
+  // but still counts.
+  const saveRun = async (rawData: any, options?: { incomplete?: boolean }) => {
+    if (!user || !sessionData) return;
+    const keys = progressKeys(storedContent());
+    const named = toFirestoreData(rawData);
+    await writeRun(
+      keys.plan(sessionData.plan),
+      sessionData.week,
+      keys.session(sessionData.session),
+      keys.run(named, sessionData.session),
+      {
+        completedAt: new Date().toISOString(),
+        ...(sessionData.startedAt && { startedAt: sessionData.startedAt }),
+        ...(options?.incomplete && { incomplete: true }),
+        // Keeps history readable after anything here is renamed or deleted.
+        labels: keys.labels({ plan: sessionData.plan, session: sessionData.session, run: named }),
+      }
+    );
+  };
+
+  // Runs from before savedAt was recorded are dated when they're recovered.
+  const recoverRun = async ({
+    plan,
+    week,
+    session,
+    data,
+    savedAt,
+  }: {
+    plan: string;
+    week: string;
+    session: string;
+    data: any;
+    savedAt?: string;
+  }) => {
+    if (!user) return;
+    const keys = progressKeys(storedContent());
+    await writeRun(keys.plan(plan), week, keys.session(session), keys.run(data, session), {
+      completedAt: savedAt ?? new Date().toISOString(),
+      incomplete: true,
+      labels: keys.labels({ plan, session, run: data }),
     });
   };
 
@@ -300,6 +347,8 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
         deleteRuns,
         skipSession,
         completeSession,
+        recoverRun,
+        discardProgress: clearProgress,
       }}
     >
       {children}

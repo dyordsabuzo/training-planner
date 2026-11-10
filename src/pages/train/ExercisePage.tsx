@@ -265,17 +265,18 @@ export const ExercisePage = () => {
 
   const supersetLength = Object.keys(sessionData.supersets).length;
   if (supersetLength > 0 && exerciseState.supersetCounter >= supersetLength) {
-    // The finished run is saved by SummaryPage; this only resets local state.
-    if (actualSupersetData) {
-      setActualSupersetData({});
-    }
-
+    // Reached by skipping the last unit; SummaryPage saves the finished run.
     const supersetIndex = Object.values(sessionData.supersets).findIndex(
       (unit: any) => unitId(unit) === unitId(supersetData)
     );
 
     return (
-      <SummaryPage currentSuperset={supersetData} supersetIndex={supersetIndex} skippedIds={skippedUnits} />
+      <SummaryPage
+        currentSuperset={supersetData}
+        supersetIndex={supersetIndex}
+        actualSupersetData={actualSupersetData}
+        skippedIds={skippedUnits}
+      />
     );
   }
 

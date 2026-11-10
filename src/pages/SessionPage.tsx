@@ -40,6 +40,7 @@ import {
 import { completedRuns, CompletedRun } from "../common/sessionStats";
 import { SessionStats } from "./others/SessionStats";
 import { SessionPreview } from "./others/SessionPreview";
+import { UnsavedRunBanner } from "./others/UnsavedRunBanner";
 import {
   formatSessionDate,
   sortPlansByCreated,
@@ -632,6 +633,8 @@ const SessionPage = () => {
                 : "Pick a week and session to begin."}
           </p>
         </div>
+
+        <UnsavedRunBanner />
 
         <div className="flex flex-col">
           <SectionLabel>{sessionData.plan ? "Plan" : "Your plans"}</SectionLabel>

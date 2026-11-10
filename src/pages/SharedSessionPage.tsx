@@ -82,6 +82,8 @@ const SharedSessionPage = () => {
       deleteRuns: async () => {},
       skipSession: async () => {},
       completeSession: async () => {},
+      recoverRun: async () => {},
+      discardProgress: async () => {},
       wrapSession: () => setIsRunning(false),
     }),
     [sharedSessionData, isRunning]
