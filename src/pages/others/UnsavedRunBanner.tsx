@@ -19,13 +19,13 @@ export const UnsavedRunBanner = () => {
   const { sourceData } = useContext(SourceDataContext);
   const { isImpersonating } = useContext(AuthContext);
   const { sessionData, recoverRun, discardProgress } = useContext(SessionContext);
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "finished" | "stoppedEarly" | "failed">("idle");
 
-  if (status === "saved") {
+  if (status === "finished" || status === "stoppedEarly") {
     return (
       <div role="status" className="flex items-center gap-3 rounded-xl bg-success-50 dark:bg-success-700/20 p-3 text-sm">
         <FontAwesomeIcon icon={faCircleCheck} className="text-success-700 dark:text-success-500" />
-        Workout saved to History as incomplete.
+        {status === "finished" ? "Workout saved to History." : "Workout saved to History as incomplete."}
       </div>
     );
   }
@@ -34,11 +34,11 @@ export const UnsavedRunBanner = () => {
   const run = isImpersonating || sessionData ? null : unsavedRun(userdata, sourceData?.plans);
   if (!run) return null;
 
-  const save = async () => {
+  const save = async (incomplete: boolean) => {
     setStatus("saving");
     try {
-      await recoverRun(run);
-      setStatus("saved");
+      await recoverRun(run, { incomplete });
+      setStatus(incomplete ? "stoppedEarly" : "finished");
     } catch {
       setStatus("failed");
     }
@@ -56,7 +56,7 @@ export const UnsavedRunBanner = () => {
               .join(" · ")}
           </p>
           <p>
-            {plural(run.sets)} logged, but the workout never finished.
+            {plural(run.sets)} logged, but the workout wasn't saved. Did you finish it?
             {run.replacesResults && " Saving replaces the results already recorded for this session and week."}
           </p>
           {status === "failed" && (
@@ -67,11 +67,19 @@ export const UnsavedRunBanner = () => {
           <button
             type="button"
             disabled={status === "saving"}
-            onClick={save}
+            onClick={() => save(false)}
             className={`min-h-11 px-4 rounded-full bg-primary text-white text-sm font-semibold hover:bg-primary-500
               transition-colors disabled:opacity-50 ${FOCUS}`}
           >
-            {status === "saving" ? "Saving…" : "Save to History"}
+            {status === "saving" ? "Saving…" : "Finished"}
+          </button>
+          <button
+            type="button"
+            disabled={status === "saving"}
+            onClick={() => save(true)}
+            className={`${OUTLINE_PILL} disabled:opacity-50`}
+          >
+            Stopped early
           </button>
           <ConfirmDeleteButton
             label="Discard"

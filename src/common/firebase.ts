@@ -2,7 +2,9 @@ import { initializeApp } from "firebase/app";
 import { connectAuthEmulator } from "firebase/auth";
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from "firebase/functions";
 import {
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection,
   doc,
   connectFirestoreEmulator,
@@ -16,7 +18,11 @@ const config = {
 };
 
 const app = initializeApp(config);
-export const database = getFirestore(app);
+// Kept on the device so sets logged with no signal survive the app closing,
+// and are sent the next time it opens online.
+export const database = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});
 // Same region as functions/src/config.ts.
 const functions = getFunctions(app, "australia-southeast1");
 

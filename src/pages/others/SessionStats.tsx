@@ -22,6 +22,8 @@ type Props = {
   userdata: any;
   order?: SessionOrder;
   onClose: () => void;
+  // Offers to clear the Incomplete label; left out where the run isn't yours.
+  onMarkFinished?: () => Promise<void>;
 };
 
 type Callout = { key: string; text: string };
@@ -38,9 +40,30 @@ const chipLabel = (set: SetStat) => {
 // planned set wasn't logged (no harsh cross/red). Tapping a set or the
 // exercise name expands a short info callout under that row, instead of a
 // popup.
-export const SessionStats = ({ title, planName, week, session, logged, userdata, order, onClose }: Props) => {
+export const SessionStats = ({
+  title,
+  planName,
+  week,
+  session,
+  logged,
+  userdata,
+  order,
+  onClose,
+  onMarkFinished,
+}: Props) => {
   const { units, totals } = summariseRun(logged, order);
   const [callout, setCallout] = useState<Callout | null>(null);
+  const [markStatus, setMarkStatus] = useState<"idle" | "saving" | "failed">("idle");
+
+  const markFinished = async () => {
+    setMarkStatus("saving");
+    try {
+      await onMarkFinished?.();
+      setMarkStatus("idle");
+    } catch {
+      setMarkStatus("failed");
+    }
+  };
 
   // Runs saved before dates were recorded have no meta, so nothing is shown.
   const { completedAt, startedAt } = logged?.meta ?? {};
@@ -137,6 +160,20 @@ export const SessionStats = ({ title, planName, week, session, logged, userdata,
               </span>
             )}
           </div>
+          {isIncomplete(logged) && onMarkFinished && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={markStatus === "saving"}
+                onClick={markFinished}
+                className="min-h-11 px-4 rounded-full bg-white/15 text-sm font-semibold hover:bg-white/25 transition-colors
+                  disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                {markStatus === "saving" ? "Saving…" : "Mark as finished"}
+              </button>
+              {markStatus === "failed" && <span className="text-sm font-semibold">Couldn't save. Try again.</span>}
+            </div>
+          )}
           {units.length > 0 && (
             <dl className={`grid gap-2 ${stats.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
               {stats.map(({ label, value, hint }) => (

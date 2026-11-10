@@ -7,6 +7,7 @@ export type UnsavedRun = {
   session: string;
   data: any;
   savedAt?: string;
+  moodBefore?: any;
   sets: number;
   // The session already has results in that week, which saving would replace.
   replacesResults: boolean;
@@ -17,7 +18,7 @@ const NOT_UNITS = ["mood", "meta"];
 // Null when there's nothing to recover. A plan missing from `plans` belongs to
 // another org, so it waits until that org is active.
 export const unsavedRun = (userdata: any, plans: any): UnsavedRun | null => {
-  const { plan, week, session, data, savedAt } = userdata?.inProgress ?? {};
+  const { plan, week, session, data, savedAt, moodBefore } = userdata?.inProgress ?? {};
   if (!plan || !week || !session || !plans?.[plan]) return null;
   const sets = Object.values(data ?? {})
     .flatMap((exercises: any) => Object.values(exercises ?? {}))
@@ -30,6 +31,7 @@ export const unsavedRun = (userdata: any, plans: any): UnsavedRun | null => {
     session,
     data,
     savedAt,
+    moodBefore,
     sets,
     replacesResults: Object.keys(earlier).some((key) => !NOT_UNITS.includes(key)),
   };

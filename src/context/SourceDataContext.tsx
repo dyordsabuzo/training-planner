@@ -303,6 +303,8 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
     queryKey: userdataKey(effectiveUid, activeOrgId),
     queryFn: () => fetchUserdata(effectiveUid!, activeOrgId!, !isImpersonating),
     enabled: contentEnabled,
+    // Always fresh when the app opens, so an unfinished workout is found.
+    staleTime: 0,
   });
 
   // Live links to other orgs' items (refs.ts withLinked). The links are

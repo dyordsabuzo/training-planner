@@ -25,20 +25,31 @@ const renderBanner = (session: any) =>
 describe("UnsavedRunBanner", () => {
   afterEach(cleanup);
 
-  it("saves the unfinished workout and confirms it", async () => {
+  it("saves a finished workout with no Incomplete label", async () => {
     const recoverRun = vi.fn().mockResolvedValue(undefined);
     renderBanner({ recoverRun });
     expect(screen.getByText(/2 sets logged/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Save to History" }));
-    expect(recoverRun).toHaveBeenCalledWith(expect.objectContaining({ plan: "Strength", session: "Day 1", data: inProgress.data }));
-    expect(await screen.findByText(/saved to History/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Finished" }));
+    expect(recoverRun).toHaveBeenCalledWith(
+      expect.objectContaining({ plan: "Strength", session: "Day 1", data: inProgress.data }),
+      { incomplete: false }
+    );
+    expect(await screen.findByText("Workout saved to History.")).toBeTruthy();
+  });
+
+  it("saves a workout stopped early as incomplete", async () => {
+    const recoverRun = vi.fn().mockResolvedValue(undefined);
+    renderBanner({ recoverRun });
+    fireEvent.click(screen.getByRole("button", { name: "Stopped early" }));
+    expect(recoverRun).toHaveBeenCalledWith(expect.anything(), { incomplete: true });
+    expect(await screen.findByText(/as incomplete/)).toBeTruthy();
   });
 
   it("keeps the offer when saving fails", async () => {
     renderBanner({ recoverRun: vi.fn().mockRejectedValue(new Error("offline")) });
-    fireEvent.click(screen.getByRole("button", { name: "Save to History" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finished" }));
     expect(await screen.findByText(/Couldn't save/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Save to History" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Finished" })).toBeTruthy();
   });
 
   it("only discards after confirming", () => {

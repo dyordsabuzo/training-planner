@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
 import SessionContext from "../context/SessionContext";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
@@ -20,13 +21,22 @@ import { FOCUS } from "./others/AgendaRow";
 export const HistoryPage = () => {
   const sourceData: any = useContext(SourceDataContext).sourceData;
   const userdata: any = Object.values(sourceData?.userdata ?? {})[0];
-  const { deleteRuns } = useContext(SessionContext) as any;
+  const { deleteRuns, markRunFinished } = useContext(SessionContext) as any;
+  const { isImpersonating } = useContext(AuthContext);
   const [viewing, setViewing] = useState<HistoryRun | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   // Return to wherever History was opened from; on a direct visit there is no
   // in-app history entry, so fall back to Train.
+  const markViewingFinished = async () => {
+    if (!viewing) return;
+    await markRunFinished(viewing);
+    // The open run is a snapshot, so its label is cleared here too.
+    const { incomplete, ...meta } = viewing.logged.meta;
+    setViewing({ ...viewing, logged: { ...viewing.logged, meta } });
+  };
+
   const goBack = () =>
     window.history.state?.idx > 0 ? navigate(-1) : navigate("/training-planner/train");
 
@@ -151,6 +161,7 @@ export const HistoryPage = () => {
           userdata={userdata}
           order={sessionOrder(sourceData?.sessions?.[viewing.session], sourceData)}
           onClose={() => setViewing(null)}
+          {...(!isImpersonating && { onMarkFinished: markViewingFinished })}
         />
       )}
     </WrapperPage>

@@ -84,6 +84,7 @@ const SharedSessionPage = () => {
       completeSession: async () => {},
       recoverRun: async () => {},
       discardProgress: async () => {},
+      markRunFinished: async () => {},
       wrapSession: () => setIsRunning(false),
     }),
     [sharedSessionData, isRunning]

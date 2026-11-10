@@ -32,8 +32,13 @@ const SessionContext = createContext({
   // Saves a run with no results; undone with deleteRuns.
   completeSession: async (session: { plan: string; week: string; session: string }) => {},
   // Saves or drops the sets of a run that never finished (see unsavedRun).
-  recoverRun: async (run: { plan: string; week: string; session: string; data: any; savedAt?: string }) => {},
+  recoverRun: async (
+    run: { plan: string; week: string; session: string; data: any; savedAt?: string; moodBefore?: any },
+    options?: { incomplete?: boolean }
+  ) => {},
   discardProgress: async () => {},
+  // Clears the Incomplete label from a saved run.
+  markRunFinished: async (run: { plan: string; week: string; session: string }) => {},
   wrapSession: () => {},
 });
 
@@ -101,15 +106,12 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
 
   const initialiseSession = (data: any) => {
     // Start time is kept so a finished run can show roughly how long it took.
+    // The pre-session mood is saved with the run: writing it now would make
+    // a session that's started and then abandoned look done.
     setSessionData({ ...data, startedAt: new Date().toISOString() });
-
-    // Persist the pre-session mood check-in (if provided) right away, using
-    // the freshly-passed session info — sessionData state isn't updated yet
-    // at this point in the render cycle.
-    if (data?.moodBefore) {
-      saveSessionUserData({ mood: { before: data.moodBefore } }, data);
-    }
   };
+
+  const hasMood = (mood: any) => !!mood && Object.keys(mood).length > 0;
 
   // Firestore rejects `undefined` values, which a distance group's missing
   // reps target produces. Dropping them keeps the write from failing silently.
@@ -128,6 +130,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
       session: keys.session(sessionData.session),
       data: keys.run(toFirestoreData(data), sessionData.session),
       savedAt: new Date().toISOString(),
+      ...(hasMood(sessionData.moodBefore) && { moodBefore: toFirestoreData(sessionData.moodBefore) }),
     };
     try {
       await updateDoc(ref, "inProgress", payload);
@@ -203,7 +206,10 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
       keys.plan(sessionData.plan),
       sessionData.week,
       keys.session(sessionData.session),
-      keys.run(named, sessionData.session),
+      {
+        ...keys.run(named, sessionData.session),
+        ...(hasMood(sessionData.moodBefore) && { mood: { before: toFirestoreData(sessionData.moodBefore) } }),
+      },
       {
         completedAt: new Date().toISOString(),
         ...(sessionData.startedAt && { startedAt: sessionData.startedAt }),
@@ -215,25 +221,46 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
   };
 
   // Runs from before savedAt was recorded are dated when they're recovered.
-  const recoverRun = async ({
-    plan,
-    week,
-    session,
-    data,
-    savedAt,
-  }: {
-    plan: string;
-    week: string;
-    session: string;
-    data: any;
-    savedAt?: string;
-  }) => {
+  const recoverRun = async (
+    {
+      plan,
+      week,
+      session,
+      data,
+      savedAt,
+      moodBefore,
+    }: {
+      plan: string;
+      week: string;
+      session: string;
+      data: any;
+      savedAt?: string;
+      moodBefore?: any;
+    },
+    options?: { incomplete?: boolean }
+  ) => {
     if (!user) return;
     const keys = progressKeys(storedContent());
-    await writeRun(keys.plan(plan), week, keys.session(session), keys.run(data, session), {
+    const run = { ...keys.run(data, session), ...(hasMood(moodBefore) && { mood: { before: moodBefore } }) };
+    await writeRun(keys.plan(plan), week, keys.session(session), run, {
       completedAt: savedAt ?? new Date().toISOString(),
-      incomplete: true,
+      ...(options?.incomplete && { incomplete: true }),
       labels: keys.labels({ plan, session, run: data }),
+    });
+  };
+
+  // A session's stored key: its id, or the name for runs logged before ids were used.
+  const storedKey = (obj: any, id: string, name: string) => (obj && id in obj ? id : name);
+
+  const markRunFinished = async (run: { plan: string; week: string; session: string }) => {
+    if (!user) return;
+    const keys = progressKeys(storedContent());
+    const ref = planRef(keys.plan(run.plan));
+    const data = (await getDoc(ref)).data();
+    const session = storedKey(data?.[run.week], keys.session(run.session), run.session);
+    await updateDoc(ref, new FieldPath(run.week, session, "meta", "incomplete"), deleteField());
+    queryClient.invalidateQueries({
+      queryKey: ["sourceData", SourceDbReferences.USERDATA, user.uid],
     });
   };
 
@@ -244,7 +271,6 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
     // History lists runs by name; find each one's stored keys (ids, or the
     // name for runs logged before ids were used).
     const keys = progressKeys(storedContent());
-    const storedKey = (obj: any, id: string, name: string) => (obj && id in obj ? id : name);
     const planIds = Array.from(new Set(runs.map((run) => keys.plan(run.plan))));
     const batch = writeBatch(database);
 
@@ -349,6 +375,7 @@ export const SessionContextProvider: React.FC<_Props> = ({ children }) => {
         completeSession,
         recoverRun,
         discardProgress: clearProgress,
+        markRunFinished,
       }}
     >
       {children}
