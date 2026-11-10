@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { faArrowRight, faCheck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
-import { AdjustableValue } from "../../components/others/AdjustableValue";
+import { AdjustableValue, StaticValue } from "../../components/others/AdjustableValue";
 import { TempoBadge } from "../../components/others/TempoBadge";
 import { WatchVideo } from "../../components/others/WatchVideo";
 import { Timer } from "../../components/others/Timer";
@@ -64,6 +64,8 @@ type Props = {
   updateSupersetData: (value: any) => void;
   completeExercise: () => void;
   onSelectAlternative: (exercise: any) => void;
+  // Targets are shown but can't be changed (public plans).
+  readOnly?: boolean;
 };
 
 export const ExerciseDetails = ({
@@ -86,7 +88,9 @@ export const ExerciseDetails = ({
   updateSupersetData,
   completeExercise,
   onSelectAlternative,
+  readOnly = false,
 }: Props) => {
+  const Value = readOnly ? StaticValue : AdjustableValue;
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [showTimerMenu, setShowTimerMenu] = useState(false);
@@ -369,7 +373,7 @@ export const ExerciseDetails = ({
         )}
         {measured && type !== "Time-based" && side !== "switch" && (
           <div className="grid grid-cols-2 gap-2 px-3 sm:gap-6 sm:px-6">
-            <AdjustableValue
+            <Value
               label="Weight"
               unit="kg"
               nonZero
@@ -380,7 +384,7 @@ export const ExerciseDetails = ({
               }}
             />
             {targetDistance !== undefined ? (
-              <AdjustableValue
+              <Value
                 label="Distance"
                 unit="m"
                 step={1}
@@ -392,7 +396,7 @@ export const ExerciseDetails = ({
                 }}
               />
             ) : (
-              <AdjustableValue
+              <Value
                 label="Reps"
                 unit="reps"
                 step={1}
@@ -439,7 +443,7 @@ export const ExerciseDetails = ({
                 </span>
               </button>
             ) : (
-              <AdjustableValue
+              <Value
                 label="Target time"
                 unit="secs"
                 step={5}

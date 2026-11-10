@@ -18,7 +18,8 @@ import { SECTION_ICONS } from "./ManageHero";
 import { countListed } from "./setupSummary";
 import { DateTile, FOCUS, SectionLabel } from "../pages/others/AgendaRow";
 import { cloneSession } from "./cloneEntity";
-import { resolveSession, sessionUnitKeys, sessionUnitNames } from "../pages/resolveSessionSupersets";
+import { usePublicPlanActions } from "./PublicPlanActions";
+import { sessionUnitNames } from "../pages/resolveSessionSupersets";
 
 import { DataTable, DataTableColumn, Badge, Button, Modal } from "@dyordsabuzo/ui-components";
 import {
@@ -91,11 +92,12 @@ export const SessionListing = ({ viewMode = "card", headerTrailing }: Props) => 
   const [expanded, setExpanded] = useState<Set<string> | null>(null);
   const [shareDialog, setShareDialog] = useState<{
     session: any;
-    step: "confirm" | "copied" | "failed";
+    step: "copied" | "failed";
   } | null>(null);
 
   const navigate = useNavigate();
   const sourceDataContext = useContext(SourceDataContext);
+  const { actionsFor: publicActionsFor, dialog: publicDialog } = usePublicPlanActions("session");
   const sourceData: any = sourceDataContext.sourceData;
 
   const sessions = sortObject(sourceData.sessions ?? {});
@@ -177,26 +179,6 @@ export const SessionListing = ({ viewMode = "card", headerTrailing }: Props) => 
     }
   };
 
-  const handleShare = (session: any) => {
-    if (!session.id) return;
-    if (session.isShareable) {
-      copyLink(session);
-    } else {
-      setShareDialog({ session, step: "confirm" });
-    }
-  };
-
-  const enableSharing = (session: any) => {
-    // The shared link reads this snapshot directly (see SessionForm).
-    sourceDataContext.editSession({
-      ...session,
-      isShareable: true,
-      sharedSnapshot: resolveSession(sourceData, session),
-      sharedOrder: sessionUnitKeys(session),
-    });
-    copyLink(session);
-  };
-
   const renderActions = ({ session, usageCount }: SessionRow, variant?: ActionsVariant) => (
     <EntityActions
       variant={variant}
@@ -219,11 +201,11 @@ export const SessionListing = ({ viewMode = "card", headerTrailing }: Props) => 
           onClick: () =>
             navigate(`/training-planner/manage/simulate/${encodeURIComponent(session.name)}`),
         },
-        {
-          label: session.isShareable ? "Copy share link" : "Share",
-          icon: faShareNodes,
-          onClick: () => handleShare(session),
-        },
+        // Links made before public links existed; they keep working.
+        ...(session.isShareable && session.id
+          ? [{ label: "Copy share link", icon: faShareNodes, onClick: () => copyLink(session) }]
+          : []),
+        ...publicActionsFor(session),
       ]}
     />
   );
@@ -329,39 +311,20 @@ export const SessionListing = ({ viewMode = "card", headerTrailing }: Props) => 
         >
           <div className="flex flex-col gap-4">
             <span className="text-sm text-text-light dark:text-text-dark">
-              {shareDialog.step === "confirm" &&
-                `Make "${shareDialog.session.name}" shareable? Anyone with the link can simulate it without signing in.`}
               {shareDialog.step === "copied" && "Shareable link copied to clipboard."}
               {shareDialog.step === "failed" &&
                 "Couldn't copy automatically. Copy the link below."}
             </span>
-            {shareDialog.step !== "confirm" && (
-              <span className="text-sm break-all text-text-muted-light dark:text-text-muted-dark">
-                {shareUrl(shareDialog.session)}
-              </span>
-            )}
+            <span className="text-sm break-all text-text-muted-light dark:text-text-muted-dark">
+              {shareUrl(shareDialog.session)}
+            </span>
             <div className="flex gap-2">
-              {shareDialog.step === "confirm" ? (
-                <>
-                  <Button
-                    label="Cancel"
-                    decoration="cancel"
-                    className="flex-1"
-                    onClick={() => setShareDialog(null)}
-                  />
-                  <Button
-                    label="Share and copy link"
-                    className="flex-1"
-                    onClick={() => enableSharing(shareDialog.session)}
-                  />
-                </>
-              ) : (
-                <Button label="Close" className="flex-1" onClick={() => setShareDialog(null)} />
-              )}
+              <Button label="Close" className="flex-1" onClick={() => setShareDialog(null)} />
             </div>
           </div>
         </Modal>
       )}
+      {publicDialog}
     </BaseListing>
   );
 };

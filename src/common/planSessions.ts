@@ -28,6 +28,18 @@ export const resolveSessionWeek = (
       completedRuns(userdata, planName).find((run) => run.session === session)?.week ??
       `Week ${(getCurrentWeekNumber(plan) ?? 0) + 1}`;
 
+// "Week 2" before "Week 10".
+export const sortWeekKeys = (keys: string[]) =>
+  [...keys].sort((a, b) => {
+    const [textA, numA] = a.split(" ");
+    const [textB, numB] = b.split(" ");
+
+    if (textA !== textB) {
+      return textA.localeCompare(textB);
+    }
+    return Number(numA) - Number(numB);
+  });
+
 // Orders sessions by their date ("YYYY-MM-DD"); undated ones go last by name.
 export const sortSessionsByDate = (names: string[], sessions: any): string[] =>
   [...names].sort((a, b) => {

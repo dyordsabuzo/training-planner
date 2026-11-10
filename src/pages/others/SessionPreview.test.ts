@@ -48,10 +48,10 @@ describe("unitTarget", () => {
     expect(unitTarget(units.Hold)).toBe("3 × 45 s");
   });
 
-  it("falls back to sets alone, or nothing", () => {
+  it("falls back to sets alone, and to 3 sets when none are set", () => {
     expect(unitTarget(units.Easy)).toBe("3 sets");
     expect(unitTarget({ targetSet: 1 })).toBe("1 set");
-    expect(unitTarget({ targetRep: 12 })).toBe("12 reps");
-    expect(unitTarget({})).toBeNull();
+    expect(unitTarget({ targetRep: 12 })).toBe("3 × 12 reps");
+    expect(unitTarget({})).toBe("3 sets");
   });
 });

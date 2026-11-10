@@ -7,6 +7,31 @@ import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 
 type Props = React.ComponentProps<typeof DecimalIncrementDecrement>;
 
+const ValueDisplay = ({ label, value, unit }: Pick<Props, "label" | "value" | "unit">) => (
+  <>
+    <span className="text-base font-bold uppercase tracking-wide text-text-light dark:text-text-dark">
+      {label}
+    </span>
+    <span className="flex items-baseline gap-1 text-text-light dark:text-text-dark">
+      <span className="text-5xl sm:text-6xl font-bold leading-none">{value}</span>
+      {unit && unit.toLowerCase() !== label.toLowerCase() && (
+        <span className="text-2xl font-bold text-text-light dark:text-text-dark">
+          {unit}
+        </span>
+      )}
+    </span>
+  </>
+);
+
+// The same value with no way to change it (public plans).
+export const StaticValue = ({ label, value, unit }: Props) => (
+  <div className="w-full flex flex-col items-center gap-1 rounded-2xl border border-gray-300 dark:border-gray-600
+    bg-white dark:bg-surface-dark py-3"
+  >
+    <ValueDisplay label={label} value={value} unit={unit} />
+  </div>
+);
+
 // Large read-only value for glancing at mid-exercise; tapping it opens the
 // +/- editor in a modal so it can't be bumped by accident.
 export const AdjustableValue = (props: Props) => {
@@ -29,17 +54,7 @@ export const AdjustableValue = (props: Props) => {
           hover:bg-gray-50 dark:hover:bg-gray-800
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <span className="text-base font-bold uppercase tracking-wide text-text-light dark:text-text-dark">
-          {label}
-        </span>
-        <span className="flex items-baseline gap-1 text-text-light dark:text-text-dark">
-          <span className="text-5xl sm:text-6xl font-bold leading-none">{value}</span>
-          {unit && unit.toLowerCase() !== label.toLowerCase() && (
-            <span className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {unit}
-            </span>
-          )}
-        </span>
+        <ValueDisplay label={label} value={value} unit={unit} />
         <span className="flex items-center gap-1 text-xs text-primary dark:text-primary-300">
           <FontAwesomeIcon icon={faPen} />
           Tap to adjust

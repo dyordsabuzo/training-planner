@@ -50,6 +50,7 @@ import {
   sortSessionsByDate,
   isLapsedOptional,
   resolveSessionWeek,
+  sortWeekKeys,
 } from "../common/planSessions";
 
 // Weights start from the last session of the plan that included the exercise.
@@ -65,17 +66,6 @@ const weightSeed = (userdata: any, plan: string, week: string, weightRule: any) 
         )
       : getLastSessionWeight(userdata, plan, exerciseName) ?? currentWeight,
 });
-
-const sortWeekKeys = (keys: string[]) =>
-  [...keys].sort((a, b) => {
-    const [textA, numA] = a.split(" ");
-    const [textB, numB] = b.split(" ");
-
-    if (textA !== textB) {
-      return textA.localeCompare(textB);
-    }
-    return Number(numA) - Number(numB);
-  });
 
 // Secondary actions on the gradient hero tile.
 type SessionTarget = { plan: string; week: string; session: string };

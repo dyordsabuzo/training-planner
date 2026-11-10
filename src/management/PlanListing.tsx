@@ -22,6 +22,7 @@ import { AgendaRow, DateTile, FOCUS, StatusChip, Tone } from "../pages/others/Ag
 import { chipClassName } from "../pages/others/HeroTile";
 import { sessionUnitNames } from "../pages/resolveSessionSupersets";
 import { clonePlan } from "./cloneEntity";
+import { usePublicPlanActions } from "./PublicPlanActions";
 import BaseListing from "./BaseListing";
 import { DataTable, DataTableColumn } from "@dyordsabuzo/ui-components";
 import {
@@ -90,6 +91,7 @@ export const PlanListing = ({ viewMode = "card", headerTrailing }: Props) => {
   const { limit, loadMore, showAll } = useLoadMore(PAGE_SIZE, search);
 
   const sourceDataContext = useContext(SourceDataContext);
+  const { actionsFor: publicActionsFor, dialog: publicPlanDialog } = usePublicPlanActions();
   const sourceData: any = sourceDataContext.sourceData;
 
   const [selectedWeekData, setSelectedWeekData] =
@@ -119,6 +121,7 @@ export const PlanListing = ({ viewMode = "card", headerTrailing }: Props) => {
     <EntityActions
       variant={variant}
       sharing={{ db: SourceDbReferences.PLANS, entity: plan }}
+      extraActions={publicActionsFor(plan)}
       onEdit={() => {
         setFormData(plan);
         setFormType("edit");
@@ -371,6 +374,7 @@ export const PlanListing = ({ viewMode = "card", headerTrailing }: Props) => {
           clear={() => setSelectedWeekData(null)}
         />
       )}
+      {publicPlanDialog}
     </BaseListing>
   );
 };

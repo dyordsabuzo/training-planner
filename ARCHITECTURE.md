@@ -69,6 +69,7 @@ exercises**.
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `trainerUids[]` (clients), `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
+| `orgs/{orgId}/publicPlans` | one per public link, id is its token | `planId` (the plan or session it copies), `name`, `open`, `weeks`, `sessions[]`, `alternatives`, `publishedAt`; anyone holding the token can read it, signed out too |
 | `orgs/{orgId}/public` | `public/profile` | `name`, `contentVersion`, `status` (set by `suspendOrg`), readable by anyone signed in (for orgs linking to this org's items) |
 | `orgs/{orgId}/links` | `links/{linkId}` | `srcOrgId`, `collection`, `srcId`, `linkedAt`, `linkedBy`: a live link to another org's item |
 
@@ -118,7 +119,7 @@ keeps the mapping exact.
 
 ```
 userdata/{uid}
-  inProgress { plan, week, session, data }
+  inProgress { plan, week, session, data, savedAt?, moodBefore? }
 userdata/{uid}/plans/{planId}
   orgId               org the plan belongs to (never changes)
   {week}              "Week 1" ... or "Open" for open plans
@@ -147,6 +148,15 @@ as done; history shows it as "Incomplete".
 flag is stored: it counts as done and appears in History and momentum like any
 run, its results reading "Nothing was recorded", and it clears an earlier skip.
 A fixed plan's week comes from `resolveSessionWeek` when none was chosen.
+
+Starting a session writes nothing. Each finished set updates `inProgress`, and
+the pre-session mood is saved with the run, so a session that's started and
+abandoned stays To do. Finishing, ending or cancelling a run clears the slot.
+If the app closes or crashes first, the slot stays filled and
+`UnsavedRunBanner.tsx` (Home and Train, via `unsavedRun.ts`) offers Finished,
+Stopped early or Discard. Stopped early saves it with `meta.incomplete`.
+Opening an incomplete run from History offers Mark as finished, which removes
+that flag (`markRunFinished`).
 
 History (`HistoryPage.tsx`) opens with totals (sessions, last 7 days, time)
 over the runs grouped by plan (`HistoryRunList.tsx`, shared with the client
@@ -220,7 +230,9 @@ button is pinned to the bottom of the screen. On the exercise screen, the
 Targets prompt before each exercise's first set sets weight, reps (or
 distance) and the unit's sets. Tapping "Set N of M" changes the sets
 mid-unit, but never below the set in progress. These changes last for the
-run only. Skip exercise, Skip group and Cancel session sit in one row of
+run only. Next to that badge, one bar per set shows sets done, the set in
+progress and sets to go. A unit with no sets set runs as 3 (`setsOrDefault`).
+Skip exercise, Skip group and Cancel session sit in one row of
 pills. On phones the bottom menu is hidden during a run and opened from a menu
 button at the top right, so nothing floats over these bottom actions.
 
@@ -310,6 +322,17 @@ active org has the `admin` role and a client has `user`
   archived, and only Cloud Functions change `linkCount`. Members read their
   org's `links`; only Cloud Functions write them. Any signed-in user reads an
   org's `public/profile`, and its trainers bump only its `contentVersion`.
+- **Public links** (`PublicPlanActions.tsx`, the ⋮ menu on plans and sessions)
+  publish a copy to `orgs/{orgId}/publicPlans/{token}` and open at
+  `/training-planner/public/{orgId}/{token}` without signing in
+  (`PublicPlanPage.tsx`). `buildPublicPlan` copies only listed workout fields;
+  a session is published as a one-session open plan. The copy changes only
+  through Update public link, and Stop public access or deleting the source
+  removes it. The rules allow `get` to anyone but `list` and writes only to
+  trainers, so the token is the access. Runs use the normal workout screens
+  with `limitedRun`: a plain Rest screen the visitor times themselves replaces
+  the rest timer, targets are read-only, skipping and mood check-ins are off,
+  and nothing is saved. Items personalised for one client can't be published.
 - A shared session (`isShareable`) opens without signing in, through its
   self-contained `sharedSnapshot`. Share links are
   `/training-planner/share/{orgId}/{sessionId}`. Older links without an org
@@ -519,7 +542,12 @@ because clients are assigned plans by id.
   (`["linked", srcOrgId, version, linkIds]`), and its profile is rechecked
   every 5 minutes.
 - Progress is keyed by user and org (`["sourceData", "userdata", uid, orgId]`)
-  and refetches normally; switching org shows that org's progress only.
+  and refetches every time the app opens, so an unfinished workout is found;
+  switching org shows that org's progress only.
+- Firestore keeps its own cache in IndexedDB (`persistentLocalCache` in
+  `firebase.ts`), so sets logged with no signal survive the app closing and
+  are sent the next time it opens online. Clearing the React Query cache on
+  sign-out doesn't clear this one.
 - The last known memberships are kept in localStorage, so a cold start
   offline still opens the right org's cached content.
 - The cache is cleared on sign-out. Bump `CACHE_BUSTER` whenever the cached

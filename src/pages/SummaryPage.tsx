@@ -14,7 +14,7 @@ import { isTrainSessionPath } from "../routes/trainRoutes";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { playApplauseSound, playVoiceClip } from "../common/utils";
-import { pluralUnit, unitName, unitTitle, UnitKind } from "./resolveSessionSupersets";
+import { pluralUnit, setsOrDefault, unitName, unitTitle, UnitKind } from "./resolveSessionSupersets";
 
 type Props = {
   currentSuperset?: any;
@@ -41,10 +41,11 @@ const summaryCounts = (units: any[]) => {
 // Pills for a unit's hero tile: kind, exercise count and sets.
 const unitDetails = (unit: any) => {
   const exercises = (unit.exercises ?? []).filter((item: any) => item.exercise);
+  const sets = setsOrDefault(unit.targetSet);
   return [
     unitTitle(unit.kind),
     `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}`,
-    unit.targetSet ? `${unit.targetSet} set${Number(unit.targetSet) === 1 ? "" : "s"}` : null,
+    `${sets} set${sets === 1 ? "" : "s"}`,
   ];
 };
 
@@ -67,6 +68,7 @@ export const SummaryPage = ({
     exitPath,
     useSessionUrl,
     showBackButton = true,
+    limitedRun = false,
   } = useContext(SessionContext) as any;
   const navigate = useNavigate();
   const location = useLocation();
@@ -193,7 +195,7 @@ export const SummaryPage = ({
           </HeroTile>
         )}
 
-        {sessionComplete && (
+        {sessionComplete && !limitedRun && (
           <MoodCheckIn
             title="How are you feeling after this session?"
             value={moodAfter}
@@ -226,7 +228,11 @@ export const SummaryPage = ({
               decoration="text-danger"
               useModal
               scrollToTopOnClose
-              impactMessage="End the session now? Sets you've logged so far are saved and the session is marked incomplete."
+              impactMessage={
+                limitedRun
+                  ? "End the session now?"
+                  : "End the session now? Sets you've logged so far are saved and the session is marked incomplete."
+              }
               onDelete={handleEndSession}
             />
           </div>

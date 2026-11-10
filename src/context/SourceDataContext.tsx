@@ -19,6 +19,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { callFunction, database, getCollection, getDocumentReference } from "../common/firebase";
 import { collectionPath, saveToDB, getFromDB, SourceDbReferences, toStringArray } from "../common/utils";
 import { buildWeek } from "../common/planCycle";
+import { deletePublicPlansOf } from "../common/publicPlansDb";
 import AuthContext from "./AuthContext";
 import { contentVersionKey } from "../common/queryCache";
 import { personalisePlan } from "../management/cloneEntity";
@@ -702,7 +703,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
   const deleteSessionMutation = useMutation({
     onSuccess: markContentChanged,
-    mutationFn: (session: any) => deleteFromDB(SourceDbReferences.SESSIONS, session),
+    mutationFn: async (session: any) => {
+      await deletePublicPlansOf(activeOrgId as string, session.id);
+      return deleteFromDB(SourceDbReferences.SESSIONS, session);
+    },
   });
 
   // One batch touching only each plan's session list. Array operations rather
@@ -856,7 +860,10 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
   const deletePlanMutation = useMutation({
     onSuccess: markContentChanged,
-    mutationFn: (plan: any) => deleteFromDB(SourceDbReferences.PLANS, plan),
+    mutationFn: async (plan: any) => {
+      await deletePublicPlansOf(activeOrgId as string, plan.id);
+      return deleteFromDB(SourceDbReferences.PLANS, plan);
+    },
   });
 
   const updateWeekPlanMutation = useMutation({

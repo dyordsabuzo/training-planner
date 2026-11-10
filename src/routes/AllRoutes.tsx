@@ -8,6 +8,7 @@ import ProfilePage from "../pages/ProfilePage";
 import SessionPage from "../pages/SessionPage";
 import SimulateSessionPage from "../pages/SimulateSessionPage";
 import SharedSessionPage from "../pages/SharedSessionPage";
+import PublicPlanPage from "../pages/PublicPlanPage";
 import JoinPage from "../pages/JoinPage";
 import { Login } from "../pages/auth/Login";
 import { ForgotPassword } from "../pages/auth/ForgotPassword";
@@ -203,6 +204,11 @@ const AppShell = () => {
           <Route
             path={"/training-planner/share/:orgId/:sessionId"}
             element={<SharedSessionPage />}
+            errorElement={<ErrorPage />}
+          />
+          <Route
+            path={"/training-planner/public/:orgId/:token"}
+            element={<PublicPlanPage />}
             errorElement={<ErrorPage />}
           />
           {/* Invite links; works signed out too (see PENDING_INVITE_KEY). */}

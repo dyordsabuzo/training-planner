@@ -6,4 +6,5 @@
 export const isTrainSessionPath = (pathname: string) =>
   /^\/training-planner\/train\/[^/]+$/.test(pathname) ||
   /^\/training-planner\/manage\/simulate\/[^/]+$/.test(pathname) ||
-  /^\/training-planner\/share\/[^/]+$/.test(pathname);
+  /^\/training-planner\/share\/[^/]+$/.test(pathname) ||
+  /^\/training-planner\/public\/[^/]+\/[^/]+$/.test(pathname);

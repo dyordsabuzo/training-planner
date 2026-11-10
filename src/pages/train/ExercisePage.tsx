@@ -22,7 +22,7 @@ import { TargetWeightPrompt, Targets } from "./TargetWeightPrompt";
 import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
 import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 import { Modal } from "@dyordsabuzo/ui-components";
-import { unitId } from "../resolveSessionSupersets";
+import { setsOrDefault, unitId } from "../resolveSessionSupersets";
 import { FOCUS, SectionLabel } from "../others/AgendaRow";
 import { OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
 import {
@@ -55,6 +55,27 @@ const SKIP_PILL = `${ACTION_PILL} border-primary-200 dark:border-primary-700 tex
   hover:bg-primary-50 dark:hover:bg-primary-800/20`;
 const DANGER_PILL = `${ACTION_PILL} border-danger-500/40 text-danger dark:text-danger-500
   hover:bg-danger-50 dark:hover:bg-danger-700/20`;
+
+const SET_BADGE = `shrink-0 flex items-center gap-2 text-white text-lg font-semibold
+  bg-primary dark:bg-primary-400 rounded-l-full py-2 pl-6 pr-5 min-h-14`;
+
+// One bar per set: filled when done, tinted for the set in progress.
+const SetBars = ({ total, done, resting }: { total: number; done: number; resting: boolean }) => (
+  <div role="img" aria-label={`${done} of ${total} sets completed`} className="flex-1 min-w-0 flex items-center gap-1">
+    {Array.from({ length: total }, (_, i) => (
+      <span
+        key={i}
+        className={`h-2.5 flex-1 max-w-10 rounded-full transition-colors ${
+          i < done
+            ? "bg-primary dark:bg-primary-300"
+            : i === done && !resting
+              ? "bg-primary-200 dark:bg-primary-700"
+              : "bg-gray-200 dark:bg-gray-700"
+        }`}
+      />
+    ))}
+  </div>
+);
 
 const pluralize = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -137,7 +158,9 @@ const reducer = (state: State, action: Action) => {
 
 export const ExercisePage = () => {
   const sessionContext = useContext(SessionContext);
-  const { sessionData, saveProgress, exitPath } = sessionContext as any;
+  // limitedRun (public plans): visitors time their own rest, and there's no
+  // skipping or editing targets.
+  const { sessionData, saveProgress, exitPath, limitedRun = false } = sessionContext as any;
   const navigate = useNavigate();
 
   const [exerciseState, dispatch] = useReducer(reducer, initialState);
@@ -251,7 +274,7 @@ export const ExercisePage = () => {
       setTargetRep(String(atLeastOne(superset.targetRep ?? sessionData.targetRep)));
       setTargetDistance(String(atLeastOne(superset.targetDistance)));
       setTargetTime(String(atLeastOne(superset.targetTime ?? sessionData.targetTime)));
-      setSupersetData(superset);
+      setSupersetData({ ...superset, targetSet: setsOrDefault(superset.targetSet) });
     }
 
     return () => {};
@@ -382,6 +405,7 @@ export const ExercisePage = () => {
 
   const weightPromptKey = `${exerciseState.supersetCounter}-${exerciseData.exercise?.name}`;
   const showWeightPrompt =
+    !limitedRun &&
     exerciseState.exerciseSet === 0 &&
     !exerciseState.supersetRest &&
     supersetData.type !== "Time-based" &&
@@ -393,6 +417,35 @@ export const ExercisePage = () => {
 
   const markWeightPrompted = () =>
     setWeightPrompted((prev) => new Set(prev).add(weightPromptKey));
+
+  const toggleRest = (supersetRest: boolean) => {
+    const targetSet = parseInt(supersetData.targetSet);
+    const exerciseLength = supersetData.exercises.length;
+
+    dispatch({
+      type: "update",
+      payload: { supersetRest, targetSet, exerciseLength },
+    });
+  };
+
+  // exerciseSet only moves on when the rest ends, so the set just done is +1.
+  const completedLabel = `Completed ${pluralize(exerciseState.exerciseSet + 1, "set")} of ${parseInt(supersetData.targetSet)}`;
+
+  const setCount = (
+    <>
+      <span>Set</span>
+      <span className="relative h-9 w-9 overflow-hidden">
+        <span
+          key={exerciseState.exerciseSet}
+          className="absolute inset-0 flex items-center justify-center text-3xl font-bold
+            leading-none animate-roll-down"
+        >
+          {exerciseState.exerciseSet + 1}
+        </span>
+      </span>
+      <span>of {parseInt(supersetData.targetSet)}</span>
+    </>
+  );
 
   return (
     <WrapperPage
@@ -543,43 +596,55 @@ export const ExercisePage = () => {
               </div>
             </div>
             <div className="w-full flex-1 flex flex-col rounded-tl-3xl rounded-b-2xl bg-white dark:bg-surface-dark">
-              <button
-                type="button"
-                onClick={() => setShowSetEditor(true)}
-                aria-label={`Set ${exerciseState.exerciseSet + 1} of ${parseInt(supersetData.targetSet)}. Tap to adjust sets`}
-                className="self-end flex items-center gap-2 text-white text-sm font-semibold
-                  bg-primary dark:bg-primary-400 rounded-l-full mt-3 py-2 pl-5 pr-4 min-h-11
-                  hover:bg-primary-500 active:scale-95 transition-transform
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-live="polite"
-              >
-                <span>Set</span>
-                <span className="relative h-6 w-6 overflow-hidden">
-                  <span
-                    key={exerciseState.exerciseSet}
-                    className="absolute inset-0 flex items-center justify-center text-xl font-bold
-                      leading-none animate-roll-down"
+              <div className="mt-3 flex items-center gap-3 pl-4">
+              <SetBars
+                total={parseInt(supersetData.targetSet) || 0}
+                // A set counts as done as soon as its rest starts.
+                done={exerciseState.exerciseSet + (exerciseState.supersetRest ? 1 : 0)}
+                resting={exerciseState.supersetRest}
+              />
+              {limitedRun ? (
+                <div className={`${SET_BADGE} justify-center`} aria-live="polite">
+                  {setCount}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowSetEditor(true)}
+                  aria-label={`Set ${exerciseState.exerciseSet + 1} of ${parseInt(supersetData.targetSet)}. Tap to adjust sets`}
+                  className={`${SET_BADGE} hover:bg-primary-500 active:scale-95 transition-transform
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+                  aria-live="polite"
+                >
+                  {setCount}
+                  <FontAwesomeIcon icon={faPen} className="text-sm text-white/70" aria-hidden="true" />
+                </button>
+              )}
+              </div>
+              {exerciseState.supersetRest && limitedRun && (
+                <div className="flex-1 flex flex-col justify-between gap-6 pt-8">
+                  <div className="flex flex-col items-center gap-2 px-6 text-center text-text-light dark:text-text-dark">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
+                      {completedLabel}
+                    </span>
+                    <h2 className="text-4xl font-bold uppercase">Rest</h2>
+                    <p className="text-base">Time your own rest before the next set. Continue when you're ready.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${PRIMARY_PILL} min-h-14 mx-4 mb-2 sm:mx-6 text-xl uppercase`}
+                    onClick={() => toggleRest(false)}
                   >
-                    {exerciseState.exerciseSet + 1}
-                  </span>
-                </span>
-                <span>of {parseInt(supersetData.targetSet)}</span>
-                <FontAwesomeIcon icon={faPen} className="text-xs text-white/70" aria-hidden="true" />
-              </button>
-              {exerciseState.supersetRest && (
+                    Continue
+                  </button>
+                </div>
+              )}
+              {exerciseState.supersetRest && !limitedRun && (
                 <div className="flex-1 flex flex-col animate-slide-up">
                   <UnwrappedRestTimer
                     length={parseInt(supersetData.rest) || 120}
-                    stateLabel={`Completed ${pluralize(exerciseState.exerciseSet, "set")} of ${parseInt(supersetData.targetSet)}`}
-                    toggleRest={(supersetRest: boolean) => {
-                      const targetSet = parseInt(supersetData.targetSet);
-                      const exerciseLength = supersetData.exercises.length;
-
-                      dispatch({
-                        type: "update",
-                        payload: { supersetRest, targetSet, exerciseLength },
-                      });
-                    }}
+                    stateLabel={completedLabel}
+                    toggleRest={toggleRest}
                   />
                 </div>
               )}
@@ -591,6 +656,7 @@ export const ExercisePage = () => {
                   targetRep={targetRep}
                   targetDistance={"targetDistance" in supersetData ? targetDistance : undefined}
                   measured={supersetData.measured !== false}
+                  readOnly={limitedRun}
                   canAnnounce={!showWeightPrompt}
                   // The counter only resets when a new unit starts.
                   isUnitStart={exerciseState.exerciseCounter === 0}
@@ -628,21 +694,23 @@ export const ExercisePage = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 mx-2 lg:mx-0">
-            {!exerciseState.supersetRest && (
+            {!exerciseState.supersetRest && !limitedRun && (
               <button type="button" className={SKIP_PILL} onClick={() => setShowSkipExercise(true)}>
                 <FontAwesomeIcon icon={faForward} />
                 Skip exercise
               </button>
             )}
-            <ConfirmDeleteButton
-              label="Skip group"
-              icon={faForwardStep}
-              triggerClassName={SKIP_PILL}
-              useModal
-              scrollToTopOnClose
-              impactMessage="Move on to the next group? Sets you've already logged in this one are kept."
-              onDelete={skipUnit}
-            />
+            {!limitedRun && (
+              <ConfirmDeleteButton
+                label="Skip group"
+                icon={faForwardStep}
+                triggerClassName={SKIP_PILL}
+                useModal
+                scrollToTopOnClose
+                impactMessage="Move on to the next group? Sets you've already logged in this one are kept."
+                onDelete={skipUnit}
+              />
+            )}
             <ConfirmDeleteButton
               label="Cancel session"
               icon={faCircleXmark}

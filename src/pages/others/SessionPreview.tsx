@@ -1,13 +1,13 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDumbbell } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@dyordsabuzo/ui-components";
-import { displayUnitName, sideLabel } from "../resolveSessionSupersets";
+import { displayUnitName, sideLabel, setsOrDefault } from "../resolveSessionSupersets";
 
 const CHIP = "px-2.5 py-1 rounded-full text-xs font-semibold";
 
 // "3 × 10 reps", "4 × 400 m", "3 × 45 s"; sets alone when there's no target.
 export const unitTarget = (unit: any) => {
-  const sets = Number(unit.targetSet) || 0;
+  const sets = setsOrDefault(unit.targetSet);
   const amount = unit.targetTime
     ? `${unit.targetTime} s`
     : unit.targetDistance
@@ -15,9 +15,7 @@ export const unitTarget = (unit: any) => {
       : unit.targetRep
         ? `${unit.targetRep} reps`
         : null;
-  if (sets && amount) return `${sets} × ${amount}`;
-  if (sets) return `${sets} ${sets === 1 ? "set" : "sets"}`;
-  return amount;
+  return amount ? `${sets} × ${amount}` : `${sets} ${sets === 1 ? "set" : "sets"}`;
 };
 
 // What a session contains before it's run: each superset or exercise group
@@ -41,7 +39,7 @@ export const SessionPreview = ({
     exercises: (unit.exercises ?? []).filter((e: any) => e?.exercise?.name),
   }));
   const exerciseCount = rows.reduce((sum, row) => sum + row.exercises.length, 0);
-  const setCount = rows.reduce((sum, row) => sum + (Number(row.unit.targetSet) || 0), 0);
+  const setCount = rows.reduce((sum, row) => sum + setsOrDefault(row.unit.targetSet), 0);
   const stats = [
     { label: rows.length === 1 ? "Unit" : "Units", value: rows.length },
     { label: exerciseCount === 1 ? "Exercise" : "Exercises", value: exerciseCount },

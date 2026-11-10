@@ -62,6 +62,10 @@ export const unitTitle = (kind?: UnitKind) => (kind === "group" ? "Exercise grou
 export const pluralUnit = (kind: UnitKind | undefined, count: number) =>
   `${count} ${unitName(kind)}${count === 1 ? "" : "s"}`;
 
+// Sets for a unit with none set (missing, blank or 0).
+const DEFAULT_SETS = 3;
+export const setsOrDefault = (value: any) => parseInt(value) || DEFAULT_SETS;
+
 export type ResolveSeed = {
   targetRep?: any;
   targetSet?: any;
