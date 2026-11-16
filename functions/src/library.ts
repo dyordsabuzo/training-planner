@@ -407,22 +407,28 @@ export const listPublicCatalog = onCall(async () => {
   return { items };
 });
 
-// A catalog item's contents, trimmed to names and targets (buildPreview).
+// A catalog item's contents, trimmed to names and targets (buildPreview),
+// and the token of its public link if the owner published one, so visitors
+// can run it signed out (the item is public anyway).
 export const getPublicPreview = onCall(async (request) => {
   const { orgId, collection, id } = parse(
     z.object({ orgId: idSchema, collection: z.enum(CATALOG), id: idSchema }),
     request.data
   );
-  const [org, root] = await Promise.all([
+  const [org, root, link] = await Promise.all([
     orgRef(orgId).get(),
     orgRef(orgId).collection(collection).doc(id).get(),
+    orgRef(orgId).collection("publicPlans").where("planId", "==", id).limit(1).select().get(),
   ]);
   if (!org.exists || org.get("status") === "suspended" || !isPubliclyListed(root.data())) {
     throw new HttpsError("not-found", "That item isn't available.");
   }
   const loaded = await loadWithDependencies(orgId, { collection, id }, root.data());
   const docs = new Map(loaded.map((item) => [key(item), item.data]));
-  return buildPreview(collection, root.data()!, (c, i) => docs.get(`${c}/${i}`));
+  return {
+    ...buildPreview(collection, root.data()!, (c, i) => docs.get(`${c}/${i}`)),
+    publicLinkToken: link.docs[0]?.id ?? null,
+  };
 });
 
 // Marketplace pages walk the content collections in order; the cursor is

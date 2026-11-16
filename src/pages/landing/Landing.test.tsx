@@ -52,6 +52,7 @@ const renderAt = (path: string, element = <Landing />) =>
         <Routes>
           <Route path="/" element={element} />
           <Route path="/login" element={element} />
+          <Route path="/training-planner/public/o1/tok" element={<p>public run page</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -118,6 +119,16 @@ describe("Landing", () => {
     expect(screen.queryByText("Squat, Lunge")).toBeNull();
     expect(sheet().classList.contains("translate-x-full")).toBe(false);
     expect(within(sheet()).getByRole("heading", { name: "Sign up" })).toBeTruthy();
+  });
+
+  it("starts the workout through its public link when there is one", async () => {
+    vi.mocked(callFunction).mockImplementation(async (name: string) =>
+      name === "listPublicCatalog" ? { items } : { ...preview, publicLinkToken: "tok" }
+    );
+    renderAt("/");
+    fireEvent.click(await screen.findByRole("button", { name: /Summer Strength/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start workout" }));
+    expect(await screen.findByText("public run page")).toBeTruthy();
   });
 
   it("hides the catalog when the call fails", async () => {

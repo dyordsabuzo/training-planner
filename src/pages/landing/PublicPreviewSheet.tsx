@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { faCalendarDays, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { callFunction } from "../../common/firebase";
@@ -7,7 +8,8 @@ import { CatalogItem, summaryText } from "./PublicCatalog";
 
 type PreviewUnit = { name: string; exercises: string[]; sets?: number; reps?: number | string; time?: number; distance?: number };
 type PreviewSession = { name: string; units: PreviewUnit[] };
-type Preview =
+// publicLinkToken: the item's public link, if its owner published one.
+type Preview = { publicLinkToken?: string | null } & (
   | ({ collection: "sessions" } & PreviewSession)
   | {
       collection: "plans";
@@ -15,7 +17,8 @@ type Preview =
       open: boolean;
       weeks: { week: string; targetRep?: number; targetSet?: number; targetTime?: number; annotation?: string }[];
       sessions: PreviewSession[];
-    };
+    }
+);
 
 const targetsOf = ({ sets, reps, time, distance }: PreviewUnit) => {
   const each = time ? `${time}s` : distance ? `${distance} m` : reps ? `${reps}` : null;
@@ -85,6 +88,7 @@ export const PublicPreviewSheet = ({
   onClose: () => void;
   onSignup: () => void;
 }) => {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["publicPreview", item.orgId, item.collection, item.id],
     queryFn: () =>
@@ -123,9 +127,24 @@ export const PublicPreviewSheet = ({
           <PreviewBody preview={data} />
         )}
 
-        <Button onClick={onSignup} className="min-h-11">
-          Sign up to use
-        </Button>
+        {/* Runs through the public link page; nothing is saved there. */}
+        {data?.publicLinkToken ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => navigate(`/training-planner/public/${item.orgId}/${data.publicLinkToken}`)}
+              className="min-h-11"
+            >
+              Start workout
+            </Button>
+            <Button onClick={onSignup} decoration="cancel" className="min-h-11">
+              Sign up to save your progress
+            </Button>
+          </div>
+        ) : (
+          <Button onClick={onSignup} className="min-h-11">
+            Sign up to use
+          </Button>
+        )}
       </div>
     </Modal>
   );

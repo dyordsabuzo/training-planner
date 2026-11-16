@@ -541,7 +541,9 @@ menus (`isChromelessRoute` in `src/routes/authRoutes.ts`).
   that, the hero fills the screen and a bottom CTA slides the panel in.
 - The hero shows public sessions and plans (`listPublicCatalog`): public,
   not archived, blocked or personalised, from active orgs. A card opens a
-  preview (`getPublicPreview`) with a "Sign up to use" button.
+  preview (`getPublicPreview`) with a "Sign up to use" button. If the owner
+  also published a public link, the preview offers "Start workout", which
+  opens that link to run it signed out.
 - Both callables read with the Admin SDK and send only the fields picked in
   `functions/src/publicCatalog.ts`: names, tags, counts, sets/reps/time/
   distance and week targets.
