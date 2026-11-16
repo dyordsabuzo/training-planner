@@ -1,16 +1,18 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 import AuthContext from "../../context/AuthContext";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router";
 import { Input, Button } from "@dyordsabuzo/ui-components";
+import { FIELD, PRIMARY_BUTTON } from "./authStyles";
+import { GoogleButton, OrDivider } from "./GoogleButton";
 
-// onSwitch: show the login form instead (the landing page's auth panel).
-export const SignupForm = ({ onSwitch }: { onSwitch?: () => void }) => {
+export const SignupForm = () => {
   const authContext = useContext(AuthContext);
-  const { registerWithEmailAndPassword } = authContext;
+  const { user, registerWithEmailAndPassword, loginWithGoogle, error } = authContext;
+  const [googleClicked, setGoogleClicked] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,15 +25,31 @@ export const SignupForm = ({ onSwitch }: { onSwitch?: () => void }) => {
   };
 
   const navigate = useNavigate();
+  // Google creates the account on first sign-in; then go to Home.
+  useEffect(() => {
+    if (user) navigate("/");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const signupWithGoogleHandler = () => {
+    loginWithGoogle();
+    setGoogleClicked(true);
+  };
 
   return (
-    <form
-      onSubmit={signupHandler}
-      className="flex flex-col gap-4 w-full rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 bg-white dark:bg-surface-dark"
-    >
+    <form onSubmit={signupHandler} className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Sign up</h2>
+        <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+          Quickest with Google: no new password to remember.
+        </p>
+      </div>
+      <GoogleButton label="Sign up with Google" onClick={signupWithGoogleHandler} />
+      {googleClicked && error && <span className="text-xs text-danger">{error}</span>}
+      <OrDivider label="or sign up with email" />
       <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold py-2 text-text-light dark:text-text-dark">Sign up</h2>
         <Input
+          className={FIELD}
           type="email"
           placeholder="Email address"
           value={email}
@@ -41,6 +59,7 @@ export const SignupForm = ({ onSwitch }: { onSwitch?: () => void }) => {
           }}
         />
         <Input
+          className={FIELD}
           type="password"
           placeholder="Password"
           required={true}
@@ -50,6 +69,7 @@ export const SignupForm = ({ onSwitch }: { onSwitch?: () => void }) => {
           value={password}
         />
         <Input
+          className={FIELD}
           type="password"
           placeholder="Confirm password"
           required={true}
@@ -59,28 +79,14 @@ export const SignupForm = ({ onSwitch }: { onSwitch?: () => void }) => {
           value={confirmPassword}
         />
         {password && confirmPassword && password !== confirmPassword && (
-          <span className="text-xs text-danger py-2">
-            Passwords must match
-          </span>
+          <span className="text-xs text-danger">Passwords must match</span>
         )}
       </div>
 
-      <Button type="submit">
-        <span className="flex items-center place-self-center gap-2 p-2">
-          <FontAwesomeIcon size="lg" icon={faUser} />
-          Sign up
-        </span>
+      <Button type="submit" decoration="custom" className={PRIMARY_BUTTON}>
+        <FontAwesomeIcon icon={faUser} />
+        Sign up
       </Button>
-
-      <button
-        type="button"
-        className="min-h-11 text-sm text-primary hover:underline hover:text-primary-700 font-semibold flex items-center gap-1
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-        onClick={() => (onSwitch ? onSwitch() : navigate("/login"))}
-      >
-        <FontAwesomeIcon size="lg" icon={faArrowLeft} />
-        Login
-      </button>
     </form>
   );
 };

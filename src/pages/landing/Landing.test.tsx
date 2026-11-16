@@ -85,7 +85,7 @@ describe("Landing", () => {
   it("opens the panel straight away on /login", () => {
     renderAt("/login", <Landing initialPanel="login" open />);
     expect(sheet().classList.contains("translate-x-full")).toBe(false);
-    expect(within(sheet()).getByRole("heading", { name: "Login" })).toBeTruthy();
+    expect(within(sheet()).getByRole("heading", { name: "Log in" })).toBeTruthy();
   });
 
   it("switches between the Log in and Sign up tabs", () => {
@@ -94,7 +94,14 @@ describe("Landing", () => {
     fireEvent.click(within(tabs).getByRole("button", { name: "Sign up" }));
     expect(within(sheet()).getByRole("heading", { name: "Sign up" })).toBeTruthy();
     fireEvent.click(within(tabs).getByRole("button", { name: "Log in" }));
-    expect(within(sheet()).getByRole("heading", { name: "Login" })).toBeTruthy();
+    expect(within(sheet()).getByRole("heading", { name: "Log in" })).toBeTruthy();
+  });
+
+  it("offers Google on both tabs", () => {
+    renderAt("/");
+    expect(within(sheet()).getByRole("button", { name: "Sign in with Google" })).toBeTruthy();
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Sign up" }));
+    expect(within(sheet()).getByRole("button", { name: "Sign up with Google" })).toBeTruthy();
   });
 
   it("lists public items, previews one, and leads to sign-up", async () => {
