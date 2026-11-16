@@ -69,7 +69,7 @@ exercises**.
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `trainerUids[]` (clients), `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
-| `orgs/{orgId}/publicPlans` | one per public link, id is its token | `planId` (the plan or session it copies), `name`, `open`, `weeks`, `sessions[]`, `alternatives`, `publishedAt`; anyone holding the token can read it, signed out too |
+| `orgs/{orgId}/publicPlans` | one per public link, id is its token | `planId` (the plan, session or superset it copies), `name`, `open`, `weeks`, `sessions[]`, `alternatives`, `publishedAt`; anyone holding the token can read it, signed out too |
 | `orgs/{orgId}/public` | `public/profile` | `name`, `contentVersion`, `status` (set by `suspendOrg`), readable by anyone signed in (for orgs linking to this org's items) |
 | `orgs/{orgId}/links` | `links/{linkId}` | `srcOrgId`, `collection`, `srcId`, `linkedAt`, `linkedBy`: a live link to another org's item |
 
@@ -322,11 +322,12 @@ active org has the `admin` role and a client has `user`
   archived, and only Cloud Functions change `linkCount`. Members read their
   org's `links`; only Cloud Functions write them. Any signed-in user reads an
   org's `public/profile`, and its trainers bump only its `contentVersion`.
-- **Public links** (`PublicPlanActions.tsx`, the ⋮ menu on plans and sessions)
+- **Public links** (`PublicPlanActions.tsx`, the ⋮ menu on plans, sessions and supersets)
   publish a copy to `orgs/{orgId}/publicPlans/{token}` and open at
   `/training-planner/public/{orgId}/{token}` without signing in
   (`PublicPlanPage.tsx`). `buildPublicPlan` copies only listed workout fields;
-  a session is published as a one-session open plan. The copy changes only
+  a session is published as a one-session open plan, and a superset as one
+  whose only session runs that superset. The copy changes only
   through Update public link, and Stop public access or deleting the source
   removes it. The rules allow `get` to anyone but `list` and writes only to
   trainers, so the token is the access. Runs use the normal workout screens

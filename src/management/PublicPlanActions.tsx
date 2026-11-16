@@ -4,16 +4,19 @@ import { faGlobe, faLink, faLinkSlash, faRotate } from "@fortawesome/free-solid-
 import { Button, Modal } from "@dyordsabuzo/ui-components";
 import AuthContext from "../context/AuthContext";
 import SourceDataContext from "../context/SourceDataContext";
-import { buildPublicPlan, buildPublicSession } from "../common/publicPlans";
+import { buildPublicPlan, buildPublicSession, buildPublicSuperset } from "../common/publicPlans";
 import { deletePublicPlan, listPublicPlans, savePublicPlan } from "../common/publicPlansDb";
 import { canShare } from "../common/sharing";
 
-type Kind = "plan" | "session";
+type Kind = "plan" | "session" | "superset";
+
+const BUILD = { plan: buildPublicPlan, session: buildPublicSession, superset: buildPublicSuperset };
 type Step = "confirm" | "confirmStop" | "copied" | "updated" | "copyFailed" | "stopped" | "empty" | "error";
 
 const EMPTY: Record<Kind, string> = {
   plan: "This plan has no sessions with exercises yet, so there's nothing to publish.",
   session: "This session has no exercises yet, so there's nothing to publish.",
+  superset: "This superset has no exercises yet, so there's nothing to publish.",
 };
 
 const MESSAGES: Record<Exclude<Step, "confirm" | "empty">, string> = {
@@ -25,7 +28,7 @@ const MESSAGES: Record<Exclude<Step, "confirm" | "empty">, string> = {
   error: "That didn't work. Check your connection and try again.",
 };
 
-// Publish, update and revoke the public link of a plan or session. The ⋮ menu
+// Publish, update and revoke the public link of a plan, session or superset. The ⋮ menu
 // items come from `actionsFor`; `dialog` renders wherever the listing puts it.
 export const usePublicPlanActions = (kind: Kind = "plan") => {
   const { activeOrgId } = useContext(AuthContext);
@@ -54,8 +57,7 @@ export const usePublicPlanActions = (kind: Kind = "plan") => {
 
   // Writes the current plan to its link, creating the link the first time.
   const publish = async (plan: any) => {
-    const build = kind === "session" ? buildPublicSession : buildPublicPlan;
-    const copyOfPlan = build(plan, sourceData, new Date().toISOString());
+    const copyOfPlan = BUILD[kind](plan, sourceData, new Date().toISOString());
     if (copyOfPlan.sessions.length === 0) {
       setState({ plan, step: "empty" });
       return;
