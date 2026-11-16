@@ -10,11 +10,10 @@ import SimulateSessionPage from "../pages/SimulateSessionPage";
 import SharedSessionPage from "../pages/SharedSessionPage";
 import PublicPlanPage from "../pages/PublicPlanPage";
 import JoinPage from "../pages/JoinPage";
-import { Login } from "../pages/auth/Login";
 import { ForgotPassword } from "../pages/auth/ForgotPassword";
 import { PasswordReset } from "../pages/auth/PasswordReset";
 import { Logout } from "../pages/auth/Logout";
-import { Signup } from "../pages/auth/Signup";
+import { Landing } from "../pages/landing/Landing";
 import { Home } from "../pages/Home";
 import { HistoryPage } from "../pages/HistoryPage";
 import { MainPage } from "../pages/MainPage";
@@ -23,7 +22,7 @@ import { useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
 import { getDisplayName } from "../common/utils";
 import SidebarContext from "../context/SidebarContext";
-import { AUTH_ROUTES } from "./authRoutes";
+import { isChromelessRoute } from "./authRoutes";
 
 const AppShell = () => {
   const authContext = useContext(AuthContext);
@@ -40,7 +39,7 @@ const AppShell = () => {
   const navigate = useNavigate();
   const { isCollapsed } = useContext(SidebarContext);
   const location = useLocation();
-  const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
+  const isAuthRoute = isChromelessRoute(location.pathname, user);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -93,20 +92,25 @@ const AppShell = () => {
         )}
         <Routes>
           <Route
+            path={"/"}
+            element={user ? <Home /> : <Landing />}
+            errorElement={<ErrorPage />}
+          />
+          <Route
             path={"/*"}
-            element={user ? <Home /> : <Navigate to="/login" />}
+            element={user ? <Home /> : <Navigate to="/" replace />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner"}
-            element={user ? <MainPage /> : <Navigate to="/login" />}
+            element={user ? <MainPage /> : <Navigate to="/" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/manage"}
             element={
               !user ? (
-                <Navigate to="/login" />
+                <Navigate to="/" />
               ) : userPermission?.role === "admin" ? (
                 <ListingPage />
               ) : (
@@ -119,7 +123,7 @@ const AppShell = () => {
             path={"/training-planner/manage/:tab"}
             element={
               !user ? (
-                <Navigate to="/login" />
+                <Navigate to="/" />
               ) : userPermission?.role === "admin" ? (
                 <ListingPage />
               ) : (
@@ -132,7 +136,7 @@ const AppShell = () => {
             path={"/training-planner/manage/simulate/:sessionName"}
             element={
               !user ? (
-                <Navigate to="/login" />
+                <Navigate to="/" />
               ) : userPermission?.role === "admin" ? (
                 <SimulateSessionPage />
               ) : (
@@ -145,7 +149,7 @@ const AppShell = () => {
             path={"/training-planner/admin"}
             element={
               !user ? (
-                <Navigate to="/login" />
+                <Navigate to="/" />
               ) : userPermission?.role === "admin" ? (
                 <AdminPage />
               ) : (
@@ -159,7 +163,7 @@ const AppShell = () => {
             path={"/training-planner/platform"}
             element={
               !user ? (
-                <Navigate to="/login" />
+                <Navigate to="/" />
               ) : isSuperAdmin ? (
                 <PlatformPage />
               ) : (
@@ -172,7 +176,7 @@ const AppShell = () => {
             path={"/training-planner/admin/clients/:uid"}
             element={
               !user ? (
-                <Navigate to="/login" />
+                <Navigate to="/" />
               ) : userPermission?.role === "admin" ? (
                 <ClientDetailPage />
               ) : (
@@ -183,22 +187,22 @@ const AppShell = () => {
           />
           <Route
             path={"/training-planner/profile"}
-            element={user ? <ProfilePage /> : <Navigate to="/login" />}
+            element={user ? <ProfilePage /> : <Navigate to="/" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/train"}
-            element={user ? <SessionPage /> : <Navigate to="/login" />}
+            element={user ? <SessionPage /> : <Navigate to="/" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/history"}
-            element={user ? <HistoryPage /> : <Navigate to="/login" />}
+            element={user ? <HistoryPage /> : <Navigate to="/" />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/training-planner/train/:sessionId"}
-            element={user ? <SessionPage /> : <Navigate to="/login" />}
+            element={user ? <SessionPage /> : <Navigate to="/" />}
             errorElement={<ErrorPage />}
           />
           <Route
@@ -225,12 +229,12 @@ const AppShell = () => {
           />
           <Route
             path={"/login"}
-            element={<Login />}
+            element={<Landing key="login" initialPanel="login" open />}
             errorElement={<ErrorPage />}
           />
           <Route
             path={"/signup"}
-            element={<Signup />}
+            element={<Landing key="signup" initialPanel="signup" open />}
             errorElement={<ErrorPage />}
           />
           <Route

@@ -31,3 +31,17 @@ describe("Navigation menu toggle", () => {
     expect(screen.queryByRole("button", { name: "Show menu" })).toBeNull();
   });
 });
+
+describe("Navigation on chromeless pages", () => {
+  afterEach(cleanup);
+
+  const sidebar = (path: string) => renderAt(path).container.querySelector("nav")!;
+
+  it("hides the sidebar on the signed-out landing page", () => {
+    expect(sidebar("/").classList.contains("lg:flex")).toBe(false);
+  });
+
+  it("shows it elsewhere", () => {
+    expect(sidebar("/training-planner/history").classList.contains("lg:flex")).toBe(true);
+  });
+});

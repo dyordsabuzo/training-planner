@@ -17,7 +17,7 @@ import { NavIcon } from "./NavIcon";
 import { ProfileMenu } from "./ProfileMenu";
 import { Logo } from "../logo/Logo";
 import { ThemeToggle } from "../others/ThemeToggle";
-import { AUTH_ROUTES } from "../../routes/authRoutes";
+import { isChromelessRoute } from "../../routes/authRoutes";
 import { isTrainSessionPath } from "../../routes/trainRoutes";
 
 const tabs = [
@@ -71,7 +71,7 @@ const Navigation = () => {
   const { isCollapsed, toggleSidebar } = useContext(SidebarContext);
   const navigate = useNavigate();
   const location = useLocation();
-  const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
+  const isAuthRoute = isChromelessRoute(location.pathname, user);
   const isSessionRoute = isTrainSessionPath(location.pathname);
 
   const [isMobileNavRevealed, setIsMobileNavRevealed] = useState(false);

@@ -410,6 +410,8 @@ Rules under `orgs/{orgId}`:
 | `listOrgs` | super admin | every org (up to 200) with owner email, members by role, items per collection, public items and links |
 | `listMarketplace` | super admin | every public item (paged, suspended orgs' included) and every blocked one, with owner names |
 | `moderateItem` | super admin | blocks an item from the marketplace (private, with a reason) or unblocks it |
+| `listPublicCatalog` | anyone, signed out too | public sessions and plans for the landing page, with owner names and counts (cached ~5 min) |
+| `getPublicPreview` | anyone, signed out too | one public session or plan, trimmed to names and targets |
 | `suspendOrg` | super admin | suspends or reactivates an org, and writes the status to its public profile |
 
 `billingGuard` isn't callable. It runs on Cloud Billing budget notifications
@@ -527,6 +529,22 @@ because clients are assigned plans by id.
   `public/profile.contentVersion` (`markContentChanged`, and
   `bumpContentVersion` in the functions). Link changes bump the owner's too,
   so its link counts stay current.
+
+### Landing page
+
+Signed out, `/` is the landing page (`src/pages/landing/`); signed in, it's
+Home. `/login` and `/signup` show the same page with that tab of the auth
+panel open, and protected routes send signed-out visitors to `/`. It has no
+menus (`isChromelessRoute` in `src/routes/authRoutes.ts`).
+
+- From `lg` up, the hero sits beside the Log in / Sign up panel. Below
+  that, the hero fills the screen and a bottom CTA slides the panel in.
+- The hero shows public sessions and plans (`listPublicCatalog`): public,
+  not archived, blocked or personalised, from active orgs. A card opens a
+  preview (`getPublicPreview`) with a "Sign up to use" button.
+- Both callables read with the Admin SDK and send only the fields picked in
+  `functions/src/publicCatalog.ts`: names, tags, counts, sets/reps/time/
+  distance and week targets.
 
 ## Caching and offline use
 

@@ -24,6 +24,8 @@ export const CALLABLES = [
   "listOrgs",
   "listMarketplace",
   "moderateItem",
+  "listPublicCatalog",
+  "getPublicPreview",
 ] as const;
 
 // The Cloud Billing budget publishes its notifications to this topic.

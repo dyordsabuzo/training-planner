@@ -25,6 +25,7 @@ import {
   remapForCopy,
   uniqueCopyName,
 } from "./sharing";
+import { buildPreview, CATALOG, isPubliclyListed, summaryOf } from "./publicCatalog";
 
 const TRAINERS = ["owner", "trainer"] as const;
 // Per collection and view; plenty for now, and keeps a call inside the timeout.
@@ -347,6 +348,81 @@ export const unlink = onCall(async (request) => {
   bumpContentVersion(batch, srcOrgId, now);
   await batch.commit();
   return { id: linkId };
+});
+
+// Landing page catalog: anyone may call these, signed in or not. Per
+// collection; enough for a showcase row.
+const CATALOG_LIMIT = 24;
+// Anonymous traffic shares one cached list per instance (maxInstances is 1).
+const CATALOG_TTL_MS = 5 * 60 * 1000;
+let catalogCache: { at: number; items: unknown[] } | null = null;
+
+export const listPublicCatalog = onCall(async () => {
+  if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS) return { items: catalogCache.items };
+
+  const snaps = await Promise.all(
+    CATALOG.map((collection) =>
+      db().collectionGroup(collection).where("visibility", "==", "public").limit(CATALOG_LIMIT).get()
+    )
+  );
+  const found = snaps.flatMap((snap, i) =>
+    snap.docs
+      .filter((doc) => isOrgContent(doc) && isPubliclyListed(doc.data()))
+      .map((doc) => ({ collection: CATALOG[i], doc }))
+  );
+  const owners = await ownersOf(found.map(({ doc }) => doc.ref.parent.parent!.id));
+  const listed = found.filter(({ doc }) => {
+    const owner = owners.get(doc.ref.parent.parent!.id);
+    return owner && !owner.suspended;
+  });
+
+  // Sessions count exercises inside their supersets too, so those are read.
+  const supersetRefs = listed.flatMap(({ collection, doc }) =>
+    collection === "sessions"
+      ? dependencyRefs("sessions", doc.data())
+          .filter((r) => r.collection === "supersets")
+          .map((r) => orgRef(doc.ref.parent.parent!.id).collection("supersets").doc(r.id))
+      : []
+  );
+  const supersets = supersetRefs.length ? await db().getAll(...supersetRefs) : [];
+  const supersetExercises = new Map(
+    supersets
+      .filter((s) => s.exists)
+      .map((s) => [s.id, dependencyRefs("supersets", s.data()!).map((r) => r.id)])
+  );
+
+  const items = listed.map(({ collection, doc }) => {
+    const { id, orgId, name, tags } = describeItem(collection, doc);
+    return {
+      collection,
+      id,
+      orgId,
+      name,
+      tags,
+      orgName: owners.get(orgId)!.name,
+      summary: summaryOf(collection, doc.data(), supersetExercises),
+    };
+  });
+  catalogCache = { at: Date.now(), items };
+  return { items };
+});
+
+// A catalog item's contents, trimmed to names and targets (buildPreview).
+export const getPublicPreview = onCall(async (request) => {
+  const { orgId, collection, id } = parse(
+    z.object({ orgId: idSchema, collection: z.enum(CATALOG), id: idSchema }),
+    request.data
+  );
+  const [org, root] = await Promise.all([
+    orgRef(orgId).get(),
+    orgRef(orgId).collection(collection).doc(id).get(),
+  ]);
+  if (!org.exists || org.get("status") === "suspended" || !isPubliclyListed(root.data())) {
+    throw new HttpsError("not-found", "That item isn't available.");
+  }
+  const loaded = await loadWithDependencies(orgId, { collection, id }, root.data());
+  const docs = new Map(loaded.map((item) => [key(item), item.data]));
+  return buildPreview(collection, root.data()!, (c, i) => docs.get(`${c}/${i}`));
 });
 
 // Marketplace pages walk the content collections in order; the cursor is
