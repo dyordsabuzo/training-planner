@@ -64,8 +64,15 @@ export const useOrgMembership = (user: User | null) => {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [activeOrgId, setActiveOrgId] = useState<string | undefined>();
   const [member, setMember] = useState<OrgMember | null>(null);
-  const [isMemberLoading, setIsMemberLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Who the claims and member doc were last loaded for. Loading is derived
+  // from them, so a new user or org counts as loading in the very render it
+  // appears (an effect setting a flag would leave one render that looks
+  // loaded with nothing in it, which flashes the wrong page).
+  const [claimsLoadedFor, setClaimsLoadedFor] = useState<string | null | undefined>(undefined);
+  const [memberLoadedFor, setMemberLoadedFor] = useState<string | null>(null);
+  const uid = user?.uid ?? null;
+  const memberKey = user && activeOrgId ? `${user.uid}/${activeOrgId}` : null;
   const [suspendedOrgs, setSuspendedOrgs] = useState<SuspendedOrg[]>([]);
 
   // Pass forceRefresh after a call that changed the user's memberships, and
@@ -137,7 +144,10 @@ export const useOrgMembership = (user: User | null) => {
         applyRoles(last?.roles ?? {}, last?.isSuperAdmin ?? false);
         setSuspendedOrgs(last?.suspendedOrgs ?? []);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+        setClaimsLoadedFor(user?.uid ?? null);
+      });
   }, [loadClaims, user]);
 
   // Org names for the switcher. Offline, fall back to ids.
@@ -157,7 +167,7 @@ export const useOrgMembership = (user: User | null) => {
     if (!user || !activeOrgId) {
       return;
     }
-    setIsMemberLoading(true);
+    const key = `${user.uid}/${activeOrgId}`;
     getDoc(getDocumentReference(`orgs/${activeOrgId}/members`, user.uid))
       .then((snapshot) => {
         const data = snapshot.exists() ? (snapshot.data() as OrgMember) : null;
@@ -168,7 +178,7 @@ export const useOrgMembership = (user: User | null) => {
         remember(user.uid, { members });
       })
       .catch(() => setMember(remembered(user.uid)?.members[activeOrgId] ?? null))
-      .finally(() => setIsMemberLoading(false));
+      .finally(() => setMemberLoadedFor(key));
   }, [user, activeOrgId]);
 
   const switchOrg = (orgId: string) => {
@@ -191,7 +201,7 @@ export const useOrgMembership = (user: User | null) => {
     isSuperAdmin,
     suspendedOrgs,
     // Plans assigned to a client are on the member doc, so wait for it too.
-    isLoading: isLoading || isMemberLoading,
+    isLoading: isLoading || claimsLoadedFor !== uid || (memberKey !== null && memberLoadedFor !== memberKey),
     switchOrg,
     refreshOrgs: (preferOrgId?: string) => loadClaims(true, preferOrgId),
     setOrgContentVersion,

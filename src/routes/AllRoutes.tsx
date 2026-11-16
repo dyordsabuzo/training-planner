@@ -15,6 +15,7 @@ import { PasswordReset } from "../pages/auth/PasswordReset";
 import { Logout } from "../pages/auth/Logout";
 import { Landing } from "../pages/landing/Landing";
 import { Home } from "../pages/Home";
+import { Loading } from "../pages/helpers/Loading";
 import { HistoryPage } from "../pages/HistoryPage";
 import { MainPage } from "../pages/MainPage";
 import { ClientDetailPage } from "../management/ClientDetailPage";
@@ -27,6 +28,7 @@ import { isChromelessRoute } from "./authRoutes";
 const AppShell = () => {
   const authContext = useContext(AuthContext);
   const {
+    isAuthReady,
     user,
     userPermission,
     isSuperAdmin,
@@ -44,6 +46,17 @@ const AppShell = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // A refresh starts signed out until Firebase restores the session; routing
+  // before then would flash the landing page and redirect protected pages.
+  if (!isAuthReady) {
+    return (
+      <div role="status" className="min-h-dvh flex items-center justify-center bg-background-light dark:bg-background-dark">
+        <span className="sr-only">Loading…</span>
+        <Loading />
+      </div>
+    );
+  }
 
   return (
     <>

@@ -43,6 +43,9 @@ export type UserPermission = {
 
 const AuthContext = createContext({
   isLoggedIn: false,
+  // False on startup until Firebase has restored (or ruled out) a saved
+  // sign-in and, if signed in, the org memberships are known.
+  isAuthReady: true,
   isLoading: false,
   error: null,
   user: null as User | null,
@@ -86,6 +89,8 @@ const AuthContext = createContext({
 export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthResolved, setIsAuthResolved] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [errorObject, setErrorObject] = useState<any>(null);
   const [auth, setAuth] = useState<any>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -98,6 +103,10 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     (UserPermission & { uid: string }) | null
   >(null);
   const membership = useOrgMembership(user);
+  // Startup only: once ready it stays ready, so switching orgs later shows
+  // the pages' own loading rather than blanking the app.
+  const isStartupDone = isAuthResolved && !(user && membership.isLoading);
+  if (isStartupDone && !isAuthReady) setIsAuthReady(true);
 
   useEffect(() => {
     const app = initializeApp({
@@ -130,6 +139,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
         clearQueryCache();
       }
       setIsLoading(false);
+      setIsAuthResolved(true);
     });
 
     return () => {};
@@ -403,6 +413,7 @@ export const AuthContextProvider: React.FC<_Props> = ({ children }) => {
     <AuthContext.Provider
       value={{
         isLoggedIn: isLoggedIn,
+        isAuthReady: isAuthReady,
         // Wait for org claims too, or pages would briefly show "no access".
         isLoading: isLoading || (!!user && membership.isLoading),
         error: errorObject,
