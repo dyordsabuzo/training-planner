@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendarDays, faDumbbell, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faCalendarDays, faDumbbell } from "@fortawesome/free-solid-svg-icons";
 import { callFunction } from "../../common/firebase";
 import { ScrollRow } from "../../management/ScrollRow";
 
-// Supersets are listed with sessions (a session of one superset).
 export type CatalogKind = "plans" | "sessions";
-export type CatalogCollection = CatalogKind | "supersets";
 
 export type CatalogItem = {
-  collection: CatalogCollection;
+  collection: CatalogKind;
   id: string;
   orgId: string;
   name: string;
@@ -23,11 +21,6 @@ const KINDS: { id: CatalogKind; label: string }[] = [
   { id: "plans", label: "Plans" },
   { id: "sessions", label: "Sessions" },
 ];
-
-const kindOf = (item: CatalogItem): CatalogKind => (item.collection === "plans" ? "plans" : "sessions");
-
-export const KIND_LABEL: Record<CatalogCollection, string> = { plans: "Plan", sessions: "Session", supersets: "Superset" };
-const KIND_ICON = { plans: faCalendarDays, sessions: faDumbbell, supersets: faLayerGroup };
 
 const FOCUS_WHITE = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
 
@@ -56,8 +49,8 @@ const CatalogCard = ({ item, onOpen }: { item: CatalogItem; onOpen: () => void }
       bg-white/10 backdrop-blur border border-white/20 hover:bg-white/15 transition-colors ${FOCUS_WHITE}`}
   >
     <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-primary-100">
-      <FontAwesomeIcon icon={KIND_ICON[item.collection]} />
-      {KIND_LABEL[item.collection]}
+      <FontAwesomeIcon icon={item.collection === "plans" ? faCalendarDays : faDumbbell} />
+      {item.collection === "plans" ? "Plan" : "Session"}
     </span>
     <span className="font-semibold leading-snug line-clamp-2">{item.name}</span>
     <span className="text-xs text-primary-100 truncate">by {item.orgName}</span>
@@ -91,9 +84,9 @@ export const PublicCatalog = ({ onOpen }: { onOpen: (item: CatalogItem) => void 
   }
   if (isError || !data?.length) return null;
 
-  const kinds = KINDS.filter((k) => data.some((item) => kindOf(item) === k.id));
+  const kinds = KINDS.filter((k) => data.some((item) => item.collection === k.id));
   const kind = chosen && kinds.some((k) => k.id === chosen) ? chosen : kinds[0].id;
-  const items = data.filter((item) => kindOf(item) === kind);
+  const items = data.filter((item) => item.collection === kind);
 
   return (
     <section className="relative flex flex-col gap-3" aria-label="Public workouts">

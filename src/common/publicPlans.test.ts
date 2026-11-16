@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPublicPlan, buildPublicSession, buildPublicSuperset, publicPlanSchema, publicSessionData } from "./publicPlans";
+import { buildPublicPlan, buildPublicSession, publicPlanSchema, publicSessionData } from "./publicPlans";
 
 const sourceData = {
   exercises: {
@@ -56,25 +56,6 @@ describe("buildPublicPlan", () => {
     const squat: any = built.sessions[0].units[0].exercises[0];
     expect(squat.exercise.alternatives).toEqual(["Lunge"]);
     expect(built.alternatives).toEqual({ Lunge: { name: "Lunge", targetWeight: 20 } });
-  });
-});
-
-describe("buildPublicSuperset", () => {
-  // A session with the superset's name, which must not be used instead.
-  const data = { ...sourceData, sessions: { ...sourceData.sessions, Legs: { name: "Legs", supersets: [] } } };
-  const copy = buildPublicSuperset({ id: "ss1", ...sourceData.supersets.Legs }, data, "2026-11-10T00:00:00.000Z");
-
-  it("is a one-session open plan running just the superset", () => {
-    expect(copy).toMatchObject({ planId: "ss1", name: "Legs", open: true, weeks: {} });
-    expect(copy.sessions).toHaveLength(1);
-    expect(copy.sessions[0].units.map((u: any) => u.name)).toEqual(["Legs"]);
-    expect(copy.sessions[0].units[0].exercises.map((e: any) => e.exercise.name)).toEqual(["Squat"]);
-    expect(publicPlanSchema.safeParse(JSON.parse(JSON.stringify(copy))).success).toBe(true);
-  });
-
-  it("copies no private fields or rest timers", () => {
-    const text = JSON.stringify(copy);
-    ["private", "previousNames", '"rest"', '"sessions":["Day B"]'].forEach((word) => expect(text).not.toContain(word));
   });
 });
 

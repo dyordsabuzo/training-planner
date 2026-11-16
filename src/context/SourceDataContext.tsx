@@ -677,10 +677,7 @@ export const SourceDataContextProvider: React.FC<_Props> = ({ children }) => {
 
   const deleteSupersetMutation = useMutation({
     onSuccess: markContentChanged,
-    mutationFn: async (superset: any) => {
-      await deletePublicPlansOf(activeOrgId as string, superset.id);
-      return deleteFromDB(SourceDbReferences.SUPERSETS, superset);
-    },
+    mutationFn: (superset: any) => deleteFromDB(SourceDbReferences.SUPERSETS, superset),
   });
 
   const addSessionMutation = useMutation({

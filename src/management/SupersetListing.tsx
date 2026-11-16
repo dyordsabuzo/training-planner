@@ -13,7 +13,6 @@ import { EntityActions, ActionsVariant, plural, sharingNotes } from "./EntityAct
 import { SECTION_ICONS } from "./ManageHero";
 import { countListed } from "./setupSummary";
 import { cloneSuperset } from "./cloneEntity";
-import { usePublicPlanActions } from "./PublicPlanActions";
 
 import { DataTable, DataTableColumn, Badge } from "@dyordsabuzo/ui-components";
 import {
@@ -103,7 +102,6 @@ export const SupersetListing = ({ viewMode = "card", headerTrailing }: Props) =>
   );
 
   const graph = useMemo(() => buildRelationshipGraph(sourceData), [sourceData]);
-  const { actionsFor: publicActionsFor, dialog: publicDialog } = usePublicPlanActions("superset");
 
   const rows: SupersetRow[] = entries.map(([key, value]) => {
     const superset: any = value;
@@ -137,7 +135,6 @@ export const SupersetListing = ({ viewMode = "card", headerTrailing }: Props) =>
           ? `This superset is used by ${usageCount} session${usageCount === 1 ? "" : "s"}. Deleting it will leave those references broken. This can't be undone.`
           : undefined
       }
-      extraActions={publicActionsFor(superset)}
     />
   );
 
@@ -209,7 +206,6 @@ export const SupersetListing = ({ viewMode = "card", headerTrailing }: Props) =>
       )}
 
       <LoadMore shown={limit} total={rows.length} onLoadMore={loadMore} onShowAll={showAll} />
-      {publicDialog}
 
       {formType && (
         <SupersetForm

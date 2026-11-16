@@ -8,8 +8,7 @@ import { Content } from "./sharing";
 
 type Doc = Record<string, any>;
 
-// Supersets are listed as sessions (a session of one superset).
-export const CATALOG = ["sessions", "supersets", "plans"] as const;
+export const CATALOG = ["sessions", "plans"] as const;
 export type CatalogContent = (typeof CATALOG)[number];
 
 const list = (value: unknown): string[] =>
@@ -36,13 +35,12 @@ export const isPubliclyListed = (data: Doc | undefined) =>
 
 const weekOrder = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
-// Card counts: weeks and sessions for a plan, exercises for a session or
-// superset (`supersetExercises` maps superset id -> its exercise ids).
+// Card counts: weeks and sessions for a plan, exercises for a session
+// (`supersetExercises` maps superset id -> its exercise ids).
 export const summaryOf = (collection: CatalogContent, data: Doc, supersetExercises: Map<string, string[]>) => {
   if (collection === "plans") {
     return { weeks: data.open ? 0 : Object.keys(data.weeks ?? {}).length, sessions: list(data.sessions).length };
   }
-  if (collection === "supersets") return { exercises: new Set(list(data.exercises)).size };
   const ids = [
     ...list(data.supersets).flatMap((id) => supersetExercises.get(id) ?? []),
     ...(Array.isArray(data.groups) ? data.groups : []).flatMap((g: any) => list(g?.exercises)),
@@ -75,20 +73,19 @@ const exerciseNames = (ids: unknown, get: Get) =>
     .map((id) => get("exercises", id)?.name)
     .filter((name): name is string => typeof name === "string" && !!name);
 
-const supersetUnit = (s: Doc, get: Get) =>
-  clean({
-    name: String(s.name ?? ""),
-    exercises: exerciseNames(s.exercises, get),
-    sets: num(s.targetSet),
-    reps: s.type === "Time-based" ? undefined : num(s.targetRep),
-    time: s.type === "Time-based" ? num(s.targetTime) : undefined,
-  });
-
 const sessionUnits = (session: Doc, get: Get): PreviewUnit[] => {
   const supersets = list(session.supersets)
     .map((id) => get("supersets", id))
     .filter((s): s is Doc => !!s)
-    .map((s) => supersetUnit(s, get));
+    .map((s) =>
+      clean({
+        name: String(s.name ?? ""),
+        exercises: exerciseNames(s.exercises, get),
+        sets: num(s.targetSet),
+        reps: s.type === "Time-based" ? undefined : num(s.targetRep),
+        time: s.type === "Time-based" ? num(s.targetTime) : undefined,
+      })
+    );
   const groups = (Array.isArray(session.groups) ? session.groups : []).map((g: any) => {
     const measured = g?.measured !== false;
     const measure = measured ? g?.measure : undefined;
@@ -109,14 +106,10 @@ const sessionPreview = (session: Doc, get: Get) => ({
   units: sessionUnits(session, get),
 });
 
-// What the preview sheet shows: a session's (or superset's) units and
-// exercises, or a plan's weeks (targets only) and sessions.
+// What the preview sheet shows: a session's units and exercises, or a
+// plan's weeks (targets only) and sessions.
 export const buildPreview = (collection: CatalogContent, root: Doc, get: Get) => {
   if (collection === "sessions") return { collection, ...sessionPreview(root, get) };
-  if (collection === "supersets") {
-    const unit = supersetUnit(root, get);
-    return { collection, name: unit.name, units: unit.exercises.length ? [unit] : [] };
-  }
   const weeks = root.open
     ? []
     : Object.keys(root.weeks ?? {})

@@ -19,7 +19,6 @@ const items = [
     summary: { weeks: 4, sessions: 3 },
   },
   { collection: "sessions", id: "s1", orgId: "o1", name: "Leg Day", tags: [], orgName: "Coach Co", summary: { exercises: 5 } },
-  { collection: "supersets", id: "ss1", orgId: "o1", name: "Arms Blast", tags: [], orgName: "Coach Co", summary: { exercises: 2 } },
 ];
 
 const preview = {
@@ -114,7 +113,6 @@ describe("Landing", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
     expect(screen.getByRole("button", { name: /Leg Day/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Superset.*Arms Blast/ })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Sign up to use" }));
     expect(screen.queryByText("Squat, Lunge")).toBeNull();

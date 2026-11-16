@@ -38,14 +38,6 @@ describe("buildPreview", () => {
     });
   });
 
-  it("previews a superset as a session of one unit", () => {
-    expect(buildPreview("supersets", docs["supersets/ss1"], get)).toEqual({
-      collection: "supersets",
-      name: "Legs",
-      units: [{ name: "Legs", exercises: ["Squat", "Lunge"], sets: 4, reps: 8 }],
-    });
-  });
-
   it("keeps a plan's week targets and session contents, nothing else", () => {
     const plan = {
       name: "Strength",
@@ -67,7 +59,6 @@ describe("summaryOf", () => {
   it("counts a plan's weeks and sessions, and a session's distinct exercises", () => {
     expect(summaryOf("plans", { weeks: { a: {}, b: {} }, sessions: ["s1"] }, new Map())).toEqual({ weeks: 2, sessions: 1 });
     expect(summaryOf("plans", { open: true, weeks: { a: {} }, sessions: [] }, new Map())).toEqual({ weeks: 0, sessions: 0 });
-    expect(summaryOf("supersets", docs["supersets/ss1"], new Map())).toEqual({ exercises: 3 });
     expect(summaryOf("sessions", docs["sessions/s1"], new Map([["ss1", ["e1", "e2", "e3"]]]))).toEqual({ exercises: 3 });
   });
 });

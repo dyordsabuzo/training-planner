@@ -75,16 +75,6 @@ export const buildPublicPlan = (plan: any, sourceData: any, publishedAt: string)
 export const buildPublicSession = (session: any, sourceData: any, publishedAt: string) =>
   buildPublicPlan({ id: session.id, name: session.name, open: true, sessions: [session.name] }, sourceData, publishedAt);
 
-// A superset goes public as a one-session plan whose session runs just that
-// superset. Only that session is looked up, so a real session with the same
-// name doesn't get in the way.
-export const buildPublicSuperset = (superset: any, sourceData: any, publishedAt: string) =>
-  buildPublicSession(
-    { id: superset.id, name: superset.name },
-    { ...sourceData, sessions: { [superset.name]: { name: superset.name, supersets: [superset.name] } } },
-    publishedAt
-  );
-
 const unitSchema = z
   .object({
     name: z.string(),

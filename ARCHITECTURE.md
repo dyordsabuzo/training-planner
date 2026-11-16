@@ -69,7 +69,7 @@ exercises**.
 | `orgs` | `orgs/{orgId}` | `name`, `code`, `ownerUid`, `status` (`active` / `suspended`), `contentVersion` |
 | `orgs/{orgId}/members` | `members/{uid}` | `uid`, `role` (`owner` / `trainer` / `client`), `assignedPlanIds[]`, `trainerUids[]` (clients), `email`, `displayName` |
 | `orgs/{orgId}/invites` | `invites/{token}` | `role`, `expiresAt`, `usesLeft` |
-| `orgs/{orgId}/publicPlans` | one per public link, id is its token | `planId` (the plan, session or superset it copies), `name`, `open`, `weeks`, `sessions[]`, `alternatives`, `publishedAt`; anyone holding the token can read it, signed out too |
+| `orgs/{orgId}/publicPlans` | one per public link, id is its token | `planId` (the plan or session it copies), `name`, `open`, `weeks`, `sessions[]`, `alternatives`, `publishedAt`; anyone holding the token can read it, signed out too |
 | `orgs/{orgId}/public` | `public/profile` | `name`, `contentVersion`, `status` (set by `suspendOrg`), readable by anyone signed in (for orgs linking to this org's items) |
 | `orgs/{orgId}/links` | `links/{linkId}` | `srcOrgId`, `collection`, `srcId`, `linkedAt`, `linkedBy`: a live link to another org's item |
 
@@ -322,12 +322,11 @@ active org has the `admin` role and a client has `user`
   archived, and only Cloud Functions change `linkCount`. Members read their
   org's `links`; only Cloud Functions write them. Any signed-in user reads an
   org's `public/profile`, and its trainers bump only its `contentVersion`.
-- **Public links** (`PublicPlanActions.tsx`, the ⋮ menu on plans, sessions and supersets)
+- **Public links** (`PublicPlanActions.tsx`, the ⋮ menu on plans and sessions)
   publish a copy to `orgs/{orgId}/publicPlans/{token}` and open at
   `/training-planner/public/{orgId}/{token}` without signing in
   (`PublicPlanPage.tsx`). `buildPublicPlan` copies only listed workout fields;
-  a session is published as a one-session open plan, and a superset as one
-  whose only session runs that superset. The copy changes only
+  a session is published as a one-session open plan. The copy changes only
   through Update public link, and Stop public access or deleting the source
   removes it. The rules allow `get` to anyone but `list` and writes only to
   trainers, so the token is the access. Runs use the normal workout screens
@@ -411,8 +410,8 @@ Rules under `orgs/{orgId}`:
 | `listOrgs` | super admin | every org (up to 200) with owner email, members by role, items per collection, public items and links |
 | `listMarketplace` | super admin | every public item (paged, suspended orgs' included) and every blocked one, with owner names |
 | `moderateItem` | super admin | blocks an item from the marketplace (private, with a reason) or unblocks it |
-| `listPublicCatalog` | anyone, signed out too | public sessions, supersets and plans for the landing page, with owner names and counts (cached ~5 min) |
-| `getPublicPreview` | anyone, signed out too | one public session, superset or plan, trimmed to names and targets |
+| `listPublicCatalog` | anyone, signed out too | public sessions and plans for the landing page, with owner names and counts (cached ~5 min) |
+| `getPublicPreview` | anyone, signed out too | one public session or plan, trimmed to names and targets |
 | `suspendOrg` | super admin | suspends or reactivates an org, and writes the status to its public profile |
 
 `billingGuard` isn't callable. It runs on Cloud Billing budget notifications
@@ -540,8 +539,7 @@ menus (`isChromelessRoute` in `src/routes/authRoutes.ts`).
 
 - From `lg` up, the hero sits beside the Log in / Sign up panel. Below
   that, the hero fills the screen and a bottom CTA slides the panel in.
-- The hero shows public sessions, supersets (listed with sessions) and plans
-  (`listPublicCatalog`): public,
+- The hero shows public sessions and plans (`listPublicCatalog`): public,
   not archived, blocked or personalised, from active orgs. A card opens a
   preview (`getPublicPreview`) with a "Sign up to use" button.
 - Both callables read with the Admin SDK and send only the fields picked in
