@@ -3,12 +3,12 @@ import { Button, Modal } from "@dyordsabuzo/ui-components";
 import { faCalendarDays, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { callFunction } from "../../common/firebase";
 import { AgendaRow, SectionLabel, StatusChip } from "../others/AgendaRow";
-import { CatalogItem, summaryText } from "./PublicCatalog";
+import { CatalogItem, KIND_LABEL, summaryText } from "./PublicCatalog";
 
 type PreviewUnit = { name: string; exercises: string[]; sets?: number; reps?: number | string; time?: number; distance?: number };
 type PreviewSession = { name: string; units: PreviewUnit[] };
 type Preview =
-  | ({ collection: "sessions" } & PreviewSession)
+  | ({ collection: "sessions" | "supersets" } & PreviewSession)
   | {
       collection: "plans";
       name: string;
@@ -43,7 +43,7 @@ const Units = ({ units }: { units: PreviewUnit[] }) => (
 );
 
 const PreviewBody = ({ preview }: { preview: Preview }) => {
-  if (preview.collection === "sessions") {
+  if (preview.collection !== "plans") {
     return (
       <div className="flex flex-col gap-1">
         <SectionLabel>Exercises</SectionLabel>
@@ -98,7 +98,7 @@ export const PublicPreviewSheet = ({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-            {item.collection === "plans" ? "Plan" : "Session"} by {item.orgName} · {summaryText(item)}
+            {KIND_LABEL[item.collection]} by {item.orgName} · {summaryText(item)}
           </p>
           {item.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
