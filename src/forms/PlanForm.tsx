@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import SourceDataContext from "../context/SourceDataContext";
 
@@ -52,6 +52,11 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
     toDate(planData?.createdAt) ?? (type === "add" ? dayjs() : null)
   );
   const [status, setStatus] = useState<string>(planData?.status ?? "Active");
+  // Edit saves keep the modal open; show "Saved" until the next change.
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    setSaved(false);
+  }, [name, isOpen, numberOfWeeks, baselineSet, baselineRep, baselineTime, sessions, startDate, cycle, isCycleBased, createdOn, status]);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -110,7 +115,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
 
     if (type === "edit") {
       sourceDataContext.editPlan({ id, ...plan });
-      closeForm();
+      setSaved(true);
     }
   };
 
@@ -228,6 +233,11 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
             </>
           )}
 
+          {saved && (
+            <span role="status" className="text-xs text-text-muted-light dark:text-text-muted-dark">
+              Saved
+            </span>
+          )}
           <FormButtons onCancel={closeForm} onDelete={type === "edit" ? handleDelete : undefined} />
         </form>
     </Modal>
