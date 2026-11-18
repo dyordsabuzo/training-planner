@@ -4,6 +4,7 @@ import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
+import { SavedStatus, useSavedFlag } from "./SavedStatus";
 
 import { findDuplicateName } from "../common/nameValidation";
 import { toStringArray } from "../common/utils";
@@ -29,7 +30,9 @@ type Props = {
 };
 
 export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
-  const formData = data;
+  // Frozen at open: callers may pass a live lookup by name, which goes
+  // undefined after a rename is saved and would lose the id.
+  const [formData] = useState(data);
 
   const id = formData?.id ?? "";
   const [name, setName] = useState(formData?.name ?? "");
@@ -48,6 +51,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const [targetTime, setTargetTime] = useState<string>(
     formData?.targetTime ?? ""
   );
+  const [saved, markSaved] = useSavedFlag([name, sessions, exercises, rest, tags, type, targetRep, targetSet, targetTime]);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -55,7 +59,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
   const sessionOptions = Object.keys(sourceData.sessions ?? {});
 
   const handleDelete = () => {
-    sourceDataContext.deleteSuperset(data);
+    sourceDataContext.deleteSuperset(formData);
     closeForm();
   };
 
@@ -96,7 +100,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
         targetSet,
         targetTime,
       });
-      closeForm();
+      markSaved();
     }
   };
 
@@ -184,6 +188,7 @@ export const SupersetForm = ({ data, entryType, closeForm }: Props) => {
             />
           </CollapsibleSection>
 
+          <SavedStatus show={saved} />
           <FormButtons onCancel={closeForm} onDelete={entryType === "edit" ? handleDelete : undefined} />
         </form>
     </Modal>

@@ -3,6 +3,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { DateInput, Input, Modal } from "@dyordsabuzo/ui-components";
 import SourceDataContext from "../context/SourceDataContext";
 import { FormButtons } from "./FormButtons";
+import { SavedStatus, useSavedFlag } from "./SavedStatus";
 import { EventInput, eventDay, eventInputErrors, RecurringEvent, WEEKDAY_LABELS } from "../common/recurringEvents";
 
 type Props = {
@@ -25,6 +26,7 @@ export const RecurringEventForm = ({ event, closeForm }: Props) => {
   const [notes, setNotes] = useState(event?.notes ?? "");
   const [errors, setErrors] = useState<Partial<Record<keyof EventInput, string>>>({});
   const [saveError, setSaveError] = useState<string>();
+  const [saved, markSaved] = useSavedFlag([name, weekdays, startDate, endDate, startTime, location, notes]);
 
   const toggleWeekday = (day: number) =>
     setWeekdays((days) => (days.includes(day) ? days.filter((d) => d !== day) : [...days, day]));
@@ -45,7 +47,9 @@ export const RecurringEventForm = ({ event, closeForm }: Props) => {
     if (Object.keys(found).length > 0) return;
     try {
       await saveEvent(input, event?.id);
-      closeForm();
+      setSaveError(undefined);
+      if (event) markSaved();
+      else closeForm();
     } catch {
       setSaveError("Couldn't save the event. Try again.");
     }
@@ -113,6 +117,7 @@ export const RecurringEventForm = ({ event, closeForm }: Props) => {
         <Input label="Notes (optional)" value={notes} placeholder="Notes" changeValue={setNotes} />
 
         {saveError && <span className="text-sm text-danger">{saveError}</span>}
+        <SavedStatus show={saved} />
         <FormButtons onCancel={closeForm} onDelete={event ? handleDelete : undefined} />
       </form>
     </Modal>

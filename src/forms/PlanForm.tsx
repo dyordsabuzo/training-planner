@@ -1,8 +1,9 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
+import { SavedStatus, useSavedFlag } from "./SavedStatus";
 
 import { findDuplicateName } from "../common/nameValidation";
 import { toDate } from "../common/planWeek";
@@ -21,7 +22,9 @@ type Props = {
 };
 
 export const PlanForm = ({ data, type, closeForm }: Props) => {
-  const planData = data;
+  // Frozen at open: callers may pass a live lookup by name, which goes
+  // undefined after a rename is saved and would lose the id.
+  const [planData] = useState(data);
 
   const id = planData?.id;
   const [name, setName] = useState(planData?.name ?? "");
@@ -52,17 +55,13 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
     toDate(planData?.createdAt) ?? (type === "add" ? dayjs() : null)
   );
   const [status, setStatus] = useState<string>(planData?.status ?? "Active");
-  // Edit saves keep the modal open; show "Saved" until the next change.
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    setSaved(false);
-  }, [name, isOpen, numberOfWeeks, baselineSet, baselineRep, baselineTime, sessions, startDate, cycle, isCycleBased, createdOn, status]);
+  const [saved, markSaved] = useSavedFlag([name, isOpen, numberOfWeeks, baselineSet, baselineRep, baselineTime, sessions, startDate, cycle, isCycleBased, createdOn, status]);
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
 
   const handleDelete = () => {
-    sourceDataContext.deletePlan(data);
+    sourceDataContext.deletePlan(planData);
     closeForm();
   };
 
@@ -115,7 +114,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
 
     if (type === "edit") {
       sourceDataContext.editPlan({ id, ...plan });
-      setSaved(true);
+      markSaved();
     }
   };
 
@@ -233,11 +232,7 @@ export const PlanForm = ({ data, type, closeForm }: Props) => {
             </>
           )}
 
-          {saved && (
-            <span role="status" className="text-xs text-text-muted-light dark:text-text-muted-dark">
-              Saved
-            </span>
-          )}
+          <SavedStatus show={saved} />
           <FormButtons onCancel={closeForm} onDelete={type === "edit" ? handleDelete : undefined} />
         </form>
     </Modal>

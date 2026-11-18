@@ -4,6 +4,7 @@ import React, { useContext, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
+import { SavedStatus, useSavedFlag } from "./SavedStatus";
 import { IncrementDecrement, Input, Modal } from "@dyordsabuzo/ui-components";
 import { describeCycleStep } from "../common/planCycle";
 
@@ -27,6 +28,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
   const [targetTime, setTargetTime] = useState<number>(
     Number(weekData.targetTime) || 0
   );
+  const [saved, markSaved] = useSavedFlag([annotation, targetSet, targetRep, targetTime]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
       targetRep,
       targetTime,
     });
-    clear();
+    markSaved();
   };
 
   return (
@@ -90,6 +92,7 @@ export const WeekForm = ({ weekData, clear }: Props) => {
           </div>
         </div>
 
+        <SavedStatus show={saved} />
         <FormButtons onCancel={clear} />
       </form>
     </Modal>

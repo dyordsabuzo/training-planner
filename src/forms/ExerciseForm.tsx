@@ -3,6 +3,7 @@ import React, { useContext, useRef, useState } from "react";
 import SourceDataContext from "../context/SourceDataContext";
 
 import { FormButtons } from "./FormButtons";
+import { SavedStatus, useSavedFlag } from "./SavedStatus";
 
 import { findDuplicateName } from "../common/nameValidation";
 import { toSentenceCase, toStringArray } from "../common/utils";
@@ -31,7 +32,9 @@ type Props = {
 };
 
 export const ExerciseForm = ({ data, type, closeForm, onCreated }: Props) => {
-  const exerciseData: ExerciseData | null = data;
+  // Frozen at open: callers may pass a live lookup by name, which goes
+  // undefined after a rename is saved and would lose the id.
+  const [exerciseData] = useState<ExerciseData | null>(data);
 
   const id = exerciseData?.id ?? "";
   const [name, setName] = useState(exerciseData?.name ?? "");
@@ -52,6 +55,10 @@ export const ExerciseForm = ({ data, type, closeForm, onCreated }: Props) => {
   const [alternatives, setAlternatives] = useState<string[]>(
     toStringArray(exerciseData?.alternatives)
   );
+
+  const savedValues = (n: string, t: string[]) =>
+    [n, videoLink, isWeightExercise, t, targetRep, targetSet, rest, supersets, alternatives];
+  const [saved, markSaved] = useSavedFlag(savedValues(name, tags));
 
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
@@ -106,7 +113,10 @@ export const ExerciseForm = ({ data, type, closeForm, onCreated }: Props) => {
         targetWeight: 0,
         isWeightExercise,
       });
-      closeForm();
+      // Show what was stored: the sentence-cased name and any pending tag.
+      setName(savedName);
+      setTags(finalTags);
+      markSaved(savedValues(savedName, finalTags));
     }
   };
 
@@ -184,6 +194,7 @@ export const ExerciseForm = ({ data, type, closeForm, onCreated }: Props) => {
             />
           </CollapsibleSection>
 
+          <SavedStatus show={saved} />
           <FormButtons onCancel={closeForm} />
         </form>
     </Modal>
