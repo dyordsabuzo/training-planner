@@ -28,6 +28,7 @@ const newGroup = (index: number): SessionGroup => ({
   sideRest: 15,
   tempoRequired: false,
   tempo: "",
+  priority: false,
 });
 
 const iconButtonClass = `min-h-11 min-w-11 flex items-center justify-center rounded-full
@@ -202,6 +203,11 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
                 <div className="text-xs text-text-muted-light dark:text-text-muted-dark break-words">
                   {summarise(group)}
                 </div>
+                {group.priority && (
+                  <span className="mt-1 mr-1 inline-flex w-fit items-center rounded-full bg-primary text-white px-2 py-0.5 text-xs font-bold">
+                    Priority
+                  </span>
+                )}
                 {group.leftRight && (
                   <span className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-text-muted-light dark:text-text-muted-dark px-2 py-0.5 text-xs font-medium">
                     <FontAwesomeIcon icon={faArrowsLeftRight} />
@@ -285,6 +291,13 @@ export const SessionGroupEditor = ({ value, onChange, exerciseOptions, onCreateE
                 emptyMessage="No exercises added yet"
               />
             </div>
+
+            <Toggle
+              label="Priority (must do)"
+              labelDirection="row"
+              value={!!group.priority}
+              toggle={(priority: boolean) => updateGroup(index, { ...group, priority })}
+            />
 
             <Toggle
               label="Left & right (each side)"

@@ -19,10 +19,11 @@ import { UnwrappedRestTimer } from "../timer/UnwrappedRestTimer";
 import { SessionProgress } from "../others/SessionProgress";
 import { ExerciseDetails } from "./ExerciseDetails";
 import { TargetWeightPrompt, Targets } from "./TargetWeightPrompt";
+import { WARMUP_PICK_COUNT, WarmupPickPrompt } from "./WarmupPickPrompt";
 import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
 import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 import { Modal } from "@dyordsabuzo/ui-components";
-import { setsOrDefault, unitId } from "../resolveSessionSupersets";
+import { isWarmup, pickRandom, setsOrDefault, unitId } from "../resolveSessionSupersets";
 import { FOCUS, SectionLabel } from "../others/AgendaRow";
 import { OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
 import {
@@ -43,6 +44,7 @@ type State = {
 
 type Action =
   | { type: "reset" }
+  | { type: "finish"; payload: { unitCount: number } }
   | { type: "update"; payload: any }
   | { type: "continue"; payload?: any }
   | { type: "skipExercise"; payload: { exerciseLength: number; targetSet: number; position: number } };
@@ -98,6 +100,9 @@ const reducer = (state: State, action: Action) => {
         ...initialState,
         supersetCounter: state.supersetCounter + 1,
       };
+    // Ends the run early: past the last unit, which shows the finish screen.
+    case "finish":
+      return { ...initialState, supersetCounter: action.payload.unitCount };
     case "update": {
       let { exerciseCounter: ecounter, exerciseSet: eset } = state;
 
@@ -181,6 +186,10 @@ export const ExercisePage = () => {
   useScrollToTopOnClose(showSetEditor);
   // Units skipped from here, shown as "Skipped" in the progress list.
   const [skippedUnits, setSkippedUnits] = useState<string[]>([]);
+  // Warm-up units already offered the random pick.
+  const [warmupDecided, setWarmupDecided] = useState<Set<string>>(new Set());
+  // "Continue" chosen at the all-priority-done prompt; not asked again.
+  const [priorityPromptDismissed, setPriorityPromptDismissed] = useState(false);
 
   const [targetRep, setTargetRep] = useState<string>("0");
   const [targetDistance, setTargetDistance] = useState<string>("0");
@@ -288,15 +297,13 @@ export const ExercisePage = () => {
 
   const supersetLength = Object.keys(sessionData.supersets).length;
   if (supersetLength > 0 && exerciseState.supersetCounter >= supersetLength) {
-    // Reached by skipping the last unit; SummaryPage saves the finished run.
-    const supersetIndex = Object.values(sessionData.supersets).findIndex(
-      (unit: any) => unitId(unit) === unitId(supersetData)
-    );
-
+    // Reached by skipping the last unit or completing the workout after the
+    // priority groups; SummaryPage saves the finished run. Every unit counts
+    // as done or skipped.
     return (
       <SummaryPage
         currentSuperset={supersetData}
-        supersetIndex={supersetIndex}
+        supersetIndex={supersetLength - 1}
         actualSupersetData={actualSupersetData}
         skippedIds={skippedUnits}
       />
@@ -304,9 +311,18 @@ export const ExercisePage = () => {
   }
 
   if (exerciseState.supersetComplete) {
-    const supersetIndex = Object.values(sessionData.supersets).findIndex(
+    const units: any[] = Object.values(sessionData.supersets);
+    const supersetIndex = units.findIndex(
       (unit: any) => unitId(unit) === unitId(supersetData)
     );
+    const nextUnit = units[exerciseState.supersetCounter + 1];
+    // All priority groups are behind us and optional ones remain.
+    const lastPriority = units.map((unit) => !!unit.priority).lastIndexOf(true);
+    const priorityDone =
+      !priorityPromptDismissed &&
+      lastPriority >= 0 &&
+      exerciseState.supersetCounter >= lastPriority &&
+      !!nextUnit;
 
     return (
       <SummaryPage
@@ -317,7 +333,17 @@ export const ExercisePage = () => {
           ] || null
         }
         supersetIndex={supersetIndex}
-        nextPageHandler={() => dispatch({ type: "reset" })}
+        nextPageHandler={() => {
+          if (priorityDone) setPriorityPromptDismissed(true);
+          dispatch({ type: "reset" });
+        }}
+        priorityDone={priorityDone}
+        onCompleteWorkout={() => {
+          // Optional units not run show as skipped.
+          const remaining = units.slice(exerciseState.supersetCounter + 1).map(unitId);
+          setSkippedUnits((prev) => [...prev, ...remaining]);
+          dispatch({ type: "finish", payload: { unitCount: units.length } });
+        }}
         actualSupersetData={actualSupersetData}
         skippedIds={skippedUnits}
       />
@@ -410,10 +436,20 @@ export const ExercisePage = () => {
     !exerciseState.supersetRest &&
     supersetData.type !== "Time-based" &&
     supersetData.measured !== false &&
-    // Group names are free text: matches "Warmup", "Warm-up", "warm up", etc.
-    !/warm[\s-]?up/i.test(supersetData.name || "") &&
+    !isWarmup(supersetData.name) &&
     !!exerciseData.exercise?.name &&
     !weightPrompted.has(weightPromptKey);
+
+  const showWarmupPick =
+    isWarmup(supersetData.name) &&
+    exerciseLength > WARMUP_PICK_COUNT &&
+    exerciseState.exerciseSet === 0 &&
+    exerciseState.exerciseCounter === 0 &&
+    !exerciseState.supersetRest &&
+    !warmupDecided.has(unitId(supersetData));
+
+  const markWarmupDecided = () =>
+    setWarmupDecided((prev) => new Set(prev).add(unitId(supersetData)));
 
   const markWeightPrompted = () =>
     setWeightPrompted((prev) => new Set(prev).add(weightPromptKey));
@@ -515,6 +551,16 @@ export const ExercisePage = () => {
           </button>
         </div>
       </Modal>
+      <WarmupPickPrompt
+        isOpen={showWarmupPick}
+        exercises={supersetData.exercises}
+        onPick={(exercises) => {
+          // Run-only: the session keeps its full warm-up list.
+          setSupersetData({ ...supersetData, exercises });
+          markWarmupDecided();
+        }}
+        onFull={markWarmupDecided}
+      />
       <TargetWeightPrompt
         isOpen={showWeightPrompt}
         exerciseName={exerciseData.exercise?.name || ""}

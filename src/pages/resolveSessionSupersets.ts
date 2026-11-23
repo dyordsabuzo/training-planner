@@ -46,6 +46,26 @@ export type SessionGroup = {
   // Rest between the left and right sides, in seconds. Runs as a
   // switch-sides countdown during training (see leftRight); 0 skips it.
   sideRest?: number;
+  // Must-do group. When any group is priority, priority groups run first and
+  // the rest are optional (see resolveSession).
+  priority?: boolean;
+};
+
+// Group names are free text: matches "Warmup", "Warm-up", "warm up", etc.
+export const isWarmup = (name?: string) => /warm[\s-]?up/i.test(name || "");
+
+// n random items, kept in their original order. All items when there are n or fewer.
+export const pickRandom = <T>(items: T[], n: number, rng: () => number = Math.random): T[] => {
+  if (items.length <= n) return [...items];
+  const indexes = items.map((_, i) => i);
+  for (let i = indexes.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [indexes[i], indexes[j]] = [indexes[j], indexes[i]];
+  }
+  return indexes
+    .slice(0, n)
+    .sort((a, b) => a - b)
+    .map((i) => items[i]);
 };
 
 export const sideLabel = (leftRight?: boolean) => (leftRight ? "Left & right" : null);
@@ -199,6 +219,7 @@ export const resolveSessionGroups = (
             : { targetRep: group.reps || seed.targetRep }),
         targetSet: group.sets || seed.targetSet,
         leftRight: !!group.leftRight,
+        priority: !!group.priority,
         sideRest: group.sideRest || 0,
         ...(tempo ? { tempo } : {}),
         annotation: group.rpe ? `RPE ${group.rpe}` : seed.annotation,
@@ -210,13 +231,29 @@ export const resolveSessionGroups = (
   return units;
 };
 
+// Run order for groups when any is priority: warm-ups, then priority groups,
+// then optional ones (each kept in session order). Unchanged otherwise.
+const runOrder = (groups: SessionGroup[]) => {
+  const indexes = groups.map((_, i) => i);
+  if (!groups.some((g) => g.priority)) return indexes;
+  const rank = (g: SessionGroup) => (isWarmup(g.name) ? 0 : g.priority ? 1 : 2);
+  return indexes.sort((a, b) => rank(groups[a]) - rank(groups[b]) || a - b);
+};
+
 // Entry point for any session. Supersets run first, then exercise groups.
 export const resolveSession = (sourceData: any, session: any, seed: ResolveSeed = {}) => {
   const supersets = toStringArray(session?.supersets);
   const groups: SessionGroup[] = session?.groups ?? [];
+  const keys = groupKeys(supersets, groups);
+  const order = runOrder(groups);
   return {
     ...resolveSessionSupersets(sourceData, supersets, seed),
-    ...resolveSessionGroups(sourceData, groups, seed, groupKeys(supersets, groups)),
+    ...resolveSessionGroups(
+      sourceData,
+      order.map((i) => groups[i]),
+      seed,
+      order.map((i) => keys[i])
+    ),
   };
 };
 

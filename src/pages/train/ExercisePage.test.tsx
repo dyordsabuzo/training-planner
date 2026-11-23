@@ -124,3 +124,90 @@ describe("ExercisePage limited run", () => {
     expect(screen.getByRole("button", { name: "Skip exercise" })).toBeTruthy();
   });
 });
+
+const unit = (name: string, extra: object = {}) => ({
+  name,
+  key: name,
+  kind: "group",
+  type: "Rep-based",
+  measured: false,
+  targetSet: 1,
+  targetRep: 8,
+  exercises: [{ exercise: { name: `${name} move` }, targetWeight: 0 }],
+  ...extra,
+});
+
+const renderWith = (data: any, extra: object = {}) =>
+  render(
+    <MemoryRouter>
+      <SessionContext.Provider value={{ sessionData: data, exitPath: "/", saveProgress: vi.fn(), ...extra } as any}>
+        <ExercisePage />
+      </SessionContext.Provider>
+    </MemoryRouter>
+  );
+
+describe("warm-up random pick", () => {
+  afterEach(cleanup);
+
+  const warmup = () => ({
+    session: "Day A",
+    supersets: {
+      "Warm-up": unit("Warm-up", {
+        exercises: ["A", "B", "C", "D", "E", "F"].map((name) => ({ exercise: { name }, targetWeight: 0 })),
+      }),
+    },
+  });
+
+  it("runs 4 random exercises when chosen", () => {
+    renderWith(warmup());
+    fireEvent.click(screen.getByRole("button", { name: "Do these 4" }));
+    expect(screen.getByText("Exercise 1 of 4")).toBeTruthy();
+  });
+
+  it("keeps the full list when chosen", () => {
+    renderWith(warmup());
+    fireEvent.click(screen.getByRole("button", { name: "Full list (6)" }));
+    expect(screen.getByText("Exercise 1 of 6")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Do these 4" })).toBeNull();
+  });
+
+  it("isn't offered for short warm-ups", () => {
+    renderWith({ session: "Day A", supersets: { "Warm-up": unit("Warm-up") } });
+    expect(screen.queryByRole("button", { name: "Do these 4" })).toBeNull();
+  });
+});
+
+describe("priority groups", () => {
+  afterEach(cleanup);
+
+  const data = () => ({
+    session: "Day A",
+    supersets: { Main: unit("Main", { priority: true }), Extra: unit("Extra"), Core: unit("Core") },
+  });
+
+  it("offers to complete the workout once priority groups are done", async () => {
+    const saveRun = vi.fn();
+    renderWith(data(), { saveRun });
+    fireEvent.click(screen.getAllByRole("button", { name: "Done" })[0]);
+    expect(screen.getByText("All priority groups done")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Complete workout" }));
+    expect(await screen.findByRole("button", { name: "Finish workout" })).toBeTruthy();
+    expect(saveRun).toHaveBeenCalledTimes(1);
+    expect(saveRun.mock.calls[0][1]).toBeUndefined();
+  });
+
+  it("continues with optional groups and doesn't ask again", () => {
+    renderWith(data(), { saveRun: vi.fn() });
+    fireEvent.click(screen.getAllByRole("button", { name: "Done" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Continue optional groups" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Done" })[0]);
+    expect(screen.queryByText("All priority groups done")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Next/ })).toBeTruthy();
+  });
+
+  it("doesn't prompt when no group is priority", () => {
+    renderWith({ session: "Day A", supersets: { Extra: unit("Extra"), Core: unit("Core") } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Done" })[0]);
+    expect(screen.queryByText("All priority groups done")).toBeNull();
+  });
+});

@@ -8,7 +8,7 @@ import { faArrowLeft, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
 import { SectionLabel } from "./others/AgendaRow";
-import { HeroTile, PRIMARY_PILL } from "./others/HeroTile";
+import { HeroTile, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
 
 import { isTrainSessionPath } from "../routes/trainRoutes";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
@@ -24,6 +24,9 @@ type Props = {
   nextPageHandler?: () => void;
   // Unit ids skipped so far in the run.
   skippedIds?: string[];
+  // Every priority group is done and optional ones remain: offer to finish.
+  priorityDone?: boolean;
+  onCompleteWorkout?: () => void;
 };
 
 // "2 supersets · 1 exercise group", counting each kind of unit separately.
@@ -56,6 +59,8 @@ export const SummaryPage = ({
   supersetIndex = 0,
   nextPageHandler = () => {},
   skippedIds = [],
+  priorityDone = false,
+  onCompleteWorkout = () => {},
 }: Props) => {
   const sessionComplete = currentSuperset && !nextSuperset;
   const {
@@ -220,6 +225,18 @@ export const SummaryPage = ({
           />
         </div>
 
+        {priorityDone && (
+          <div
+            role="status"
+            className="rounded-2xl p-4 border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-800/20 flex flex-col gap-1"
+          >
+            <span className="font-bold">All priority groups done</span>
+            <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+              Continue with the optional groups, or complete the workout now.
+            </span>
+          </div>
+        )}
+
         {currentSuperset && nextSuperset && (
           <div className="flex justify-center">
             <ConfirmDeleteButton
@@ -238,9 +255,20 @@ export const SummaryPage = ({
           </div>
         )}
 
-        <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95">
-          <button type="button" className={`${PRIMARY_PILL} w-full`} onClick={handleButtonClick}>
-            {nextSuperset
+        <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95 flex flex-col gap-2">
+          {priorityDone && (
+            <button type="button" className={`${PRIMARY_PILL} w-full`} onClick={onCompleteWorkout}>
+              Complete workout
+            </button>
+          )}
+          <button
+            type="button"
+            className={priorityDone ? `${OUTLINE_PILL} w-full min-h-12 text-base` : `${PRIMARY_PILL} w-full`}
+            onClick={handleButtonClick}
+          >
+            {priorityDone
+              ? "Continue optional groups"
+              : nextSuperset
               ? `Next ${unitName(nextSuperset.kind as UnitKind)}`
               : currentSuperset
                 ? "Finish workout"

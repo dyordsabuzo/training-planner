@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveSession, sessionUnitKeys, sessionUnitNames } from "./resolveSessionSupersets";
+import { pickRandom, resolveSession, sessionUnitKeys, sessionUnitNames } from "./resolveSessionSupersets";
 
 const sourceData = {
   exercises: {
@@ -177,5 +177,40 @@ describe("groups with the same name", () => {
   it("keeps group keys clear of superset names", () => {
     const session = { supersets: ["Legs"], groups: [group("Legs", "Squat")] };
     expect(sessionUnitKeys(session)).toEqual(["Legs", "Legs #2"]);
+  });
+});
+
+describe("priority groups", () => {
+  const group = (name: string, priority = false) => ({
+    name, exercises: ["Squat"], sets: 3, reps: 5, percent: 0, rpe: 0, priority,
+  });
+
+  it("runs warm-ups, then priority groups, then optional ones", () => {
+    const session = {
+      supersets: ["Legs"],
+      groups: [group("Extra"), group("Main", true), group("Warm-up"), group("Finisher", true), group("Extra")],
+    };
+    const units = resolveSession(sourceData, session);
+    expect(Object.keys(units)).toEqual(["Legs", "Warm-up", "Main", "Finisher", "Extra", "Extra #2"]);
+    expect(units.Main.priority).toBe(true);
+    expect(units.Extra.priority).toBe(false);
+  });
+
+  it("keeps session order when no group is priority", () => {
+    const units = resolveSession(sourceData, { groups: [group("Extra"), group("Warm-up")] });
+    expect(Object.keys(units)).toEqual(["Extra", "Warm-up"]);
+  });
+});
+
+describe("pickRandom", () => {
+  it("returns n distinct items in their original order", () => {
+    const picked = pickRandom([1, 2, 3, 4, 5, 6], 4, () => 0.5);
+    expect(picked).toHaveLength(4);
+    expect(new Set(picked).size).toBe(4);
+    expect([...picked].sort((a, b) => a - b)).toEqual(picked);
+  });
+
+  it("returns every item when there are n or fewer", () => {
+    expect(pickRandom([1, 2, 3], 4)).toEqual([1, 2, 3]);
   });
 });

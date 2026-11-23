@@ -59,7 +59,7 @@ exercises**.
 | --- | --- | --- |
 | `orgs/{orgId}/exercises` | one per exercise | `name`, `supersets[]`, `alternatives[]`, targets |
 | `orgs/{orgId}/supersets` | one per superset | `name`, `exercises[]`, `sessions[]`, targets |
-| `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id`), share snapshot |
+| `orgs/{orgId}/sessions` | one per session | `name`, `supersets[]`, `groups[]` (inline exercise groups, each with a stable `id` and optional `priority`), share snapshot |
 | `orgs/{orgId}/plans` | one per plan | `name`, `sessions[]`, `weeks{}`, cycle settings, `personalisedFor` (client uid, on a personalised copy) |
 | `users` | `users/{uid}` | profile and access request |
 | `userdata` | `userdata/{uid}` | `inProgress` for a run underway |
@@ -235,6 +235,16 @@ progress and sets to go. A unit with no sets set runs as 3 (`setsOrDefault`).
 Skip exercise, Skip group and Cancel session sit in one row of
 pills. On phones the bottom menu is hidden during a run and opened from a menu
 button at the top right, so nothing floats over these bottom actions.
+
+Exercise groups can be flagged **priority** in Manage. When any group is,
+`resolveSession` runs warm-ups first, then priority groups, then the optional
+rest (unit keys are unchanged, so saved runs aren't affected). Once the last
+priority group is done and optional ones remain, the summary offers
+**Complete workout** (saved as a normal completed run, the remaining groups
+shown as skipped) or **Continue optional groups**. A warm-up group (name
+matching `isWarmup`) with more than 4 exercises opens `WarmupPickPrompt` at
+its start: do 4 random exercises (`pickRandom`, with Reshuffle) or the full
+list. The pick lasts for the run only.
 
 Timers (`components/others/Timer.tsx`) draw their own SVG ring and avoid
 waking the phone every frame, to save battery. JavaScript wakes once per
