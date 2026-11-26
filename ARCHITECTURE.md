@@ -265,7 +265,8 @@ the URL. Lists render as `AgendaRow`s; the table view is desktop-only.
 The session form (`SessionForm.tsx`) saves an existing session on its own, 800ms
 after the last change and straight away on close, unmount or the page being
 hidden. There's no revert: Done just closes. It writes only what changed, and
-nothing while the form is invalid. New sessions and clones wait for Save. Its
+nothing while the form is invalid. New sessions and clones wait for Save; the
+modal then stays open as the new session's edit form and autosaves from there. Its
 Plans field edits the plans' own `sessions[]` (`setSessionPlans`), one batch of
 array operations by session id, so a rename or a stale cached plan can't undo
 another edit. Plan changes reach assigned clients as soon as they save.

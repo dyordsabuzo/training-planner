@@ -30,7 +30,11 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   // undefined after an autosaved rename and would lose the id.
   const [formData] = useState(data);
 
-  const id = formData?.id;
+  // A new session becomes an edit once Save has stored it, so the modal stays
+  // open and later changes autosave.
+  const [mode, setMode] = useState(type);
+  const [id, setId] = useState<string | undefined>(formData?.id);
+  const adding = useRef(false);
   const sourceDataContext = useContext(SourceDataContext);
   const sourceData: any = sourceDataContext.sourceData;
 
@@ -133,7 +137,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const retryPlanIds = useRef<string[]>([]);
   const lastWrite = useRef(0);
   const persist = async () => {
-    if (type !== "edit" || formData?.linked || !id) return;
+    if (mode !== "edit" || formData?.linked || !id) return;
 
     const session = buildSession();
     if (!session) return;
@@ -205,27 +209,41 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (type === "edit") {
+    if (mode === "edit") {
       persist();
       return;
     }
 
     const session = buildSession();
-    if (session && type === "add") {
+    if (session && mode === "add" && !adding.current) {
+      adding.current = true;
+      setWriteStatus("saving");
+      const savedFields = JSON.stringify(fieldsWith(session.tags));
+      const savedPlans = planIds;
       // Plans reference the session by id, so they're updated once it has one.
       sourceDataContext.addSession(session).then((saved) => {
-        if (saved?.id && planIds.length > 0) {
-          sourceDataContext.setSessionPlans(saved.id, Object.fromEntries(planIds.map((plan) => [plan, true])));
+        adding.current = false;
+        if (!saved?.id) {
+          setWriteStatus("error");
+          return;
         }
+        if (savedPlans.length > 0) {
+          sourceDataContext.setSessionPlans(saved.id, Object.fromEntries(savedPlans.map((plan) => [plan, true])));
+        }
+        setTags(session.tags);
+        savedKey.current = savedFields;
+        savedPlanIds.current = savedPlans;
+        setId(saved.id);
+        setMode("edit");
+        setWriteStatus("saved");
       });
-      closeForm();
     }
   };
 
   return (
     <>
     <Modal
-      title={type === "add" ? "Add session" : "Session"}
+      title={mode === "add" ? "Add session" : "Session"}
       isOpen={true}
       onClose={handleClose}
       size="lg"
@@ -299,7 +317,7 @@ export const SessionForm = ({ data, type, closeForm }: Props) => {
           </span>
         </div>
 
-        {type === "edit" ? (
+        {mode === "edit" ? (
           <div className="flex items-center gap-3 py-4">
             <Button label="Done" type="button" decoration="save" onClick={handleClose} />
             {status !== "idle" && (

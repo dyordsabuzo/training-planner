@@ -439,7 +439,7 @@ describe("SessionForm plans", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(addSession).toHaveBeenCalledOnce();
     expect(addSession.mock.calls[0][0]).not.toHaveProperty("plans");
-    expect(closeForm).toHaveBeenCalledOnce();
+    expect(closeForm).not.toHaveBeenCalled();
     await elapse(0);
     expect(setSessionPlans).toHaveBeenCalledWith("new", { p2: true });
   });
@@ -481,12 +481,28 @@ describe("SessionForm add", () => {
     expect(screen.queryByRole("button", { name: "Done" })).not.toBeInTheDocument();
   });
 
-  it("adds on Save, then closes", () => {
-    const { addSession, closeForm } = setup(added, "add");
+  it("adds on Save and stays open, autosaving later changes", async () => {
+    const { addSession, editSession, closeForm } = setup(added, "add");
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(addSession).toHaveBeenCalledOnce();
     expect(addSession.mock.calls[0][0].name).toBe("Legs copy");
-    expect(closeForm).toHaveBeenCalledOnce();
+    await elapse(0);
+    expect(closeForm).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    rename("Leg day");
+    await elapse(2000);
+    expect(editSession).toHaveBeenCalledOnce();
+    expect(editSession.mock.calls[0][0]).toMatchObject({ id: "new", name: "Leg day" });
+    expect(addSession).toHaveBeenCalledOnce();
+  });
+
+  it("adds only once when Save is pressed twice", () => {
+    const { addSession } = setup(added, "add");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(addSession).toHaveBeenCalledOnce();
   });
 
   it("creates nothing on Cancel", () => {
