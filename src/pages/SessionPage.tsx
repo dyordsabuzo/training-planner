@@ -28,7 +28,7 @@ import { EmptyState } from "../management/EmptyState";
 import { getCurrentWeekNumber } from "../common/planWeek";
 import { Card } from "@dyordsabuzo/ui-components";
 import { DateTile, FOCUS, SectionLabel } from "./others/AgendaRow";
-import { chipClassName, HeroTile, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
+import { chipClassName, HeroTile, MOBILE_BIG, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
 import { MoodCheckIn, MoodValue } from "../components/others/MoodCheckIn";
 import { resolveSession, sessionOrder } from "./resolveSessionSupersets";
 import {
@@ -917,14 +917,14 @@ const SessionPage = () => {
           <div className="flex gap-2">
             <button
               type="button"
-              className={`${PRIMARY_PILL} grow-[3]`}
+              className={`${PRIMARY_PILL} ${MOBILE_BIG} grow-[3]`}
               onClick={() => setViewingRun(selectedRun)}
             >
               View results
             </button>
             <button
               type="button"
-              className={`${OUTLINE_PILL} min-h-12 text-base grow`}
+              className={`${OUTLINE_PILL} min-h-12 text-base ${MOBILE_BIG} grow`}
               onClick={() =>
                 sessionContext.initialiseSession({ ...sessionData, moodBefore })
               }
@@ -936,7 +936,7 @@ const SessionPage = () => {
           <div className="flex gap-2">
             <button
               type="button"
-              className={`${PRIMARY_PILL} grow-[3] disabled:opacity-50`}
+              className={`${PRIMARY_PILL} ${MOBILE_BIG} grow-[3] disabled:opacity-50`}
               disabled={!sessionData.session}
               onClick={() =>
                 sessionContext.initialiseSession({ ...sessionData, moodBefore })
@@ -947,7 +947,7 @@ const SessionPage = () => {
             </button>
             <button
               type="button"
-              className={`${OUTLINE_PILL} min-h-12 text-base grow disabled:opacity-50`}
+              className={`${OUTLINE_PILL} min-h-12 text-base ${MOBILE_BIG} grow disabled:opacity-50`}
               disabled={!!pendingAction}
               onClick={() =>
                 applyAction("complete", {

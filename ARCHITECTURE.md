@@ -226,7 +226,9 @@ the run and between units, the summary shows the next unit as a "First up" /
 "Up next" tile listing its exercises. Below it is a compact progress outline
 (`SessionProgress` with `compact`: one line per unit, exercises on tap,
 finished units folded into "N done · M skipped"). The Start / Next / Finish
-button is pinned to the bottom of the screen. On the exercise screen, the
+button is pinned to the bottom of the screen. On phones, run buttons are
+enlarged (`MOBILE_BIG` in `HeroTile.tsx`; Targets START and Complete workout
+larger still). On the exercise screen, the
 Targets prompt before each exercise's first set sets weight, reps (or
 distance) and the unit's sets. Tapping "Set N of M" changes the sets
 mid-unit, but never below the set in progress. These changes last for the

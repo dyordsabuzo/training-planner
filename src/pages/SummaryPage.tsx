@@ -4,11 +4,11 @@ import { useLocation, useNavigate } from "react-router";
 import SessionContext from "../context/SessionContext";
 import WrapperPage from "./WrapperPage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCircleCheck, faCircleXmark, faFlagCheckered, faForward } from "@fortawesome/free-solid-svg-icons";
 import { Celebration } from "./others/Celebration";
 import { SessionProgress } from "./others/SessionProgress";
 import { SectionLabel } from "./others/AgendaRow";
-import { HeroTile, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
+import { HeroTile, MOBILE_BIG, OUTLINE_PILL, PRIMARY_PILL } from "./others/HeroTile";
 
 import { isTrainSessionPath } from "../routes/trainRoutes";
 import { ConfirmDeleteButton } from "../forms/ConfirmDeleteButton";
@@ -225,18 +225,6 @@ export const SummaryPage = ({
           />
         </div>
 
-        {priorityDone && (
-          <div
-            role="status"
-            className="rounded-2xl p-4 border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-800/20 flex flex-col gap-1"
-          >
-            <span className="font-bold">All priority groups done</span>
-            <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
-              Continue with the optional groups, or complete the workout now.
-            </span>
-          </div>
-        )}
-
         {currentSuperset && nextSuperset && (
           <div className="flex justify-center">
             <ConfirmDeleteButton
@@ -256,16 +244,41 @@ export const SummaryPage = ({
         )}
 
         <div className="sticky bottom-0 -mx-2 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-surface-dark/95 flex flex-col gap-2">
+          {/* In the pinned footer so the choice is always on screen, even on phones. */}
           {priorityDone && (
-            <button type="button" className={`${PRIMARY_PILL} w-full`} onClick={onCompleteWorkout}>
+            <div
+              role="status"
+              className="flex items-center gap-3 rounded-2xl p-3 sm:p-4 border-2 border-primary bg-primary-50 dark:bg-primary-800/30"
+            >
+              <FontAwesomeIcon icon={faCircleCheck} className="shrink-0 text-3xl text-primary dark:text-primary-300" />
+              <div className="flex flex-col">
+                <span className="text-lg font-bold">All priority groups done</span>
+                <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                  Complete the workout now, or continue with the optional groups.
+                </span>
+              </div>
+            </div>
+          )}
+          {priorityDone && (
+            <button
+              type="button"
+              className={`${PRIMARY_PILL} w-full max-sm:min-h-[4.5rem] max-sm:text-xl uppercase`}
+              onClick={onCompleteWorkout}
+            >
+              <FontAwesomeIcon icon={faFlagCheckered} />
               Complete workout
             </button>
           )}
           <button
             type="button"
-            className={priorityDone ? `${OUTLINE_PILL} w-full min-h-12 text-base` : `${PRIMARY_PILL} w-full`}
+            className={
+              priorityDone
+                ? `${OUTLINE_PILL} min-h-12 text-base ${MOBILE_BIG} w-full border-2 border-primary dark:border-primary-300`
+                : `${PRIMARY_PILL} ${MOBILE_BIG} w-full`
+            }
             onClick={handleButtonClick}
           >
+            {priorityDone && <FontAwesomeIcon icon={faForward} />}
             {priorityDone
               ? "Continue optional groups"
               : nextSuperset

@@ -25,7 +25,7 @@ import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 import { Modal } from "@dyordsabuzo/ui-components";
 import { isWarmup, pickRandom, setsOrDefault, unitId } from "../resolveSessionSupersets";
 import { FOCUS, SectionLabel } from "../others/AgendaRow";
-import { OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
+import { MOBILE_BIG, OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
 import {
   holdAudio,
   isMobileViewport,
@@ -51,7 +51,7 @@ type Action =
 
 // Skip exercise / Skip group / Cancel session share one row, so the pills
 // split it evenly and shrink their text on small phones.
-const ACTION_PILL = `flex-1 min-w-0 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-full border
+const ACTION_PILL = `flex-1 min-w-0 flex items-center justify-center gap-1.5 min-h-11 max-sm:min-h-14 px-2 rounded-full border
   text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${FOCUS}`;
 const SKIP_PILL = `${ACTION_PILL} border-primary-200 dark:border-primary-700 text-primary
   hover:bg-primary-50 dark:hover:bg-primary-800/20`;
@@ -518,11 +518,11 @@ export const ExercisePage = () => {
         onClose={() => setShowSkipExercise(false)}
       >
         <div className="flex flex-col gap-2">
-          <button type="button" className={PRIMARY_PILL} onClick={skipExerciseSet}>
+          <button type="button" className={`${PRIMARY_PILL} ${MOBILE_BIG}`} onClick={skipExerciseSet}>
             Just this set
           </button>
           {exerciseLength > 1 && (
-            <button type="button" className={`${OUTLINE_PILL} min-h-12 text-base`} onClick={skipExerciseForUnit}>
+            <button type="button" className={`${OUTLINE_PILL} min-h-12 text-base ${MOBILE_BIG}`} onClick={skipExerciseForUnit}>
               For the rest of this group
             </button>
           )}
@@ -546,7 +546,7 @@ export const ExercisePage = () => {
             value={parseInt(supersetData.targetSet) || 1}
             updateValue={(v: number) => setSupersetData({ ...supersetData, targetSet: v })}
           />
-          <button type="button" className={`${PRIMARY_PILL} w-full`} onClick={closeSetEditor}>
+          <button type="button" className={`${PRIMARY_PILL} ${MOBILE_BIG} w-full`} onClick={closeSetEditor}>
             Done
           </button>
         </div>

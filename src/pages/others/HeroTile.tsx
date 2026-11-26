@@ -9,6 +9,9 @@ export const OUTLINE_PILL = `flex items-center justify-center gap-1.5 min-h-11 p
 export const PRIMARY_PILL = `flex items-center justify-center gap-2 min-h-12 px-6 rounded-full bg-primary text-white text-base
   font-bold shadow-sm shadow-primary/30 hover:bg-primary-500 transition-colors ${FOCUS}`;
 
+// Bigger tap targets for workout actions on phones; unchanged from sm up.
+export const MOBILE_BIG = "max-sm:min-h-16 max-sm:text-lg";
+
 export const chipClassName = (isSelected: boolean, isCurrent = false) =>
   `min-h-11 px-4 rounded-full text-sm font-semibold transition-colors ${FOCUS}
    ${

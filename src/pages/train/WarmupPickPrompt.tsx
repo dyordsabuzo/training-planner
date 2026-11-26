@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "@dyordsabuzo/ui-components";
 import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 import { pickRandom } from "../resolveSessionSupersets";
-import { OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
+import { MOBILE_BIG, OUTLINE_PILL, PRIMARY_PILL } from "../others/HeroTile";
 
 export const WARMUP_PICK_COUNT = 4;
 
@@ -38,17 +38,17 @@ export const WarmupPickPrompt = ({ isOpen, exercises, onPick, onFull }: Props) =
           ))}
         </ol>
         <div className="flex flex-col gap-2">
-          <button type="button" className={PRIMARY_PILL} onClick={() => onPick(picked)}>
+          <button type="button" className={`${PRIMARY_PILL} ${MOBILE_BIG}`} onClick={() => onPick(picked)}>
             Do these {WARMUP_PICK_COUNT}
           </button>
           <button
             type="button"
-            className={`${OUTLINE_PILL} min-h-12 text-base`}
+            className={`${OUTLINE_PILL} min-h-12 text-base ${MOBILE_BIG}`}
             onClick={() => setPicked(pickRandom(exercises, WARMUP_PICK_COUNT))}
           >
             Reshuffle
           </button>
-          <button type="button" className={`${OUTLINE_PILL} min-h-12 text-base`} onClick={onFull}>
+          <button type="button" className={`${OUTLINE_PILL} min-h-12 text-base ${MOBILE_BIG}`} onClick={onFull}>
             Full list ({exercises.length})
           </button>
         </div>

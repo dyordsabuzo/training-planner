@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button, Modal } from "@dyordsabuzo/ui-components";
+import { Modal } from "@dyordsabuzo/ui-components";
+import { PRIMARY_PILL } from "../others/HeroTile";
 import { DecimalIncrementDecrement } from "../../components/others/DecimalIncrementDecrement";
 import { useScrollToTopOnClose } from "../../common/useScrollToTopOnClose";
 
@@ -91,9 +92,9 @@ export const TargetWeightPrompt = ({
           updateValue={setSets}
         />
         <div className="flex">
-          <Button
-            label="START"
-            className="w-full"
+          <button
+            type="button"
+            className={`${PRIMARY_PILL} w-full max-sm:min-h-[4.5rem] max-sm:text-xl uppercase`}
             onClick={() =>
               onConfirm({
                 targetWeight: weight,
@@ -101,7 +102,9 @@ export const TargetWeightPrompt = ({
                 ...(isDistance ? { targetDistance: second } : { targetRep: second }),
               })
             }
-          />
+          >
+            START
+          </button>
         </div>
       </div>
     </Modal>
